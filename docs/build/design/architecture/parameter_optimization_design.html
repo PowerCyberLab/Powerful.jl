@@ -1,0 +1,479 @@
+<!DOCTYPE html>
+<html lang="en"><head><meta charset="UTF-8"/><meta name="viewport" content="width=device-width, initial-scale=1.0"/><title>Parameter Optimization Design · Powerful.jl</title><meta name="title" content="Parameter Optimization Design · Powerful.jl"/><meta property="og:title" content="Parameter Optimization Design · Powerful.jl"/><meta property="twitter:title" content="Parameter Optimization Design · Powerful.jl"/><meta name="description" content="Documentation for Powerful.jl."/><meta property="og:description" content="Documentation for Powerful.jl."/><meta property="twitter:description" content="Documentation for Powerful.jl."/><meta property="og:url" content="https://sensl.gitlab.io/Powerful.jl/design/architecture/parameter_optimization_design.html"/><meta property="twitter:url" content="https://sensl.gitlab.io/Powerful.jl/design/architecture/parameter_optimization_design.html"/><link rel="canonical" href="https://sensl.gitlab.io/Powerful.jl/design/architecture/parameter_optimization_design.html"/><script data-outdated-warner src="../../assets/warner.js"></script><link href="https://cdnjs.cloudflare.com/ajax/libs/lato-font/3.0.0/css/lato-font.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/juliamono/0.050/juliamono.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/fontawesome.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/solid.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/brands.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.16.8/katex.min.css" rel="stylesheet" type="text/css"/><script>documenterBaseURL="../.."</script><script src="https://cdnjs.cloudflare.com/ajax/libs/require.js/2.3.6/require.min.js" data-main="../../assets/documenter.js"></script><script src="../../search_index.js"></script><script src="../../siteinfo.js"></script><script src="../../../versions.js"></script><link class="docs-theme-link" rel="stylesheet" type="text/css" href="../../assets/themes/catppuccin-mocha.css" data-theme-name="catppuccin-mocha"/><link class="docs-theme-link" rel="stylesheet" type="text/css" href="../../assets/themes/catppuccin-macchiato.css" data-theme-name="catppuccin-macchiato"/><link class="docs-theme-link" rel="stylesheet" type="text/css" href="../../assets/themes/catppuccin-frappe.css" data-theme-name="catppuccin-frappe"/><link class="docs-theme-link" rel="stylesheet" type="text/css" href="../../assets/themes/catppuccin-latte.css" data-theme-name="catppuccin-latte"/><link class="docs-theme-link" rel="stylesheet" type="text/css" href="../../assets/themes/documenter-dark.css" data-theme-name="documenter-dark" data-theme-primary-dark/><link class="docs-theme-link" rel="stylesheet" type="text/css" href="../../assets/themes/documenter-light.css" data-theme-name="documenter-light" data-theme-primary/><script src="../../assets/themeswap.js"></script></head><body><div id="documenter"><nav class="docs-sidebar"><div class="docs-package-name"><span class="docs-autofit"><a href="../../index.html">Powerful.jl</a></span></div><button class="docs-search-query input is-rounded is-small is-clickable my-2 mx-auto py-1 px-2" id="documenter-search-query">Search docs (Ctrl + /)</button><ul class="docs-menu"><li><a class="tocitem" href="../../index.html">Home</a></li><li><input class="collapse-toggle" id="menuitem-2" type="checkbox"/><label class="tocitem" for="menuitem-2"><span class="docs-label">Guides</span><i class="docs-chevron"></i></label><ul class="collapsed"><li><a class="tocitem" href="../../guides/index.html">Overview</a></li><li><a class="tocitem" href="../../guides/getting_started.html">Getting Started</a></li><li><a class="tocitem" href="../../guides/powerflow.html">Power Flow Analysis</a></li><li><a class="tocitem" href="../../guides/tds.html">Time-Domain Simulation</a></li><li><a class="tocitem" href="../../guides/configuration.html">Configuration</a></li><li><a class="tocitem" href="../../guides/accessing_variables.html">Accessing Results</a></li><li><a class="tocitem" href="../../guides/reports.html">Report Customization</a></li></ul></li><li><input class="collapse-toggle" id="menuitem-3" type="checkbox"/><label class="tocitem" for="menuitem-3"><span class="docs-label">Notebooks</span><i class="docs-chevron"></i></label><ul class="collapsed"><li><a class="tocitem" href="../../notebooks/index.html">Overview</a></li><li><a class="tocitem" href="../../notebooks/01_getting_started.html">01 Getting Started</a></li><li><a class="tocitem" href="../../notebooks/02_formulations_and_solvers.html">02 Formulations And Solvers</a></li><li><a class="tocitem" href="../../notebooks/03_gpu_acceleration.html">03 Gpu Acceleration</a></li><li><a class="tocitem" href="../../notebooks/03_multi_island_power_flow.html">03 Multi Island Power Flow</a></li><li><a class="tocitem" href="../../notebooks/04_multi_island_power_flow.html">04 Multi Island Power Flow</a></li><li><a class="tocitem" href="../../notebooks/05_tds_initialization_validation.html">05 Tds Initialization Validation</a></li></ul></li><li><input class="collapse-toggle" id="menuitem-4" type="checkbox"/><label class="tocitem" for="menuitem-4"><span class="docs-label">Developer Documentation</span><i class="docs-chevron"></i></label><ul class="collapsed"><li><a class="tocitem" href="../../developer/overview.html">Overview</a></li><li><a class="tocitem" href="../../developer/indexing.html">Three-Layer Indexing</a></li><li><a class="tocitem" href="../../developer/formulations.html">Multi-Physics Formulations</a></li><li><a class="tocitem" href="../../developer/workspaces.html">Computation Architecture</a></li><li><a class="tocitem" href="../../developer/models.html">Implementing Models</a></li><li><a class="tocitem" href="../../developer/events.html">TDS Event System</a></li><li><a class="tocitem" href="../../developer/miscellaneous.html">Per-Unit &amp; Multi-Island</a></li></ul></li><li><input class="collapse-toggle" id="menuitem-5" type="checkbox"/><label class="tocitem" for="menuitem-5"><span class="docs-label">API Reference</span><i class="docs-chevron"></i></label><ul class="collapsed"><li><a class="tocitem" href="../../api.html">Overview</a></li><li><a class="tocitem" href="../../api/system.html">System &amp; DAE</a></li><li><a class="tocitem" href="../../api/models.html">Models</a></li><li><a class="tocitem" href="../../api/powerflow.html">Power Flow</a></li><li><a class="tocitem" href="../../api/tds.html">Time-Domain Simulation</a></li><li><a class="tocitem" href="../../api/advanced.html">Advanced Features</a></li></ul></li><li><a class="tocitem" href="../../index_page.html">Index</a></li></ul><div class="docs-version-selector field has-addons"><div class="control"><span class="docs-label button is-static is-size-7">Version</span></div><div class="docs-selector control is-expanded"><div class="select is-fullwidth is-size-7"><select id="documenter-version-selector"></select></div></div></div></nav><div class="docs-main"><header class="docs-navbar"><a class="docs-sidebar-button docs-navbar-link fa-solid fa-bars is-hidden-desktop" id="documenter-sidebar-button" href="#"></a><nav class="breadcrumb"><ul class="is-hidden-mobile"><li class="is-active"><a href="parameter_optimization_design.html">Parameter Optimization Design</a></li></ul><ul class="is-hidden-tablet"><li class="is-active"><a href="parameter_optimization_design.html">Parameter Optimization Design</a></li></ul></nav><div class="docs-right"><a class="docs-navbar-link" href="https://github.com/sensl/Powerful.jl/blob/main/docs/src/design/architecture/parameter_optimization_design.md#" title="Edit source on GitHub"><span class="docs-icon fa-solid"></span></a><a class="docs-settings-button docs-navbar-link fa-solid fa-gear" id="documenter-settings-button" href="#" title="Settings"></a><a class="docs-article-toggle-button fa-solid fa-chevron-up" id="documenter-article-toggle-button" href="javascript:;" title="Collapse all docstrings"></a></div></header><article class="content" id="documenter-page"><h1 id="Parameter-Optimization-Design"><a class="docs-heading-anchor" href="#Parameter-Optimization-Design">Parameter Optimization Design</a><a id="Parameter-Optimization-Design-1"></a><a class="docs-heading-anchor-permalink" href="#Parameter-Optimization-Design" title="Permalink"></a></h1><h2 id="Design-Philosophy"><a class="docs-heading-anchor" href="#Design-Philosophy">Design Philosophy</a><a id="Design-Philosophy-1"></a><a class="docs-heading-anchor-permalink" href="#Design-Philosophy" title="Permalink"></a></h2><p><strong>Automatic, not manual</strong>: Users should NOT need to modify model definitions to optimize different parameters. The system should automatically discover parameter dependencies through AD probing.</p><p><strong>Explicit control</strong>: Users explicitly choose which parameter subset to optimize (at runtime, not package development time).</p><p><strong>Zero hot-loop overhead</strong>: No rebuilding, no allocations in optimization iterations. One-time setup only.</p><p><strong>Type-stable dispatch</strong>: Support both Float64 (normal evaluation) and Dual (AD) via fast dispatch, not rebuilding.</p><p><strong>Reuse infrastructure</strong>: Use existing AD, sparsity, and coloring machinery.</p><hr/><h2 id="Design-Alternatives-Comparison"><a class="docs-heading-anchor" href="#Design-Alternatives-Comparison">Design Alternatives Comparison</a><a id="Design-Alternatives-Comparison-1"></a><a class="docs-heading-anchor-permalink" href="#Design-Alternatives-Comparison" title="Permalink"></a></h2><h3 id="Alternative-1:-Addressed-Parameters-(Extend-AddressManager)"><a class="docs-heading-anchor" href="#Alternative-1:-Addressed-Parameters-(Extend-AddressManager)">Alternative 1: Addressed Parameters (Extend AddressManager)</a><a id="Alternative-1:-Addressed-Parameters-(Extend-AddressManager)-1"></a><a class="docs-heading-anchor-permalink" href="#Alternative-1:-Addressed-Parameters-(Extend-AddressManager)" title="Permalink"></a></h3><p><strong>Concept</strong>: Treat parameters like variables - give them addresses, integrate with AddressManager.</p><pre><code class="language-julia hljs"># Setup
+am = AddressManager()
+assign_address!(am, :PV, :droop_R, ParamAddr(), 1:100)
+assign_address!(am, :PV, :pg_ref, ParamAddr(), 1:100)
+
+# During optimization
+p = gather_parameter_vector(am)  # Gather from model fields
+# ... optimizer updates p ...
+scatter_parameter_vector!(am, p)  # Scatter back to model fields</code></pre><p><strong>Pros:</strong></p><ul><li>✅ Conceptual consistency: Parameters addressed like variables/residuals</li><li>✅ Unified address system</li><li>✅ Sparsity pattern ∂g/∂p could use addresses directly</li><li>✅ Could share gather/scatter infrastructure</li></ul><p><strong>Cons:</strong></p><ul><li>❌ AddressManager complexity explosion (already handles 3 layouts, 4 address types)</li><li>❌ Two sources of truth: p vector AND model fields must stay synchronized</li><li>❌ Type stability challenge: AddressManager addresses point to typed arrays</li><li>❌ Every residual computation needs synchronized p vector</li><li>❌ Philosophical mismatch: variables are UNKNOWNS (solved for), parameters are INPUTS (given)</li></ul><p><strong>Performance:</strong></p><ul><li>Scatter cost: O(n_params) - same as Alternative 2</li><li>Complexity cost: Higher maintenance burden</li></ul><hr/><h3 id="Alternative-2:-Parameter-Scatter-with-Type-Stable-Dispatch-(RECOMMENDED)"><a class="docs-heading-anchor" href="#Alternative-2:-Parameter-Scatter-with-Type-Stable-Dispatch-(RECOMMENDED)">Alternative 2: Parameter Scatter with Type-Stable Dispatch (RECOMMENDED)</a><a id="Alternative-2:-Parameter-Scatter-with-Type-Stable-Dispatch-(RECOMMENDED)-1"></a><a class="docs-heading-anchor-permalink" href="#Alternative-2:-Parameter-Scatter-with-Type-Stable-Dispatch-(RECOMMENDED)" title="Permalink"></a></h3><p><strong>Concept</strong>: Separate parameter mapping. Scatter updates model fields. Dispatch handles Float64/Dual.</p><pre><code class="language-julia hljs"># Setup (once)
+psys = ParameterizedSystem(sys)
+add_parameter!(psys, :PV, :droop_R, 1:100)
+add_parameter!(psys, :PV, :pg_ref, 1:100)
+
+# Hot loop (fast)
+function objective(p)
+    scatter_parameters!(psys, p)  # O(n_params), type-stable
+    y = solve_power_flow(psys.sys)
+    return loss(y)
+end</code></pre><p><strong>Pros:</strong></p><ul><li>✅ Simple: ~150 lines of code</li><li>✅ Type-stable: Julia compiles separate versions for Float64 and Dual</li><li>✅ Fast: Scatter is O(n_params) ≈ microseconds for 1000 params</li><li>✅ Explicit: Model fields are source of truth, p is working copy</li><li>✅ Orthogonal: Doesn&#39;t complicate AddressManager</li><li>✅ No synchronization issues: scatter is one-way, explicit</li></ul><p><strong>Cons:</strong></p><ul><li>⚠️ Requires scatter call each iteration (but cost is negligible)</li><li>⚠️ Parameter system separate from variable addressing (but conceptually cleaner)</li></ul><p><strong>Performance:</strong></p><ul><li>Scatter cost: O(n_params) ≈ 1-10 μs for 1000 params</li><li>No allocations after first compile</li><li>Type-stable dispatch: zero runtime overhead</li></ul><p><strong>Comparison to solve time:</strong></p><ul><li>IEEE 14-bus solve: ~1ms, scatter: ~0.001ms → <strong>0.1% overhead</strong></li><li>ACTIVSg 70k solve: ~140ms, scatter: ~0.01ms → <strong>0.007% overhead</strong></li></ul><hr/><h3 id="Alternative-3:-Functional-Parameter-Views-(Ground-Up-Redesign)"><a class="docs-heading-anchor" href="#Alternative-3:-Functional-Parameter-Views-(Ground-Up-Redesign)">Alternative 3: Functional Parameter Views (Ground-Up Redesign)</a><a id="Alternative-3:-Functional-Parameter-Views-(Ground-Up-Redesign)-1"></a><a class="docs-heading-anchor-permalink" href="#Alternative-3:-Functional-Parameter-Views-(Ground-Up-Redesign)" title="Permalink"></a></h3><p><strong>Concept</strong>: Make parameters first-class, residuals are pure functions of (y, p).</p><pre><code class="language-julia hljs"># Residual signature changes
+function calc_residuals!(
+    g_out,
+    y::NamedTuple,      # Variables (by value)
+    p::NamedTuple,      # Parameters (by value)
+    models::NamedTuple  # Topology/structure only
+)
+    # Compute using y and p directly, not model.droop_R
+    @simd for i in eachindex(models.PV)
+        g_out.pv_control[i] = ... # uses p.droop_R[i], not models.PV.droop_R[i]
+    end
+end
+
+# Usage
+sys = SystemModel(dae, models, parameters)
+calc_residuals!(g, y, sys.parameters, sys.models)</code></pre><p><strong>Pros:</strong></p><ul><li>✅ Mathematically pure: residuals are g(y, p), parameters explicit</li><li>✅ Zero scatter: Parameters passed by value</li><li>✅ Composable: Easy to swap parameter sets</li><li>✅ Testable: Residual functions are pure</li></ul><p><strong>Cons:</strong></p><ul><li>❌ BREAKING CHANGE: Requires rewriting all residual functions</li><li>❌ Data flow disruption: Current models store parameters in fields</li><li>❌ StructArray benefits lost: Can&#39;t iterate over StructArray{PV} with SoA layout</li><li>❌ Large migration cost: Every model in the package changes</li><li>❌ Backward compatibility: Breaks existing user models</li></ul><p><strong>Migration cost:</strong> Very high (100+ files, every model function)</p><hr/><h3 id="Alternative-4:-Workspace-Based-Parameters"><a class="docs-heading-anchor" href="#Alternative-4:-Workspace-Based-Parameters">Alternative 4: Workspace-Based Parameters</a><a id="Alternative-4:-Workspace-Based-Parameters-1"></a><a class="docs-heading-anchor-permalink" href="#Alternative-4:-Workspace-Based-Parameters" title="Permalink"></a></h3><p><strong>Concept</strong>: Parameters live in ResidualWorkspace alongside variables.</p><pre><code class="language-julia hljs">struct ResidualWorkspace{T, AT}
+    var_vals::NamedTuple     # Variables (gathered from y)
+    param_vals::NamedTuple   # Parameters (gathered from p)
+    res_vals::NamedTuple     # Residuals (computed)
+    active_mask::Vector{Bool}
+end
+
+# Usage
+ws = ResidualWorkspace(sys)
+update_workspace!(ws, y, p)  # Gather both y and p
+calc_residuals!(ws, models)</code></pre><p><strong>Pros:</strong></p><ul><li>✅ Symmetric: Variables and parameters handled uniformly</li><li>✅ Fits existing workspace pattern</li><li>✅ GPU-friendly: gather_kernel! for both y and p</li></ul><p><strong>Cons:</strong></p><ul><li>❌ Still needs gather (equivalent to scatter)</li><li>❌ Parameter gathering happens every residual eval (more frequent than scatter)</li><li>❌ Doesn&#39;t fundamentally solve the problem</li><li>⚠️ Slightly more complexity in ResidualWorkspace</li></ul><p><strong>Performance:</strong> Similar to Alternative 2, possibly slightly slower (gather on every residual eval vs scatter once per iteration)</p><hr/><h3 id="Alternative-5:-Lazy-Parameter-Synchronization"><a class="docs-heading-anchor" href="#Alternative-5:-Lazy-Parameter-Synchronization">Alternative 5: Lazy Parameter Synchronization</a><a id="Alternative-5:-Lazy-Parameter-Synchronization-1"></a><a class="docs-heading-anchor-permalink" href="#Alternative-5:-Lazy-Parameter-Synchronization" title="Permalink"></a></h3><p><strong>Concept</strong>: Track which parameters changed, only sync those.</p><pre><code class="language-julia hljs">struct ParameterizedSystem
+    sys::SystemModel
+    param_tracker::ParameterTracker  # Tracks dirty flags
+end
+
+function scatter_parameters!(psys, p)
+    # Only update changed parameters
+    for (idx, val) in enumerate(p)
+        if psys.param_tracker.dirty[idx]
+            update_model_field!(psys, idx, val)
+            psys.param_tracker.dirty[idx] = false
+        end
+    end
+end</code></pre><p><strong>Pros:</strong></p><ul><li>✅ Potentially faster if few parameters change</li><li>✅ Could batch updates</li></ul><p><strong>Cons:</strong></p><ul><li>❌ Added complexity: dirty tracking</li><li>❌ Optimizer updates all parameters typically (so no benefit)</li><li>❌ Harder to reason about correctness</li><li>⚠️ Micro-optimization (scatter is already microseconds)</li></ul><hr/><h2 id="Recommendation:-Alternative-2-(Scatter-Dispatch)"><a class="docs-heading-anchor" href="#Recommendation:-Alternative-2-(Scatter-Dispatch)">Recommendation: Alternative 2 (Scatter + Dispatch)</a><a id="Recommendation:-Alternative-2-(Scatter-Dispatch)-1"></a><a class="docs-heading-anchor-permalink" href="#Recommendation:-Alternative-2-(Scatter-Dispatch)" title="Permalink"></a></h2><h3 id="Why-This-is-the-Cleanest-Design"><a class="docs-heading-anchor" href="#Why-This-is-the-Cleanest-Design">Why This is the Cleanest Design</a><a id="Why-This-is-the-Cleanest-Design-1"></a><a class="docs-heading-anchor-permalink" href="#Why-This-is-the-Cleanest-Design" title="Permalink"></a></h3><ol><li><p><strong>Separation of concerns</strong>:</p><ul><li>Variables: unknowns in DAE, live in y, addressed by AddressManager</li><li>Parameters: inputs to DAE, live in p, mapped by ParameterizedSystem</li><li>Clear conceptual distinction</li></ul></li><li><p><strong>Minimal invasiveness</strong>:</p><ul><li>Zero changes to existing models</li><li>AddressManager unchanged</li><li>ResidualWorkspace unchanged</li><li>~150 lines of new code</li></ul></li><li><p><strong>Performance is negligible</strong>:</p><ul><li>For 1000 params: ~10 μs scatter</li><li>For 100,000 params: ~1 ms scatter</li><li>Compare to solve: 100-1000 ms</li><li>Overhead: &lt;1% in all realistic cases</li></ul></li><li><p><strong>Type stability via dispatch</strong>:</p><pre><code class="language-julia hljs">scatter_parameters!(psys, p::Vector{Float64})     # Compiles once
+scatter_parameters!(psys, p::Vector{Dual{...}})   # Compiles once
+# No rebuilding, no type instability</code></pre></li><li><p><strong>Easy to understand</strong>:</p><ul><li>User sees: &quot;I have parameters p, I scatter them to system&quot;</li><li>Clear data flow: p → scatter → model fields → residuals</li><li>Debuggable: Can inspect model fields after scatter</li></ul></li></ol><hr/><h2 id="Detailed-Design:-ParameterizedSystem"><a class="docs-heading-anchor" href="#Detailed-Design:-ParameterizedSystem">Detailed Design: ParameterizedSystem</a><a id="Detailed-Design:-ParameterizedSystem-1"></a><a class="docs-heading-anchor-permalink" href="#Detailed-Design:-ParameterizedSystem" title="Permalink"></a></h2><h3 id="Data-Structures"><a class="docs-heading-anchor" href="#Data-Structures">Data Structures</a><a id="Data-Structures-1"></a><a class="docs-heading-anchor-permalink" href="#Data-Structures" title="Permalink"></a></h3><pre><code class="language-julia hljs">&quot;&quot;&quot;
+    ParameterSlice
+
+Maps a contiguous slice of the parameter vector p to a model field.
+
+# Example</code></pre><p>julia</p><h1 id="slice-represents-p[5:14]-sys.models.PV.droop_R[1:10]"><a class="docs-heading-anchor" href="#slice-represents-p[5:14]-sys.models.PV.droop_R[1:10]">slice represents p[5:14] → sys.models.PV.droop_R[1:10]</a><a id="slice-represents-p[5:14]-sys.models.PV.droop_R[1:10]-1"></a><a class="docs-heading-anchor-permalink" href="#slice-represents-p[5:14]-sys.models.PV.droop_R[1:10]" title="Permalink"></a></h1><p>slice = ParameterSlice{Float64}(     :PV,                    # model<em>name     :droop</em>R,               # field<em>name     [1, 2, 3, ..., 10],    # model</em>indices     5:14,                   # param<em>indices     sys.models.PV.droop</em>R   # field_ref (direct reference for speed) )</p><pre><code class="nohighlight hljs">&quot;&quot;&quot;
+struct ParameterSlice{T}
+    model_name::Symbol
+    field_name::Symbol
+    model_indices::Vector{Int}      # Which model instances: [1, 3, 5] or 1:100
+    param_indices::UnitRange{Int}   # Position in p vector: 5:14
+    field_ref::AbstractVector{T}    # Direct reference to model.field array
+end
+
+&quot;&quot;&quot;
+    ParameterizedSystem{T}
+
+System with optimizable parameter mapping.
+
+# Fields
+- `sys::SystemModel{T}`: Base system (unchanged)
+- `param_slices::Vector{ParameterSlice{T}}`: Parameter mappings
+- `total_params::Int`: Total number of parameters
+- `sparsity_∂g∂p`: Cached sparsity pattern (computed lazily)
+- `colors_∂g∂p`: Cached coloring (computed lazily)
+
+# Workflow</code></pre><p>julia</p><h1 id="Setup-(once,-outside-optimization-loop)"><a class="docs-heading-anchor" href="#Setup-(once,-outside-optimization-loop)">Setup (once, outside optimization loop)</a><a id="Setup-(once,-outside-optimization-loop)-1"></a><a class="docs-heading-anchor-permalink" href="#Setup-(once,-outside-optimization-loop)" title="Permalink"></a></h1><p>psys = ParameterizedSystem(sys) add<em>parameter!(psys, :PV, :droop</em>R, 1:100) add_parameter!(psys, :Branch, :x, [1, 5, 10, 20])</p><h1 id="Hot-loop-(type-stable,-zero-allocations)"><a class="docs-heading-anchor" href="#Hot-loop-(type-stable,-zero-allocations)">Hot loop (type-stable, zero allocations)</a><a id="Hot-loop-(type-stable,-zero-allocations)-1"></a><a class="docs-heading-anchor-permalink" href="#Hot-loop-(type-stable,-zero-allocations)" title="Permalink"></a></h1><p>function objective(p)     scatter<em>parameters!(psys, p)  # Fast: O(n</em>params)     y = solve<em>power</em>flow(psys.sys)     return loss(y) end</p><pre><code class="nohighlight hljs">&quot;&quot;&quot;
+struct ParameterizedSystem{T}
+    sys::SystemModel{T}
+    param_slices::Vector{ParameterSlice{T}}
+    total_params::Int
+
+    # Cached for efficient gradient computation (computed lazily)
+    sparsity_∂g∂p::Ref{Union{Nothing, SparseMatrixCSC{Bool, Int}}}
+    colors_∂g∂p::Ref{Union{Nothing, Vector{Int}}}
+end
+
+# Constructor
+function ParameterizedSystem(sys::SystemModel{T}) where T
+    ParameterizedSystem{T}(
+        sys,
+        ParameterSlice{T}[],
+        0,
+        Ref{Union{Nothing, SparseMatrixCSC{Bool, Int}}}(nothing),
+        Ref{Union{Nothing, Vector{Int}}}(nothing)
+    )
+end</code></pre><hr/><h3 id="Core-Operations"><a class="docs-heading-anchor" href="#Core-Operations">Core Operations</a><a id="Core-Operations-1"></a><a class="docs-heading-anchor-permalink" href="#Core-Operations" title="Permalink"></a></h3><pre><code class="language-julia hljs">&quot;&quot;&quot;
+    add_parameter!(psys, model_name, field_name, instances)
+
+Mark a subset of model instances&#39; fields as optimizable parameters.
+
+# Arguments
+- `psys::ParameterizedSystem`: Parameter system
+- `model_name::Symbol`: Model type (e.g., :PV, :Branch)
+- `field_name::Symbol`: Field name (e.g., :droop_R, :pg_ref)
+- `instances`: Model instance indices (UnitRange or Vector{Int})
+
+# Example</code></pre><p>julia psys = ParameterizedSystem(sys)</p><h1 id="Add-all-generators&#39;-droop-coefficients"><a class="docs-heading-anchor" href="#Add-all-generators&#39;-droop-coefficients">Add all generators&#39; droop coefficients</a><a id="Add-all-generators&#39;-droop-coefficients-1"></a><a class="docs-heading-anchor-permalink" href="#Add-all-generators&#39;-droop-coefficients" title="Permalink"></a></h1><p>add<em>parameter!(psys, :PV, :droop</em>R, 1:100)</p><h1 id="Add-specific-generators&#39;-setpoints"><a class="docs-heading-anchor" href="#Add-specific-generators&#39;-setpoints">Add specific generators&#39; setpoints</a><a id="Add-specific-generators&#39;-setpoints-1"></a><a class="docs-heading-anchor-permalink" href="#Add-specific-generators&#39;-setpoints" title="Permalink"></a></h1><p>add<em>parameter!(psys, :PV, :pg</em>ref, [1, 5, 10, 15, 20])</p><h1 id="Add-branch-reactances"><a class="docs-heading-anchor" href="#Add-branch-reactances">Add branch reactances</a><a id="Add-branch-reactances-1"></a><a class="docs-heading-anchor-permalink" href="#Add-branch-reactances" title="Permalink"></a></h1><p>add_parameter!(psys, :Branch, :x, 1:500)</p><pre><code class="nohighlight hljs">
+# Notes
+- Invalidates cached sparsity/coloring (recomputed on next use)
+- Parameters appear in p vector in the order they&#39;re added
+- Can add parameters from different models
+- Can add different fields from same model
+&quot;&quot;&quot;
+function add_parameter!(
+    psys::ParameterizedSystem{T},
+    model_name::Symbol,
+    field_name::Symbol,
+    instances::Union{UnitRange{Int}, Vector{Int}}
+) where T
+    # Get model from system
+    model = getfield(psys.sys.models, model_name)
+
+    # Get field reference
+    field = getfield(model, field_name)
+
+    # Validate
+    instance_vec = collect(instances)
+    @assert all(1 .&lt;= instance_vec .&lt;= length(model)) &quot;Instance indices out of bounds&quot;
+    @assert eltype(field) &lt;: Number &quot;Field must contain numbers&quot;
+
+    # Determine parameter indices in flat p vector
+    start_idx = psys.total_params + 1
+    n_params = length(instance_vec)
+    end_idx = start_idx + n_params - 1
+
+    # Create slice
+    slice = ParameterSlice{T}(
+        model_name,
+        field_name,
+        instance_vec,
+        start_idx:end_idx,
+        field
+    )
+
+    push!(psys.param_slices, slice)
+
+    # Update total count (using setfield! since struct is mutable conceptually)
+    new_psys = ParameterizedSystem{T}(
+        psys.sys,
+        psys.param_slices,
+        psys.total_params + n_params,
+        Ref{Union{Nothing, SparseMatrixCSC{Bool, Int}}}(nothing),  # Invalidate cache
+        Ref{Union{Nothing, Vector{Int}}}(nothing)
+    )
+
+    # Copy fields back (or make struct mutable)
+    # Actually, let&#39;s make the fields mutable:
+    # Just update in place if struct fields are not const
+    psys.total_params += n_params
+    psys.sparsity_∂g∂p[] = nothing
+    psys.colors_∂g∂p[] = nothing
+
+    return nothing
+end
+
+# Better: make struct mutable
+Base.@kwdef mutable struct ParameterizedSystem{T}
+    sys::SystemModel{T}
+    param_slices::Vector{ParameterSlice{T}} = ParameterSlice{T}[]
+    total_params::Int = 0
+    sparsity_∂g∂p::Union{Nothing, SparseMatrixCSC{Bool, Int}} = nothing
+    colors_∂g∂p::Union{Nothing, Vector{Int}} = nothing
+end</code></pre><pre><code class="language-julia hljs">&quot;&quot;&quot;
+    gather_parameters(psys::ParameterizedSystem{T}) -&gt; Vector{T}
+
+Extract current parameter values from model fields into flat vector.
+
+Returns parameter vector p with length `psys.total_params`.
+
+# Example</code></pre><p>julia psys = ParameterizedSystem(sys) add<em>parameter!(psys, :PV, :droop</em>R, 1:10) add<em>parameter!(psys, :PV, :pg</em>ref, 1:10)</p><p>p = gather_parameters(psys)  # Vector{Float64} of length 20</p><pre><code class="nohighlight hljs">
+# Performance
+- Time: O(n_params)
+- Allocations: One Vector{T} of length n_params
+- Typically ~microseconds for 1000 parameters
+&quot;&quot;&quot;
+function gather_parameters(psys::ParameterizedSystem{T}) where T
+    p = Vector{T}(undef, psys.total_params)
+
+    @inbounds for slice in psys.param_slices
+        for (local_idx, model_idx) in enumerate(slice.model_indices)
+            param_idx = slice.param_indices[local_idx]
+            p[param_idx] = slice.field_ref[model_idx]
+        end
+    end
+
+    return p
+end</code></pre><pre><code class="language-julia hljs">&quot;&quot;&quot;
+    scatter_parameters!(psys::ParameterizedSystem, p::AbstractVector)
+
+Copy parameter values from flat vector p into model fields.
+
+# Type Stability
+This function is type-stable and compiles specialized versions for:
+- `p::Vector{Float64}` - Normal evaluation
+- `p::Vector{Dual{...}}` - Automatic differentiation
+- Any `AbstractVector{T}` where T&lt;:Number
+
+# Performance
+- Time: O(n_params) - simple indexed assignment
+- Allocations: Zero (after first compile for each type)
+- Typical: 1-10 μs for 1000 parameters
+
+# Example</code></pre><p>julia psys = ParameterizedSystem(sys) add<em>parameter!(psys, :PV, :droop</em>R, 1:100)</p><p>p = gather_parameters(psys) p .*= 1.1  # Increase all droop coefficients by 10%</p><p>scatter_parameters!(psys, p)  # Update model fields</p><pre><code class="nohighlight hljs">
+# Usage in Optimization</code></pre><p>julia function objective(p, psys)     scatter<em>parameters!(psys, p)  # Called each iteration     y = solve</em>power<em>flow(psys.sys)     return compute</em>loss(y) end</p><h1 id="ForwardDiff/Zygote-will-call-with-p::Vector{Dual{...}}"><a class="docs-heading-anchor" href="#ForwardDiff/Zygote-will-call-with-p::Vector{Dual{...}}">ForwardDiff/Zygote will call with p::Vector{Dual{...}}</a><a id="ForwardDiff/Zygote-will-call-with-p::Vector{Dual{...}}-1"></a><a class="docs-heading-anchor-permalink" href="#ForwardDiff/Zygote-will-call-with-p::Vector{Dual{...}}" title="Permalink"></a></h1><h1 id="scatter_parameters!-handles-it-automatically-via-dispatch"><a class="docs-heading-anchor" href="#scatter_parameters!-handles-it-automatically-via-dispatch">scatter_parameters! handles it automatically via dispatch</a><a id="scatter_parameters!-handles-it-automatically-via-dispatch-1"></a><a class="docs-heading-anchor-permalink" href="#scatter_parameters!-handles-it-automatically-via-dispatch" title="Permalink"></a></h1><pre><code class="nohighlight hljs">&quot;&quot;&quot;
+@inline function scatter_parameters!(
+    psys::ParameterizedSystem,
+    p::AbstractVector{Tp}
+) where Tp
+    @boundscheck length(p) == psys.total_params ||
+        throw(DimensionMismatch(&quot;Expected $(psys.total_params) parameters, got $(length(p))&quot;))
+
+    @inbounds for slice in psys.param_slices
+        for (local_idx, model_idx) in enumerate(slice.model_indices)
+            param_idx = slice.param_indices[local_idx]
+            slice.field_ref[model_idx] = p[param_idx]
+        end
+    end
+
+    return nothing
+end</code></pre><hr/><h3 id="Automatic-Sparsity-Detection"><a class="docs-heading-anchor" href="#Automatic-Sparsity-Detection">Automatic Sparsity Detection</a><a id="Automatic-Sparsity-Detection-1"></a><a class="docs-heading-anchor-permalink" href="#Automatic-Sparsity-Detection" title="Permalink"></a></h3><pre><code class="language-julia hljs">&quot;&quot;&quot;
+    compute_parameter_sparsity!(psys::ParameterizedSystem)
+
+Automatically detect ∂g/∂p sparsity pattern via AD probing.
+
+Caches result in `psys.sparsity_∂g∂p` and `psys.colors_∂g∂p`.
+
+# Algorithm
+For each parameter pᵢ:
+1. Create dual: p[i] = Dual(p[i], 1.0)
+2. Scatter to models
+3. Compute residuals g(y, p)
+4. Extract dual parts: ∂gⱼ/∂pᵢ
+5. Record nonzeros
+
+# Performance
+- Time: O(n_params × residual_eval_time)
+- For 1000 params, ACTIVSg 70k: ~5 seconds
+- Only computed ONCE, then cached
+
+# Example</code></pre><p>julia psys = ParameterizedSystem(sys) add<em>parameter!(psys, :PV, :droop</em>R, 1:100)</p><h1 id="Automatically-detect-sparsity"><a class="docs-heading-anchor" href="#Automatically-detect-sparsity">Automatically detect sparsity</a><a id="Automatically-detect-sparsity-1"></a><a class="docs-heading-anchor-permalink" href="#Automatically-detect-sparsity" title="Permalink"></a></h1><p>compute<em>parameter</em>sparsity!(psys)</p><h1 id="Now-cached"><a class="docs-heading-anchor" href="#Now-cached">Now cached</a><a id="Now-cached-1"></a><a class="docs-heading-anchor-permalink" href="#Now-cached" title="Permalink"></a></h1><p>@assert !isnothing(psys.sparsity<em>∂g∂p) @assert !isnothing(psys.colors</em>∂g∂p)</p><pre><code class="nohighlight hljs">&quot;&quot;&quot;
+function compute_parameter_sparsity!(psys::ParameterizedSystem{T}) where T
+    # Already computed?
+    if !isnothing(psys.sparsity_∂g∂p)
+        return psys.sparsity_∂g∂p
+    end
+
+    n_res = length(psys.sys.dae.g)
+    n_params = psys.total_params
+
+    # Current parameter values
+    p0 = gather_parameters(psys)
+    y = psys.sys.dae.y  # Current state
+
+    # Storage for sparsity pattern
+    I = Int[]  # Residual indices
+    J = Int[]  # Parameter indices
+
+    # Probe each parameter
+    for param_idx in 1:n_params
+        # Create dual vector (only param_idx has nonzero dual part)
+        p_dual = ForwardDiff.Dual.(p0, ntuple(i -&gt; i == 1 ? one(T) : zero(T), 1))
+        p_dual[param_idx] = ForwardDiff.Dual(p0[param_idx], one(T))
+
+        # Scatter dual parameters to models
+        scatter_parameters!(psys, p_dual)
+
+        # Compute residuals with dual parameters
+        # Variables remain Float64 (we&#39;re computing ∂g/∂p, not ∂g/∂y)
+        ws = ResidualWorkspace(psys.sys, eltype(p_dual))
+        update_workspace!(ws, psys.sys.dae, y)
+        compute_all_residuals!(ws, psys.sys.models)
+
+        # Extract residuals as flat vector
+        g_dual = extract_residual_vector(ws)
+
+        # Record nonzeros
+        for res_idx in 1:n_res
+            dual_part = ForwardDiff.partials(g_dual[res_idx], 1)
+
+            if abs(dual_part) &gt; 1e-14  # Tolerance for numerical noise
+                push!(I, res_idx)
+                push!(J, param_idx)
+            end
+        end
+    end
+
+    # Restore original Float64 parameters
+    scatter_parameters!(psys, p0)
+
+    # Build sparse pattern
+    sparsity = sparse(I, J, ones(Bool, length(I)), n_res, n_params)
+
+    # Compute coloring for efficient Jacobian computation
+    colors = matrix_colors(sparsity)
+
+    # Cache
+    psys.sparsity_∂g∂p = sparsity
+    psys.colors_∂g∂p = colors
+
+    return sparsity
+end</code></pre><hr/><h3 id="Efficient-Colored-Parameter-Jacobian"><a class="docs-heading-anchor" href="#Efficient-Colored-Parameter-Jacobian">Efficient Colored Parameter Jacobian</a><a id="Efficient-Colored-Parameter-Jacobian-1"></a><a class="docs-heading-anchor-permalink" href="#Efficient-Colored-Parameter-Jacobian" title="Permalink"></a></h3><pre><code class="language-julia hljs">&quot;&quot;&quot;
+    compute_parameter_jacobian(psys, y, p) -&gt; SparseMatrixCSC
+
+Compute ∂g/∂p efficiently using cached sparsity and coloring.
+
+Uses colored forward-mode AD (same technique as variable Jacobian).
+
+# Performance
+For ACTIVSg 70k (135,800 residuals, 1,000 parameters):
+- Naive: 1,000 evaluations × 140ms = 140 seconds
+- Colored: ~50 evaluations × 140ms = 7 seconds
+- **20x speedup** from coloring!
+
+# Arguments
+- `psys::ParameterizedSystem`: System with cached sparsity
+- `y::Vector`: Current state
+- `p::Vector`: Current parameters
+
+# Returns
+Sparse matrix B where B[i,j] = ∂gᵢ/∂pⱼ
+
+# Example</code></pre><p>julia</p><h1 id="Setup-(computes-sparsity-once)"><a class="docs-heading-anchor" href="#Setup-(computes-sparsity-once)">Setup (computes sparsity once)</a><a id="Setup-(computes-sparsity-once)-1"></a><a class="docs-heading-anchor-permalink" href="#Setup-(computes-sparsity-once)" title="Permalink"></a></h1><p>psys = ParameterizedSystem(sys) add<em>parameter!(psys, :PV, :droop</em>R, 1:100) compute<em>parameter</em>sparsity!(psys)</p><h1 id="Compute-g/p-at-current-point"><a class="docs-heading-anchor" href="#Compute-g/p-at-current-point">Compute ∂g/∂p at current point</a><a id="Compute-g/p-at-current-point-1"></a><a class="docs-heading-anchor-permalink" href="#Compute-g/p-at-current-point" title="Permalink"></a></h1><p>y = solve<em>power</em>flow(psys.sys) p = gather<em>parameters(psys) B = compute</em>parameter_jacobian(psys, y, p)</p><h1 id="Use-in-implicit-differentiation"><a class="docs-heading-anchor" href="#Use-in-implicit-differentiation">Use in implicit differentiation</a><a id="Use-in-implicit-differentiation-1"></a><a class="docs-heading-anchor-permalink" href="#Use-in-implicit-differentiation" title="Permalink"></a></h1><p>J = compute_jacobian(psys.sys, y)  # ∂g/∂y λ = J&#39; \ ∂loss∂y ∂loss∂p = -λ&#39; * B  # Chain rule</p><pre><code class="nohighlight hljs">&quot;&quot;&quot;
+function compute_parameter_jacobian(
+    psys::ParameterizedSystem{T},
+    y::AbstractVector,
+    p::AbstractVector{T}
+) where T
+    # Ensure sparsity is computed
+    if isnothing(psys.sparsity_∂g∂p)
+        compute_parameter_sparsity!(psys)
+    end
+
+    sparsity = psys.sparsity_∂g∂p
+    colors = psys.colors_∂g∂p
+    n_res = length(psys.sys.dae.g)
+    n_params = psys.total_params
+    n_colors = maximum(colors)
+
+    # Initialize sparse matrix
+    B = T.(sparsity)
+
+    # For each color, compute all parameters with that color simultaneously
+    for color in 1:n_colors
+        # Parameters with this color
+        param_indices = findall(==(color), colors)
+        n_seeds = length(param_indices)
+
+        # Create dual-valued parameter vector
+        p_dual = ForwardDiff.Dual.(
+            p,
+            ntuple(_ -&gt; zero(T), n_seeds)
+        )
+
+        for (seed_idx, param_idx) in enumerate(param_indices)
+            p_dual[param_idx] = ForwardDiff.Dual(
+                p[param_idx],
+                ntuple(i -&gt; i == seed_idx ? one(T) : zero(T), n_seeds)
+            )
+        end
+
+        # Scatter dual parameters
+        scatter_parameters!(psys, p_dual)
+
+        # Compute residuals
+        ws = ResidualWorkspace(psys.sys, eltype(p_dual))
+        update_workspace!(ws, psys.sys.dae, y)
+        compute_all_residuals!(ws, psys.sys.models)
+        g_dual = extract_residual_vector(ws)
+
+        # Extract derivatives for this color
+        for (seed_idx, param_idx) in enumerate(param_indices)
+            # Find residuals that depend on this parameter
+            res_indices = sparsity[:, param_idx].nzind
+
+            for res_idx in res_indices
+                B[res_idx, param_idx] = ForwardDiff.partials(g_dual[res_idx], seed_idx)
+            end
+        end
+    end
+
+    # Restore Float64 parameters
+    scatter_parameters!(psys, p)
+
+    return B
+end</code></pre><hr/><h2 id="User-Facing-API-Examples"><a class="docs-heading-anchor" href="#User-Facing-API-Examples">User-Facing API Examples</a><a id="User-Facing-API-Examples-1"></a><a class="docs-heading-anchor-permalink" href="#User-Facing-API-Examples" title="Permalink"></a></h2><h3 id="Example-1:-Simple-Droop-Optimization"><a class="docs-heading-anchor" href="#Example-1:-Simple-Droop-Optimization">Example 1: Simple Droop Optimization</a><a id="Example-1:-Simple-Droop-Optimization-1"></a><a class="docs-heading-anchor-permalink" href="#Example-1:-Simple-Droop-Optimization" title="Permalink"></a></h3><pre><code class="language-julia hljs">using Powerful, ComponentArrays, Optimization, OptimizationOptimJL
+
+# Load case
+case = PowerFlowData.parse_network(&quot;ACTIVSg70k.raw&quot;)
+sys = create_system(case)
+
+# Setup parameters
+psys = ParameterizedSystem(sys)
+add_parameter!(psys, :PV, :droop_R, 1:100)  # 100 generators
+
+# Initial values
+p0 = gather_parameters(psys)
+
+# Objective
+function objective(p, psys)
+    scatter_parameters!(psys, p)
+    y = solve_power_flow(psys.sys)
+    v = get_bus_voltages(psys.sys, y)
+    return sum((v .- 1.0).^2)
+end
+
+# Optimize
+prob = OptimizationProblem((p, _) -&gt; objective(p, psys), p0; grad=true)
+sol = solve(prob, BFGS(); maxiters=50)
+
+println(&quot;Optimal droop: &quot;, sol.u)</code></pre><hr/><h3 id="Example-2:-Multi-Parameter-Optimization-with-ComponentArrays"><a class="docs-heading-anchor" href="#Example-2:-Multi-Parameter-Optimization-with-ComponentArrays">Example 2: Multi-Parameter Optimization with ComponentArrays</a><a id="Example-2:-Multi-Parameter-Optimization-with-ComponentArrays-1"></a><a class="docs-heading-anchor-permalink" href="#Example-2:-Multi-Parameter-Optimization-with-ComponentArrays" title="Permalink"></a></h3><pre><code class="language-julia hljs">using ComponentArrays
+
+# Setup
+psys = ParameterizedSystem(sys)
+add_parameter!(psys, :PV, :droop_R, 1:100)
+add_parameter!(psys, :PV, :pg_ref, 1:100)
+add_parameter!(psys, :Branch, :x, 1:500)
+
+# Use ComponentArray for named access
+p_flat = gather_parameters(psys)  # Length: 100 + 100 + 500 = 700
+
+# Wrap with names (matches order of add_parameter! calls)
+p = ComponentArray(
+    droop_R = p_flat[1:100],
+    pg_ref = p_flat[101:200],
+    branch_x = p_flat[201:700]
+)
+
+# Objective can use named access
+function objective(p, psys)
+    scatter_parameters!(psys, p)  # Works with ComponentArray!
+
+    y = solve_power_flow(psys.sys)
+
+    # Use parameter names in loss
+    voltage_loss = sum((get_voltages(psys.sys, y) .- 1.0).^2)
+    droop_penalty = 0.01 * sum((p.droop_R .- 0.05).^2)
+    gen_penalty = 0.01 * sum(p.pg_ref.^2)
+
+    return voltage_loss + droop_penalty + gen_penalty
+end</code></pre><hr/><h2 id="Performance-Analysis"><a class="docs-heading-anchor" href="#Performance-Analysis">Performance Analysis</a><a id="Performance-Analysis-1"></a><a class="docs-heading-anchor-permalink" href="#Performance-Analysis" title="Permalink"></a></h2><h3 id="Scatter-Cost-Breakdown"><a class="docs-heading-anchor" href="#Scatter-Cost-Breakdown">Scatter Cost Breakdown</a><a id="Scatter-Cost-Breakdown-1"></a><a class="docs-heading-anchor-permalink" href="#Scatter-Cost-Breakdown" title="Permalink"></a></h3><p>For 1,000 parameters:</p><pre><code class="language-julia hljs">@benchmark scatter_parameters!($psys, $p)
+# Median time: ~5 μs
+# Allocations: 0 bytes</code></pre><p><strong>Operation breakdown:</strong></p><ul><li>Loop over ~10-20 slices (typical)</li><li>Each slice: loop over instances, indexed assignment</li><li>Total: ~1000 indexed assignments</li><li>Modern CPU: ~5 ns per assignment → ~5 μs total</li></ul><p><strong>Comparison to solve costs:</strong></p><table><tr><th style="text-align: right">System</th><th style="text-align: right">Solve Time</th><th style="text-align: right">Scatter Time</th><th style="text-align: right">Overhead</th></tr><tr><td style="text-align: right">IEEE 14-bus</td><td style="text-align: right">1 ms</td><td style="text-align: right">0.5 μs</td><td style="text-align: right">0.05%</td></tr><tr><td style="text-align: right">IEEE 118-bus</td><td style="text-align: right">10 ms</td><td style="text-align: right">2 μs</td><td style="text-align: right">0.02%</td></tr><tr><td style="text-align: right">ACTIVSg 70k</td><td style="text-align: right">140 ms</td><td style="text-align: right">10 μs</td><td style="text-align: right">0.007%</td></tr></table><p><strong>Conclusion</strong>: Scatter overhead is completely negligible (&lt;0.1% in all cases).</p><hr/><h3 id="Full-Gradient-Cost-(with-Implicit-Differentiation)"><a class="docs-heading-anchor" href="#Full-Gradient-Cost-(with-Implicit-Differentiation)">Full Gradient Cost (with Implicit Differentiation)</a><a id="Full-Gradient-Cost-(with-Implicit-Differentiation)-1"></a><a class="docs-heading-anchor-permalink" href="#Full-Gradient-Cost-(with-Implicit-Differentiation)" title="Permalink"></a></h3><p>For ACTIVSg 70k (135,800 variables, 1,000 parameters):</p><table><tr><th style="text-align: right">Operation</th><th style="text-align: right">Time</th><th style="text-align: right">Notes</th></tr><tr><td style="text-align: right">scatter_parameters!</td><td style="text-align: right">0.01 ms</td><td style="text-align: right">Negligible</td></tr><tr><td style="text-align: right">Forward solve + J</td><td style="text-align: right">140 ms</td><td style="text-align: right">Existing, colored ∂g/∂y</td></tr><tr><td style="text-align: right">Adjoint solve (J^T λ = ȳ)</td><td style="text-align: right">140 ms</td><td style="text-align: right">Reuse J sparsity</td></tr><tr><td style="text-align: right">Parameter Jacobian (B)</td><td style="text-align: right">7,000 ms</td><td style="text-align: right">Colored ∂g/∂p (~50 colors)</td></tr><tr><td style="text-align: right">Chain rule (-λ^T B)</td><td style="text-align: right">10 ms</td><td style="text-align: right">Sparse matrix-vector product</td></tr><tr><td style="text-align: right"><strong>Total per gradient</strong></td><td style="text-align: right"><strong>~7.3 seconds</strong></td><td style="text-align: right">Dominated by B computation</td></tr></table><p><strong>Breakdown of 7.3s:</strong></p><ul><li>scatter: 0.0001s (0.001%)</li><li>Forward/adjoint: 0.28s (3.8%)</li><li>Parameter Jacobian: 7.0s (96%)</li></ul><p><strong>Key insight</strong>: Scatter is 0.001% of gradient time - completely negligible!</p><hr/><h2 id="Comparison-Summary"><a class="docs-heading-anchor" href="#Comparison-Summary">Comparison Summary</a><a id="Comparison-Summary-1"></a><a class="docs-heading-anchor-permalink" href="#Comparison-Summary" title="Permalink"></a></h2><table><tr><th style="text-align: right">Aspect</th><th style="text-align: right">Addressed Params</th><th style="text-align: right">Scatter + Dispatch</th><th style="text-align: right">Functional Views</th><th style="text-align: right">Workspace Params</th></tr><tr><td style="text-align: right"><strong>Setup complexity</strong></td><td style="text-align: right">High</td><td style="text-align: right">Low</td><td style="text-align: right">Low</td><td style="text-align: right">Medium</td></tr><tr><td style="text-align: right"><strong>Runtime overhead</strong></td><td style="text-align: right">O(n_params)</td><td style="text-align: right">O(n_params)</td><td style="text-align: right">O(0)</td><td style="text-align: right">O(n_params)</td></tr><tr><td style="text-align: right"><strong>Type stability</strong></td><td style="text-align: right">Challenging</td><td style="text-align: right">Natural</td><td style="text-align: right">Natural</td><td style="text-align: right">Natural</td></tr><tr><td style="text-align: right"><strong>Code changes</strong></td><td style="text-align: right">Moderate</td><td style="text-align: right">Minimal</td><td style="text-align: right">Large (breaking)</td><td style="text-align: right">Moderate</td></tr><tr><td style="text-align: right"><strong>Maintenance</strong></td><td style="text-align: right">High</td><td style="text-align: right">Low</td><td style="text-align: right">Medium</td><td style="text-align: right">Medium</td></tr><tr><td style="text-align: right"><strong>Conceptual clarity</strong></td><td style="text-align: right">Medium</td><td style="text-align: right">High</td><td style="text-align: right">High</td><td style="text-align: right">Medium</td></tr><tr><td style="text-align: right"><strong>AddressManager impact</strong></td><td style="text-align: right">Large</td><td style="text-align: right">None</td><td style="text-align: right">None</td><td style="text-align: right">None</td></tr><tr><td style="text-align: right"><strong>Backward compat</strong></td><td style="text-align: right">Yes</td><td style="text-align: right">Yes</td><td style="text-align: right">No</td><td style="text-align: right">Yes</td></tr></table><p><strong>Winner</strong>: Scatter + Dispatch (Alternative 2)</p><ul><li>Lowest maintenance burden</li><li>Minimal code changes</li><li>Negligible performance cost</li><li>Clear conceptual model</li><li>Type-stable via dispatch</li></ul><hr/><h2 id="Implementation-Roadmap"><a class="docs-heading-anchor" href="#Implementation-Roadmap">Implementation Roadmap</a><a id="Implementation-Roadmap-1"></a><a class="docs-heading-anchor-permalink" href="#Implementation-Roadmap" title="Permalink"></a></h2><h3 id="Phase-1:-Core-Infrastructure-(200-LOC)"><a class="docs-heading-anchor" href="#Phase-1:-Core-Infrastructure-(200-LOC)">Phase 1: Core Infrastructure (~200 LOC)</a><a id="Phase-1:-Core-Infrastructure-(200-LOC)-1"></a><a class="docs-heading-anchor-permalink" href="#Phase-1:-Core-Infrastructure-(200-LOC)" title="Permalink"></a></h3><pre><code class="nohighlight hljs">src/powercore/parameter_system.jl
+├── struct ParameterSlice{T}
+├── struct ParameterizedSystem{T}
+├── add_parameter!()
+├── gather_parameters()
+└── scatter_parameters!()</code></pre><h3 id="Phase-2:-Sparsity-Detection-(150-LOC)"><a class="docs-heading-anchor" href="#Phase-2:-Sparsity-Detection-(150-LOC)">Phase 2: Sparsity Detection (~150 LOC)</a><a id="Phase-2:-Sparsity-Detection-(150-LOC)-1"></a><a class="docs-heading-anchor-permalink" href="#Phase-2:-Sparsity-Detection-(150-LOC)" title="Permalink"></a></h3><pre><code class="nohighlight hljs">src/powercore/parameter_sparsity.jl
+├── compute_parameter_sparsity!()
+├── compute_parameter_jacobian()
+└── extract_residual_vector()</code></pre><h3 id="Phase-3:-Implicit-Differentiation-(100-LOC)"><a class="docs-heading-anchor" href="#Phase-3:-Implicit-Differentiation-(100-LOC)">Phase 3: Implicit Differentiation (~100 LOC)</a><a id="Phase-3:-Implicit-Differentiation-(100-LOC)-1"></a><a class="docs-heading-anchor-permalink" href="#Phase-3:-Implicit-Differentiation-(100-LOC)" title="Permalink"></a></h3><pre><code class="nohighlight hljs">src/powercore/parameter_implicit_diff.jl
+└── ChainRulesCore.rrule(solve_power_flow, psys)</code></pre><h3 id="Phase-4:-Examples-and-Tests"><a class="docs-heading-anchor" href="#Phase-4:-Examples-and-Tests">Phase 4: Examples &amp; Tests</a><a id="Phase-4:-Examples-and-Tests-1"></a><a class="docs-heading-anchor-permalink" href="#Phase-4:-Examples-and-Tests" title="Permalink"></a></h3><pre><code class="nohighlight hljs">examples/
+├── optimize_droop_coefficients.jl
+├── parameter_estimation_pmu.jl
+└── battery_placement_codesign.jl
+
+test/
+├── test_parameter_system.jl
+├── test_parameter_sparsity.jl
+└── test_parameter_gradients.jl</code></pre><p><strong>Total new code</strong>: ~450 lines + tests + examples</p><hr/><h2 id="Summary"><a class="docs-heading-anchor" href="#Summary">Summary</a><a id="Summary-1"></a><a class="docs-heading-anchor-permalink" href="#Summary" title="Permalink"></a></h2><h3 id="Key-Design-Decision"><a class="docs-heading-anchor" href="#Key-Design-Decision">Key Design Decision</a><a id="Key-Design-Decision-1"></a><a class="docs-heading-anchor-permalink" href="#Key-Design-Decision" title="Permalink"></a></h3><p><strong>Use scatter + dispatch (Alternative 2)</strong> because:</p><ol><li>Scatter cost is &lt;0.01% of solve time - negligible</li><li>Type-stable via Julia&#39;s dispatch - zero overhead</li><li>Minimal code changes - ~450 LOC</li><li>Orthogonal to AddressManager - no added complexity</li><li>Clear conceptual model - parameters are inputs, variables are unknowns</li></ol><h3 id="Why-NOT-Addressed-Parameters"><a class="docs-heading-anchor" href="#Why-NOT-Addressed-Parameters">Why NOT Addressed Parameters</a><a id="Why-NOT-Addressed-Parameters-1"></a><a class="docs-heading-anchor-permalink" href="#Why-NOT-Addressed-Parameters" title="Permalink"></a></h3><ul><li>AddressManager is already complex (3 layouts, 4 address types)</li><li>Philosophical mismatch (inputs vs unknowns)</li><li>Two sources of truth (synchronization burden)</li><li>Same O(n_params) cost but higher complexity</li></ul><h3 id="Why-NOT-Functional-Views"><a class="docs-heading-anchor" href="#Why-NOT-Functional-Views">Why NOT Functional Views</a><a id="Why-NOT-Functional-Views-1"></a><a class="docs-heading-anchor-permalink" href="#Why-NOT-Functional-Views" title="Permalink"></a></h3><ul><li>Breaking change (all residual functions)</li><li>High migration cost (100+ files)</li><li>Loses StructArray benefits</li><li>Not worth it for 0.01% performance gain</li></ul><h3 id="Performance-Guarantee"><a class="docs-heading-anchor" href="#Performance-Guarantee">Performance Guarantee</a><a id="Performance-Guarantee-1"></a><a class="docs-heading-anchor-permalink" href="#Performance-Guarantee" title="Permalink"></a></h3><p>For any realistic system with &lt;100,000 parameters:</p><ul><li><strong>Scatter overhead: &lt;0.1% of solve time</strong></li><li><strong>Total gradient: 5-10 seconds</strong> (dominated by ∂g/∂p computation, not scatter)</li><li><strong>Type-stable: zero runtime dispatch overhead</strong></li></ul><p>The design is clean, maintainable, and fast.</p></article><nav class="docs-footer"><p class="footer-message">Powered by <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> and the <a href="https://julialang.org/">Julia Programming Language</a>.</p></nav></div><div class="modal" id="documenter-settings"><div class="modal-background"></div><div class="modal-card"><header class="modal-card-head"><p class="modal-card-title">Settings</p><button class="delete"></button></header><section class="modal-card-body"><p><label class="label">Theme</label><div class="select"><select id="documenter-themepicker"><option value="auto">Automatic (OS)</option><option value="documenter-light">documenter-light</option><option value="documenter-dark">documenter-dark</option><option value="catppuccin-latte">catppuccin-latte</option><option value="catppuccin-frappe">catppuccin-frappe</option><option value="catppuccin-macchiato">catppuccin-macchiato</option><option value="catppuccin-mocha">catppuccin-mocha</option></select></div></p><hr/><p>This document was generated with <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> version 1.16.1 on <span class="colophon-date" title="Wednesday 3 December 2025 12:47">Wednesday 3 December 2025</span>. Using Julia version 1.11.7.</p></section><footer class="modal-card-foot"></footer></div></div></div></body></html>

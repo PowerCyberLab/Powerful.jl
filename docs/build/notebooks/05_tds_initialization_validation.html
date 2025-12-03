@@ -1,0 +1,189 @@
+<!DOCTYPE html>
+<html lang="en"><head><meta charset="UTF-8"/><meta name="viewport" content="width=device-width, initial-scale=1.0"/><title>05 Tds Initialization Validation · Powerful.jl</title><meta name="title" content="05 Tds Initialization Validation · Powerful.jl"/><meta property="og:title" content="05 Tds Initialization Validation · Powerful.jl"/><meta property="twitter:title" content="05 Tds Initialization Validation · Powerful.jl"/><meta name="description" content="Documentation for Powerful.jl."/><meta property="og:description" content="Documentation for Powerful.jl."/><meta property="twitter:description" content="Documentation for Powerful.jl."/><meta property="og:url" content="https://sensl.gitlab.io/Powerful.jl/notebooks/05_tds_initialization_validation.html"/><meta property="twitter:url" content="https://sensl.gitlab.io/Powerful.jl/notebooks/05_tds_initialization_validation.html"/><link rel="canonical" href="https://sensl.gitlab.io/Powerful.jl/notebooks/05_tds_initialization_validation.html"/><script data-outdated-warner src="../assets/warner.js"></script><link href="https://cdnjs.cloudflare.com/ajax/libs/lato-font/3.0.0/css/lato-font.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/juliamono/0.050/juliamono.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/fontawesome.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/solid.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/brands.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.16.8/katex.min.css" rel="stylesheet" type="text/css"/><script>documenterBaseURL=".."</script><script src="https://cdnjs.cloudflare.com/ajax/libs/require.js/2.3.6/require.min.js" data-main="../assets/documenter.js"></script><script src="../search_index.js"></script><script src="../siteinfo.js"></script><script src="../../versions.js"></script><link class="docs-theme-link" rel="stylesheet" type="text/css" href="../assets/themes/catppuccin-mocha.css" data-theme-name="catppuccin-mocha"/><link class="docs-theme-link" rel="stylesheet" type="text/css" href="../assets/themes/catppuccin-macchiato.css" data-theme-name="catppuccin-macchiato"/><link class="docs-theme-link" rel="stylesheet" type="text/css" href="../assets/themes/catppuccin-frappe.css" data-theme-name="catppuccin-frappe"/><link class="docs-theme-link" rel="stylesheet" type="text/css" href="../assets/themes/catppuccin-latte.css" data-theme-name="catppuccin-latte"/><link class="docs-theme-link" rel="stylesheet" type="text/css" href="../assets/themes/documenter-dark.css" data-theme-name="documenter-dark" data-theme-primary-dark/><link class="docs-theme-link" rel="stylesheet" type="text/css" href="../assets/themes/documenter-light.css" data-theme-name="documenter-light" data-theme-primary/><script src="../assets/themeswap.js"></script></head><body><div id="documenter"><nav class="docs-sidebar"><div class="docs-package-name"><span class="docs-autofit"><a href="../index.html">Powerful.jl</a></span></div><button class="docs-search-query input is-rounded is-small is-clickable my-2 mx-auto py-1 px-2" id="documenter-search-query">Search docs (Ctrl + /)</button><ul class="docs-menu"><li><a class="tocitem" href="../index.html">Home</a></li><li><input class="collapse-toggle" id="menuitem-2" type="checkbox"/><label class="tocitem" for="menuitem-2"><span class="docs-label">Guides</span><i class="docs-chevron"></i></label><ul class="collapsed"><li><a class="tocitem" href="../guides/index.html">Overview</a></li><li><a class="tocitem" href="../guides/getting_started.html">Getting Started</a></li><li><a class="tocitem" href="../guides/powerflow.html">Power Flow Analysis</a></li><li><a class="tocitem" href="../guides/tds.html">Time-Domain Simulation</a></li><li><a class="tocitem" href="../guides/configuration.html">Configuration</a></li><li><a class="tocitem" href="../guides/accessing_variables.html">Accessing Results</a></li><li><a class="tocitem" href="../guides/reports.html">Report Customization</a></li></ul></li><li><input class="collapse-toggle" id="menuitem-3" type="checkbox" checked/><label class="tocitem" for="menuitem-3"><span class="docs-label">Notebooks</span><i class="docs-chevron"></i></label><ul class="collapsed"><li><a class="tocitem" href="index.html">Overview</a></li><li><a class="tocitem" href="01_getting_started.html">01 Getting Started</a></li><li><a class="tocitem" href="02_formulations_and_solvers.html">02 Formulations And Solvers</a></li><li><a class="tocitem" href="03_gpu_acceleration.html">03 Gpu Acceleration</a></li><li><a class="tocitem" href="03_multi_island_power_flow.html">03 Multi Island Power Flow</a></li><li><a class="tocitem" href="04_multi_island_power_flow.html">04 Multi Island Power Flow</a></li><li class="is-active"><a class="tocitem" href="05_tds_initialization_validation.html">05 Tds Initialization Validation</a><ul class="internal"><li><a class="tocitem" href="#Setup"><span>Setup</span></a></li><li><a class="tocitem" href="#Why-Validation-Matters"><span>Why Validation Matters</span></a></li><li><a class="tocitem" href="#1.-Load-System-and-Solve-Power-Flow"><span>1. Load System and Solve Power Flow</span></a></li><li><a class="tocitem" href="#2.-Identify-Generator-Buses"><span>2. Identify Generator Buses</span></a></li><li><a class="tocitem" href="#3.-Create-Dynamic-Models"><span>3. Create Dynamic Models</span></a></li><li><a class="tocitem" href="#4.-Create-TDS-Problem"><span>4. Create TDS Problem</span></a></li><li><a class="tocitem" href="#5.-Validate-Initialization"><span>5. Validate Initialization</span></a></li><li><a class="tocitem" href="#6.-Inspect-Validation-Report"><span>6. Inspect Validation Report</span></a></li><li><a class="tocitem" href="#7.-Understanding-Residuals"><span>7. Understanding Residuals</span></a></li><li><a class="tocitem" href="#8.-What-If-Validation-Fails?"><span>8. What If Validation Fails?</span></a></li><li><a class="tocitem" href="#9.-Save-Validation-Report"><span>9. Save Validation Report</span></a></li><li><a class="tocitem" href="#10.-Inspect-Initial-States"><span>10. Inspect Initial States</span></a></li><li><a class="tocitem" href="#11.-Verify-System-Composition"><span>11. Verify System Composition</span></a></li><li><a class="tocitem" href="#12.-Compare-Generator-Counts"><span>12. Compare Generator Counts</span></a></li><li><a class="tocitem" href="#Summary"><span>Summary</span></a></li></ul></li></ul></li><li><input class="collapse-toggle" id="menuitem-4" type="checkbox"/><label class="tocitem" for="menuitem-4"><span class="docs-label">Developer Documentation</span><i class="docs-chevron"></i></label><ul class="collapsed"><li><a class="tocitem" href="../developer/overview.html">Overview</a></li><li><a class="tocitem" href="../developer/indexing.html">Three-Layer Indexing</a></li><li><a class="tocitem" href="../developer/formulations.html">Multi-Physics Formulations</a></li><li><a class="tocitem" href="../developer/workspaces.html">Computation Architecture</a></li><li><a class="tocitem" href="../developer/models.html">Implementing Models</a></li><li><a class="tocitem" href="../developer/events.html">TDS Event System</a></li><li><a class="tocitem" href="../developer/miscellaneous.html">Per-Unit &amp; Multi-Island</a></li></ul></li><li><input class="collapse-toggle" id="menuitem-5" type="checkbox"/><label class="tocitem" for="menuitem-5"><span class="docs-label">API Reference</span><i class="docs-chevron"></i></label><ul class="collapsed"><li><a class="tocitem" href="../api.html">Overview</a></li><li><a class="tocitem" href="../api/system.html">System &amp; DAE</a></li><li><a class="tocitem" href="../api/models.html">Models</a></li><li><a class="tocitem" href="../api/powerflow.html">Power Flow</a></li><li><a class="tocitem" href="../api/tds.html">Time-Domain Simulation</a></li><li><a class="tocitem" href="../api/advanced.html">Advanced Features</a></li></ul></li><li><a class="tocitem" href="../index_page.html">Index</a></li></ul><div class="docs-version-selector field has-addons"><div class="control"><span class="docs-label button is-static is-size-7">Version</span></div><div class="docs-selector control is-expanded"><div class="select is-fullwidth is-size-7"><select id="documenter-version-selector"></select></div></div></div></nav><div class="docs-main"><header class="docs-navbar"><a class="docs-sidebar-button docs-navbar-link fa-solid fa-bars is-hidden-desktop" id="documenter-sidebar-button" href="#"></a><nav class="breadcrumb"><ul class="is-hidden-mobile"><li><a class="is-disabled">Notebooks</a></li><li class="is-active"><a href="05_tds_initialization_validation.html">05 Tds Initialization Validation</a></li></ul><ul class="is-hidden-tablet"><li class="is-active"><a href="05_tds_initialization_validation.html">05 Tds Initialization Validation</a></li></ul></nav><div class="docs-right"><a class="docs-navbar-link" href="https://github.com/sensl/Powerful.jl/blob/main/docs/src/notebooks/05_tds_initialization_validation.md#" title="Edit source on GitHub"><span class="docs-icon fa-solid"></span></a><a class="docs-settings-button docs-navbar-link fa-solid fa-gear" id="documenter-settings-button" href="#" title="Settings"></a><a class="docs-article-toggle-button fa-solid fa-chevron-up" id="documenter-article-toggle-button" href="javascript:;" title="Collapse all docstrings"></a></div></header><article class="content" id="documenter-page"><h1 id="TDS-Initialization-Validation"><a class="docs-heading-anchor" href="#TDS-Initialization-Validation">TDS Initialization Validation</a><a id="TDS-Initialization-Validation-1"></a><a class="docs-heading-anchor-permalink" href="#TDS-Initialization-Validation" title="Permalink"></a></h1><p>Learn how to validate time-domain simulation (TDS) initialization and diagnose steady-state issues.</p><h2 id="Setup"><a class="docs-heading-anchor" href="#Setup">Setup</a><a id="Setup-1"></a><a class="docs-heading-anchor-permalink" href="#Setup" title="Permalink"></a></h2><pre><code class="language-julia hljs">using Powerful
+using Powerful.PowerFlowData
+using Powerful.Models: GENCLS
+using StructArrays
+using DataFrames</code></pre><h2 id="Why-Validation-Matters"><a class="docs-heading-anchor" href="#Why-Validation-Matters">Why Validation Matters</a><a id="Why-Validation-Matters-1"></a><a class="docs-heading-anchor-permalink" href="#Why-Validation-Matters" title="Permalink"></a></h2><p>Time-domain simulations start from a steady-state operating point. If the initial conditions don&#39;t satisfy the DAE (differential-algebraic equation) residuals f=0 and g=0, the simulation will have undesirable initial transients before applying disturbances.</p><p><strong>Common issues:</strong></p><ul><li>Incorrect generator initialization</li><li>Missing dynamic models for critical buses</li><li>Inconsistent power flow and dynamic model data</li></ul><p><strong>Solution:</strong> Use validation tools to catch these errors before time-stepping begins.</p><h2 id="1.-Load-System-and-Solve-Power-Flow"><a class="docs-heading-anchor" href="#1.-Load-System-and-Solve-Power-Flow">1. Load System and Solve Power Flow</a><a id="1.-Load-System-and-Solve-Power-Flow-1"></a><a class="docs-heading-anchor-permalink" href="#1.-Load-System-and-Solve-Power-Flow" title="Permalink"></a></h2><pre><code class="language-julia hljs"># Load IEEE 14-bus test case
+case = PowerFlowData.parse_network(joinpath(pkgdir(Powerful), &quot;cases&quot;, &quot;ieee14.raw&quot;))
+sys_pf = SystemModel(case)
+
+# Solve power flow (establishes steady-state)
+prob_pf = ACPowerFlowProblem(sys_pf)
+sol_pf = solve(prob_pf, NewtonRaphson())
+
+println(&quot;Power flow converged: &quot;, sol_pf.converged)
+println(&quot;Iterations: &quot;, sol_pf.iterations)</code></pre><pre><code class="nohighlight hljs">Power flow converged: true
+Iterations: 4</code></pre><h2 id="2.-Identify-Generator-Buses"><a class="docs-heading-anchor" href="#2.-Identify-Generator-Buses">2. Identify Generator Buses</a><a id="2.-Identify-Generator-Buses-1"></a><a class="docs-heading-anchor-permalink" href="#2.-Identify-Generator-Buses" title="Permalink"></a></h2><p>Dynamic models replace static generator models (Slack, PV) at selected buses.</p><pre><code class="language-julia hljs"># Get generator bus numbers
+slack_models = sys_pf.models[:Slack]
+pv_models = sys_pf.models[:PV]
+
+slack_bus = slack_models.i[1]  ## Slack bus number
+pv_buses = pv_models.i         ## PV bus numbers
+
+println(&quot;Slack bus: $slack_bus&quot;)
+println(&quot;PV buses: $pv_buses&quot;)
+println(&quot;Total generators: &quot;, 1 + length(pv_buses))</code></pre><pre><code class="nohighlight hljs">Slack bus: 1
+PV buses: Int32[2, 3, 6, 8]
+Total generators: 5</code></pre><h2 id="3.-Create-Dynamic-Models"><a class="docs-heading-anchor" href="#3.-Create-Dynamic-Models">3. Create Dynamic Models</a><a id="3.-Create-Dynamic-Models-1"></a><a class="docs-heading-anchor-permalink" href="#3.-Create-Dynamic-Models" title="Permalink"></a></h2><p>Replace all generators with classical machine models (GENCLS). This is the recommended approach for TDS.</p><pre><code class="language-julia hljs"># Combine all generator buses
+gen_buses = vcat(slack_bus, pv_buses)
+
+# Create GENCLS models for each generator
+gencls_array = [
+    GENCLS(
+        BUS = gen_buses[i],
+        ID = &quot;1&quot;,
+        H = 5.0,      ## Inertia constant (seconds)
+        D = 0.0,      ## Damping coefficient
+        xd_p = 0.3,   ## Transient reactance (pu)
+        status = true
+    )
+    for i in eachindex(gen_buses)
+]
+
+# Convert to StructArray (required format)
+gencls_models = StructArray(gencls_array)
+dynamic_models = (GENCLS = gencls_models,)
+
+println(&quot;Created $(length(gencls_models)) GENCLS models&quot;)</code></pre><pre><code class="nohighlight hljs">Created 5 GENCLS models</code></pre><h2 id="4.-Create-TDS-Problem"><a class="docs-heading-anchor" href="#4.-Create-TDS-Problem">4. Create TDS Problem</a><a id="4.-Create-TDS-Problem-1"></a><a class="docs-heading-anchor-permalink" href="#4.-Create-TDS-Problem" title="Permalink"></a></h2><p>The TDSProblem initializes dynamic states based on the power flow solution.</p><pre><code class="language-julia hljs">prob = TDSProblem(sys_pf, sol_pf, dynamic_models; tspan=(0.0, 10.0))
+
+println(&quot;TDS problem created for $(length(gencls_models)) dynamic generators&quot;)</code></pre><pre><code class="nohighlight hljs">TDS problem created for 5 dynamic generators</code></pre><h2 id="5.-Validate-Initialization"><a class="docs-heading-anchor" href="#5.-Validate-Initialization">5. Validate Initialization</a><a id="5.-Validate-Initialization-1"></a><a class="docs-heading-anchor-permalink" href="#5.-Validate-Initialization" title="Permalink"></a></h2><p>Check that all residuals are zero at t=0 (steady-state).</p><pre><code class="language-julia hljs">result = validate_tds_initialization(prob; atol=1e-6)
+
+println(&quot;\nValidation result:&quot;)
+println(&quot;  Valid: &quot;, result.is_valid)
+println(&quot;  Max differential residual: &quot;, result.max_diff_residual)
+println(&quot;  Max algebraic residual: &quot;, result.max_alg_residual)</code></pre><pre><code class="nohighlight hljs">Validation result:
+  Valid: true
+  Max differential residual: 5.551115123125783e-17
+  Max algebraic residual: 3.2540081740251026e-12</code></pre><h2 id="6.-Inspect-Validation-Report"><a class="docs-heading-anchor" href="#6.-Inspect-Validation-Report">6. Inspect Validation Report</a><a id="6.-Inspect-Validation-Report-1"></a><a class="docs-heading-anchor-permalink" href="#6.-Inspect-Validation-Report" title="Permalink"></a></h2><p>Print detailed diagnostics if validation fails.</p><pre><code class="language-julia hljs">print_validation_report(result)</code></pre><pre><code class="nohighlight hljs">======================================================================
+TDS Initialization Validation Report
+======================================================================
+✓ All residuals within tolerance
+  Max differential residual: 5.55e-17
+  Max algebraic residual:    3.25e-12</code></pre><h2 id="7.-Understanding-Residuals"><a class="docs-heading-anchor" href="#7.-Understanding-Residuals">7. Understanding Residuals</a><a id="7.-Understanding-Residuals-1"></a><a class="docs-heading-anchor-permalink" href="#7.-Understanding-Residuals" title="Permalink"></a></h2><p><strong>Differential residuals (f):</strong> Time derivatives of state variables (e.g., δ̇, ω̇)</p><ul><li>Should be zero at steady-state (no acceleration)</li><li>Non-zero indicates initial transient</li></ul><p><strong>Algebraic residuals (g):</strong> Power balance equations</p><ul><li>Should be zero at all times</li><li>Non-zero indicates power flow mismatch</li></ul><pre><code class="language-julia hljs">if result.is_valid
+    println(&quot;\n✓ Initialization passed - ready for time-domain simulation&quot;)
+else
+    println(&quot;\n✗ Initialization failed - check report above&quot;)
+end</code></pre><pre><code class="nohighlight hljs">✓ Initialization passed - ready for time-domain simulation</code></pre><h2 id="8.-What-If-Validation-Fails?"><a class="docs-heading-anchor" href="#8.-What-If-Validation-Fails?">8. What If Validation Fails?</a><a id="8.-What-If-Validation-Fails?-1"></a><a class="docs-heading-anchor-permalink" href="#8.-What-If-Validation-Fails?" title="Permalink"></a></h2><p><strong>Common causes:</strong></p><ol><li><strong>Missing dynamic models</strong>: Some generators still use static (Slack/PV) models</li><li><strong>Incorrect parameters</strong>: Generator reactance or inertia values mismatch</li><li><strong>Power flow mismatch</strong>: Dynamic model injections ≠ static model injections</li></ol><p><strong>Example: Intentional failure</strong> (replace only one generator)</p><pre><code class="language-julia hljs"># Create problem with only 1 GENCLS (others remain static)
+gen_buses_partial = [slack_bus]  ## Only replace slack
+gencls_partial = StructArray([
+    GENCLS(BUS = slack_bus, ID = &quot;1&quot;, H = 5.0, D = 0.0, xd_p = 0.3, status = true)
+])
+dynamic_models_partial = (GENCLS = gencls_partial,)
+
+prob_partial = TDSProblem(sys_pf, sol_pf, dynamic_models_partial; tspan=(0.0, 10.0))
+result_partial = validate_tds_initialization(prob_partial; atol=1e-6)
+
+println(&quot;\nPartial replacement validation:&quot;)
+println(&quot;  Valid: &quot;, result_partial.is_valid)
+println(&quot;  (Expected: true - network models handle remaining generators)&quot;)</code></pre><pre><code class="nohighlight hljs">Partial replacement validation:
+  Valid: true
+  (Expected: true - network models handle remaining generators)</code></pre><h2 id="9.-Save-Validation-Report"><a class="docs-heading-anchor" href="#9.-Save-Validation-Report">9. Save Validation Report</a><a id="9.-Save-Validation-Report-1"></a><a class="docs-heading-anchor-permalink" href="#9.-Save-Validation-Report" title="Permalink"></a></h2><p>Export diagnostics to file for documentation or debugging.</p><pre><code class="language-julia hljs">write_validation_report(result, &quot;validation_report.txt&quot;)
+println(&quot;\n✓ Validation report saved to: validation_report.txt&quot;)</code></pre><pre><code class="nohighlight hljs">[ Info: Validation report written to validation_report.txt
+
+✓ Validation report saved to: validation_report.txt</code></pre><h2 id="10.-Inspect-Initial-States"><a class="docs-heading-anchor" href="#10.-Inspect-Initial-States">10. Inspect Initial States</a><a id="10.-Inspect-Initial-States-1"></a><a class="docs-heading-anchor-permalink" href="#10.-Inspect-Initial-States" title="Permalink"></a></h2><p>View the computed initial conditions for dynamic models in a formatted table.</p><pre><code class="language-julia hljs"># Print all instances and all state variables
+print_initialization_summary(prob)
+
+# Filter by instance keys (show only specific generators)
+println(&quot;\n--- Filtered: First two generators ---&quot;)
+print_initialization_summary(prob; keys = Dict(:GENCLS =&gt; [(1, &quot;1&quot;), (2, &quot;1&quot;)]))
+
+# Filter by state variables (show only delta and omega)
+println(&quot;\n--- Filtered: Only delta and omega ---&quot;)
+print_initialization_summary(prob; vars = [:delta, :omega])
+
+# Include output variables (P_e, Q_e) - requires residual evaluation
+println(&quot;\n--- With output variables (P_e, Q_e) ---&quot;)
+print_initialization_summary(prob; vars = [:delta, :omega, :P_e, :Q_e], include_output_vars = true)</code></pre><pre><code class="nohighlight hljs">======================================================================
+TDS Initialization Summary
+======================================================================
+
+GENCLS: 5 instances
+----------------------------------------------------------------------
+┌─────┬────┬───────────┬──────────┬───────────┬──────────┬──────────┬───────────┬──────────┬──────────┐
+│ BUS │ ID │     delta │    omega │       I_d │      I_q │    psi_d │     psi_q │      P_m │      E_q │
+├─────┼────┼───────────┼──────────┼───────────┼──────────┼──────────┼───────────┼──────────┼──────────┤
+│   1 │  1 │  0.240265 │ 1.000000 │ -0.001447 │ 0.816995 │ 1.000413 │ -0.245099 │ 0.816978 │ 0.999979 │
+│   2 │  1 │  0.071603 │ 1.000000 │  0.380370 │ 0.351276 │ 1.024595 │ -0.105383 │ 0.400000 │ 1.138706 │
+│   3 │  1 │  0.050109 │ 1.000000 │  0.196981 │ 0.376378 │ 1.003669 │ -0.112913 │ 0.400000 │ 1.062763 │
+│   6 │  1 │ -0.041486 │ 1.000000 │  0.400352 │ 0.261526 │ 1.027007 │ -0.078458 │ 0.300000 │ 1.147113 │
+│   8 │  1 │  0.072279 │ 1.000000 │  0.195314 │ 0.322869 │ 1.025436 │ -0.096861 │ 0.350000 │ 1.084030 │
+└─────┴────┴───────────┴──────────┴───────────┴──────────┴──────────┴───────────┴──────────┴──────────┘
+
+======================================================================
+
+--- Filtered: First two generators ---
+
+======================================================================
+TDS Initialization Summary
+======================================================================
+
+GENCLS: 2 instances
+----------------------------------------------------------------------
+┌─────┬────┬──────────┬──────────┬───────────┬──────────┬──────────┬───────────┬──────────┬──────────┐
+│ BUS │ ID │    delta │    omega │       I_d │      I_q │    psi_d │     psi_q │      P_m │      E_q │
+├─────┼────┼──────────┼──────────┼───────────┼──────────┼──────────┼───────────┼──────────┼──────────┤
+│   1 │  1 │ 0.240265 │ 1.000000 │ -0.001447 │ 0.816995 │ 1.000413 │ -0.245099 │ 0.816978 │ 0.999979 │
+│   2 │  1 │ 0.071603 │ 1.000000 │  0.380370 │ 0.351276 │ 1.024595 │ -0.105383 │ 0.400000 │ 1.138706 │
+└─────┴────┴──────────┴──────────┴───────────┴──────────┴──────────┴───────────┴──────────┴──────────┘
+
+======================================================================
+
+--- Filtered: Only delta and omega ---
+
+======================================================================
+TDS Initialization Summary
+======================================================================
+
+GENCLS: 5 instances
+----------------------------------------------------------------------
+┌─────┬────┬───────────┬──────────┐
+│ BUS │ ID │     delta │    omega │
+├─────┼────┼───────────┼──────────┤
+│   1 │  1 │  0.240265 │ 1.000000 │
+│   2 │  1 │  0.071603 │ 1.000000 │
+│   3 │  1 │  0.050109 │ 1.000000 │
+│   6 │  1 │ -0.041486 │ 1.000000 │
+│   8 │  1 │  0.072279 │ 1.000000 │
+└─────┴────┴───────────┴──────────┘
+
+======================================================================
+
+--- With output variables (P_e, Q_e) ---
+
+======================================================================
+TDS Initialization Summary
+======================================================================
+
+GENCLS: 5 instances
+----------------------------------------------------------------------
+┌─────┬────┬───────────┬──────────┬──────────┬───────────┐
+│ BUS │ ID │     delta │    omega │      P_e │       Q_e │
+├─────┼────┼───────────┼──────────┼──────────┼───────────┤
+│   1 │  1 │  0.240265 │ 1.000000 │ 0.816978 │ -0.201692 │
+│   2 │  1 │  0.071603 │ 1.000000 │ 0.400000 │  0.352707 │
+│   3 │  1 │  0.050109 │ 1.000000 │ 0.400000 │  0.155205 │
+│   6 │  1 │ -0.041486 │ 1.000000 │ 0.300000 │  0.390645 │
+│   8 │  1 │  0.072279 │ 1.000000 │ 0.350000 │  0.169009 │
+└─────┴────┴───────────┴──────────┴──────────┴───────────┘
+
+======================================================================</code></pre><h2 id="11.-Verify-System-Composition"><a class="docs-heading-anchor" href="#11.-Verify-System-Composition">11. Verify System Composition</a><a id="11.-Verify-System-Composition-1"></a><a class="docs-heading-anchor-permalink" href="#11.-Verify-System-Composition" title="Permalink"></a></h2><p>After dynamic model replacement, verify which models remain in the system.</p><pre><code class="language-julia hljs"># Create ADCache to access model workspaces
+adcache = ADCache(prob.address_manager, prob.sys, prob.formulation)
+
+println(&quot;\nTDS model composition:&quot;)
+for (model_name, workspace) in pairs(adcache.float_ws.model_workspaces)
+    n = length(prob.sys.models[model_name])
+    if n &gt; 0
+        println(&quot;  $model_name: $n instances&quot;)
+    end
+end</code></pre><pre><code class="nohighlight hljs">TDS model composition:
+  Branch: 16 instances
+  Transformer2W: 4 instances
+  Bus: 14 instances
+  PQ: 11 instances
+  GENCLS: 5 instances</code></pre><h2 id="12.-Compare-Generator-Counts"><a class="docs-heading-anchor" href="#12.-Compare-Generator-Counts">12. Compare Generator Counts</a><a id="12.-Compare-Generator-Counts-1"></a><a class="docs-heading-anchor-permalink" href="#12.-Compare-Generator-Counts" title="Permalink"></a></h2><p>Show how dynamic models replace static generators.</p><pre><code class="language-julia hljs">println(&quot;\nTDS system generator composition:&quot;)
+println(&quot;  Slack: $(length(prob.sys.models[:Slack])) (replaced)&quot;)
+println(&quot;  PV: $(length(prob.sys.models[:PV])) (replaced)&quot;)
+println(&quot;  GENCLS: $(length(prob.sys.models[:GENCLS])) (dynamic)&quot;)</code></pre><pre><code class="nohighlight hljs">TDS system generator composition:
+  Slack: 0 (replaced)
+  PV: 0 (replaced)
+  GENCLS: 5 (dynamic)</code></pre><h2 id="Summary"><a class="docs-heading-anchor" href="#Summary">Summary</a><a id="Summary-1"></a><a class="docs-heading-anchor-permalink" href="#Summary" title="Permalink"></a></h2><p><strong>Key takeaways:</strong></p><ol><li>Always validate TDS initialization before running simulations</li><li>Use <code>validate_tds_initialization(prob)</code> to check residuals</li><li>Aim for <code>max_residual &lt; 1e-6</code> for accurate simulations</li><li>Replace all generators with dynamic models for consistent results</li><li>Export reports for documentation and debugging</li></ol><p><strong>Next steps:</strong></p><ul><li>Run time-domain simulations (see TDS guide)</li><li>Apply disturbances (line trips, load changes)</li><li>Analyze transient stability</li></ul><hr/><p><em>This notebook was generated using <a href="https://github.com/fredrikekre/Literate.jl">Literate.jl</a>.</em></p></article><nav class="docs-footer"><a class="docs-footer-prevpage" href="04_multi_island_power_flow.html">« 04 Multi Island Power Flow</a><a class="docs-footer-nextpage" href="../developer/overview.html">Overview »</a><div class="flexbox-break"></div><p class="footer-message">Powered by <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> and the <a href="https://julialang.org/">Julia Programming Language</a>.</p></nav></div><div class="modal" id="documenter-settings"><div class="modal-background"></div><div class="modal-card"><header class="modal-card-head"><p class="modal-card-title">Settings</p><button class="delete"></button></header><section class="modal-card-body"><p><label class="label">Theme</label><div class="select"><select id="documenter-themepicker"><option value="auto">Automatic (OS)</option><option value="documenter-light">documenter-light</option><option value="documenter-dark">documenter-dark</option><option value="catppuccin-latte">catppuccin-latte</option><option value="catppuccin-frappe">catppuccin-frappe</option><option value="catppuccin-macchiato">catppuccin-macchiato</option><option value="catppuccin-mocha">catppuccin-mocha</option></select></div></p><hr/><p>This document was generated with <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> version 1.16.1 on <span class="colophon-date" title="Wednesday 3 December 2025 12:47">Wednesday 3 December 2025</span>. Using Julia version 1.11.7.</p></section><footer class="modal-card-foot"></footer></div></div></div></body></html>

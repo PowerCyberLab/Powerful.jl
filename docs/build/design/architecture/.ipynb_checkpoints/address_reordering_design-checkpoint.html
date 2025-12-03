@@ -1,0 +1,133 @@
+<!DOCTYPE html>
+<html lang="en"><head><meta charset="UTF-8"/><meta name="viewport" content="width=device-width, initial-scale=1.0"/><title>Address Reordering for Optimal Sparse Factorization · Powerful.jl</title><meta name="title" content="Address Reordering for Optimal Sparse Factorization · Powerful.jl"/><meta property="og:title" content="Address Reordering for Optimal Sparse Factorization · Powerful.jl"/><meta property="twitter:title" content="Address Reordering for Optimal Sparse Factorization · Powerful.jl"/><meta name="description" content="Documentation for Powerful.jl."/><meta property="og:description" content="Documentation for Powerful.jl."/><meta property="twitter:description" content="Documentation for Powerful.jl."/><meta property="og:url" content="https://sensl.gitlab.io/Powerful.jl/design/architecture/.ipynb_checkpoints/address_reordering_design-checkpoint.html"/><meta property="twitter:url" content="https://sensl.gitlab.io/Powerful.jl/design/architecture/.ipynb_checkpoints/address_reordering_design-checkpoint.html"/><link rel="canonical" href="https://sensl.gitlab.io/Powerful.jl/design/architecture/.ipynb_checkpoints/address_reordering_design-checkpoint.html"/><script data-outdated-warner src="../../../assets/warner.js"></script><link href="https://cdnjs.cloudflare.com/ajax/libs/lato-font/3.0.0/css/lato-font.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/juliamono/0.050/juliamono.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/fontawesome.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/solid.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/brands.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.16.8/katex.min.css" rel="stylesheet" type="text/css"/><script>documenterBaseURL="../../.."</script><script src="https://cdnjs.cloudflare.com/ajax/libs/require.js/2.3.6/require.min.js" data-main="../../../assets/documenter.js"></script><script src="../../../search_index.js"></script><script src="../../../siteinfo.js"></script><script src="../../../../versions.js"></script><link class="docs-theme-link" rel="stylesheet" type="text/css" href="../../../assets/themes/catppuccin-mocha.css" data-theme-name="catppuccin-mocha"/><link class="docs-theme-link" rel="stylesheet" type="text/css" href="../../../assets/themes/catppuccin-macchiato.css" data-theme-name="catppuccin-macchiato"/><link class="docs-theme-link" rel="stylesheet" type="text/css" href="../../../assets/themes/catppuccin-frappe.css" data-theme-name="catppuccin-frappe"/><link class="docs-theme-link" rel="stylesheet" type="text/css" href="../../../assets/themes/catppuccin-latte.css" data-theme-name="catppuccin-latte"/><link class="docs-theme-link" rel="stylesheet" type="text/css" href="../../../assets/themes/documenter-dark.css" data-theme-name="documenter-dark" data-theme-primary-dark/><link class="docs-theme-link" rel="stylesheet" type="text/css" href="../../../assets/themes/documenter-light.css" data-theme-name="documenter-light" data-theme-primary/><script src="../../../assets/themeswap.js"></script></head><body><div id="documenter"><nav class="docs-sidebar"><div class="docs-package-name"><span class="docs-autofit"><a href="../../../index.html">Powerful.jl</a></span></div><button class="docs-search-query input is-rounded is-small is-clickable my-2 mx-auto py-1 px-2" id="documenter-search-query">Search docs (Ctrl + /)</button><ul class="docs-menu"><li><a class="tocitem" href="../../../index.html">Home</a></li><li><input class="collapse-toggle" id="menuitem-2" type="checkbox"/><label class="tocitem" for="menuitem-2"><span class="docs-label">Guides</span><i class="docs-chevron"></i></label><ul class="collapsed"><li><a class="tocitem" href="../../../guides/index.html">Overview</a></li><li><a class="tocitem" href="../../../guides/getting_started.html">Getting Started</a></li><li><a class="tocitem" href="../../../guides/powerflow.html">Power Flow Analysis</a></li><li><a class="tocitem" href="../../../guides/tds.html">Time-Domain Simulation</a></li><li><a class="tocitem" href="../../../guides/configuration.html">Configuration</a></li><li><a class="tocitem" href="../../../guides/accessing_variables.html">Accessing Results</a></li><li><a class="tocitem" href="../../../guides/reports.html">Report Customization</a></li></ul></li><li><input class="collapse-toggle" id="menuitem-3" type="checkbox"/><label class="tocitem" for="menuitem-3"><span class="docs-label">Notebooks</span><i class="docs-chevron"></i></label><ul class="collapsed"><li><a class="tocitem" href="../../../notebooks/index.html">Overview</a></li><li><a class="tocitem" href="../../../notebooks/01_getting_started.html">01 Getting Started</a></li><li><a class="tocitem" href="../../../notebooks/02_formulations_and_solvers.html">02 Formulations And Solvers</a></li><li><a class="tocitem" href="../../../notebooks/03_gpu_acceleration.html">03 Gpu Acceleration</a></li><li><a class="tocitem" href="../../../notebooks/03_multi_island_power_flow.html">03 Multi Island Power Flow</a></li><li><a class="tocitem" href="../../../notebooks/04_multi_island_power_flow.html">04 Multi Island Power Flow</a></li><li><a class="tocitem" href="../../../notebooks/05_tds_initialization_validation.html">05 Tds Initialization Validation</a></li></ul></li><li><input class="collapse-toggle" id="menuitem-4" type="checkbox"/><label class="tocitem" for="menuitem-4"><span class="docs-label">Developer Documentation</span><i class="docs-chevron"></i></label><ul class="collapsed"><li><a class="tocitem" href="../../../developer/overview.html">Overview</a></li><li><a class="tocitem" href="../../../developer/indexing.html">Three-Layer Indexing</a></li><li><a class="tocitem" href="../../../developer/formulations.html">Multi-Physics Formulations</a></li><li><a class="tocitem" href="../../../developer/workspaces.html">Computation Architecture</a></li><li><a class="tocitem" href="../../../developer/models.html">Implementing Models</a></li><li><a class="tocitem" href="../../../developer/events.html">TDS Event System</a></li><li><a class="tocitem" href="../../../developer/miscellaneous.html">Per-Unit &amp; Multi-Island</a></li></ul></li><li><input class="collapse-toggle" id="menuitem-5" type="checkbox"/><label class="tocitem" for="menuitem-5"><span class="docs-label">API Reference</span><i class="docs-chevron"></i></label><ul class="collapsed"><li><a class="tocitem" href="../../../api.html">Overview</a></li><li><a class="tocitem" href="../../../api/system.html">System &amp; DAE</a></li><li><a class="tocitem" href="../../../api/models.html">Models</a></li><li><a class="tocitem" href="../../../api/powerflow.html">Power Flow</a></li><li><a class="tocitem" href="../../../api/tds.html">Time-Domain Simulation</a></li><li><a class="tocitem" href="../../../api/advanced.html">Advanced Features</a></li></ul></li><li><a class="tocitem" href="../../../index_page.html">Index</a></li></ul><div class="docs-version-selector field has-addons"><div class="control"><span class="docs-label button is-static is-size-7">Version</span></div><div class="docs-selector control is-expanded"><div class="select is-fullwidth is-size-7"><select id="documenter-version-selector"></select></div></div></div></nav><div class="docs-main"><header class="docs-navbar"><a class="docs-sidebar-button docs-navbar-link fa-solid fa-bars is-hidden-desktop" id="documenter-sidebar-button" href="#"></a><nav class="breadcrumb"><ul class="is-hidden-mobile"><li class="is-active"><a href="address_reordering_design-checkpoint.html">Address Reordering for Optimal Sparse Factorization</a></li></ul><ul class="is-hidden-tablet"><li class="is-active"><a href="address_reordering_design-checkpoint.html">Address Reordering for Optimal Sparse Factorization</a></li></ul></nav><div class="docs-right"><a class="docs-navbar-link" href="https://github.com/sensl/Powerful.jl/blob/main/docs/src/design/architecture/.ipynb_checkpoints/address_reordering_design-checkpoint.md#" title="Edit source on GitHub"><span class="docs-icon fa-solid"></span></a><a class="docs-settings-button docs-navbar-link fa-solid fa-gear" id="documenter-settings-button" href="#" title="Settings"></a><a class="docs-article-toggle-button fa-solid fa-chevron-up" id="documenter-article-toggle-button" href="javascript:;" title="Collapse all docstrings"></a></div></header><article class="content" id="documenter-page"><h1 id="Address-Reordering-for-Optimal-Sparse-Factorization"><a class="docs-heading-anchor" href="#Address-Reordering-for-Optimal-Sparse-Factorization">Address Reordering for Optimal Sparse Factorization</a><a id="Address-Reordering-for-Optimal-Sparse-Factorization-1"></a><a class="docs-heading-anchor-permalink" href="#Address-Reordering-for-Optimal-Sparse-Factorization" title="Permalink"></a></h1><h2 id="Motivation"><a class="docs-heading-anchor" href="#Motivation">Motivation</a><a id="Motivation-1"></a><a class="docs-heading-anchor-permalink" href="#Motivation" title="Permalink"></a></h2><p>The current address assignment is sequential: all <code>theta[1:n]</code>, then all <code>v[1:n]</code>. This ordering is simple but not optimal for sparse matrix factorization. AMD (Approximate Minimum Degree) ordering can significantly reduce fill-in during factorization, improving both memory usage and computational efficiency.</p><h2 id="Key-Insight"><a class="docs-heading-anchor" href="#Key-Insight">Key Insight</a><a id="Key-Insight-1"></a><a class="docs-heading-anchor-permalink" href="#Key-Insight" title="Permalink"></a></h2><p>For power flow problems, the Jacobian sparsity pattern can be determined from <strong>connectivity alone</strong>:</p><ul><li>Bus variables: <code>theta[i]</code>, <code>v[i]</code> for each bus <code>i</code></li><li>Bus residuals: <code>p[i]</code>, <code>q[i]</code> for each bus <code>i</code></li><li>Self-coupling: Each bus&#39;s residuals depend on its own variables (diagonal blocks)</li><li>Network coupling: Branches/transformers create off-diagonal dependencies between connected buses</li></ul><p>This allows us to:</p><ol><li>Build the sparsity pattern <strong>before</strong> address assignment (from connectivity data)</li><li>Run AMD to get optimal ordering</li><li>Assign addresses according to this ordering</li><li>Provide permutation to KLU to skip internal AMD</li></ol><h2 id="Architecture"><a class="docs-heading-anchor" href="#Architecture">Architecture</a><a id="Architecture-1"></a><a class="docs-heading-anchor-permalink" href="#Architecture" title="Permalink"></a></h2><h3 id="Three-Stage-Process"><a class="docs-heading-anchor" href="#Three-Stage-Process">Three-Stage Process</a><a id="Three-Stage-Process-1"></a><a class="docs-heading-anchor-permalink" href="#Three-Stage-Process" title="Permalink"></a></h3><pre><code class="language-julia hljs"># Stage 1: Connectivity-based sparsity (BEFORE addressing)
+pattern = build_topology_sparsity(models)  # Only needs bus/branch connectivity
+
+# Stage 2: AMD ordering
+perm = amd_ordering(pattern)  # Get optimal permutation
+
+# Stage 3: Readdressing
+assign_address!(am, models, perm)  # Assign addresses using permutation</code></pre><h3 id="Connectivity-Based-Sparsity-Pattern"><a class="docs-heading-anchor" href="#Connectivity-Based-Sparsity-Pattern">Connectivity-Based Sparsity Pattern</a><a id="Connectivity-Based-Sparsity-Pattern-1"></a><a class="docs-heading-anchor-permalink" href="#Connectivity-Based-Sparsity-Pattern" title="Permalink"></a></h3><pre><code class="language-julia hljs">function build_topology_sparsity(models::NamedTuple) -&gt; SparseMatrixCSC{Bool}
+    &quot;&quot;&quot;
+    Build Jacobian sparsity pattern from network topology alone.
+
+    Does NOT require addresses to be assigned yet!
+
+    Algorithm:
+    1. Extract bus numbers from Bus model
+    2. For each bus i: Add diagonal blocks (theta[i], v[i] affect p[i], q[i])
+    3. For each branch (i,j): Add off-diagonal blocks (coupling between buses)
+    4. Return sparsity pattern as Boolean sparse matrix
+    &quot;&quot;&quot;
+end</code></pre><h3 id="Permuted-Address-Assignment"><a class="docs-heading-anchor" href="#Permuted-Address-Assignment">Permuted Address Assignment</a><a id="Permuted-Address-Assignment-1"></a><a class="docs-heading-anchor-permalink" href="#Permuted-Address-Assignment" title="Permalink"></a></h3><pre><code class="language-julia hljs">function assign_address_permuted!(
+    am::AddressManager,
+    model_name::Symbol,
+    metadata::ModelMetadata,
+    count::Int,
+    permutation::Vector{Int}  # &lt;-- NEW: permutation from AMD
+)
+    &quot;&quot;&quot;
+    Assign addresses according to AMD permutation.
+
+    Instead of: [1, 2, 3, ..., n]
+    Use:        [perm[1], perm[2], ..., perm[n]]
+
+    This reorders variables/residuals to match optimal AMD ordering.
+    &quot;&quot;&quot;
+end</code></pre><h3 id="KLU-Integration"><a class="docs-heading-anchor" href="#KLU-Integration">KLU Integration</a><a id="KLU-Integration-1"></a><a class="docs-heading-anchor-permalink" href="#KLU-Integration" title="Permalink"></a></h3><pre><code class="language-julia hljs"># Store permutation in workspace
+workspace.permutation = perm
+
+# First factorization: provide permutation to skip AMD
+if isnothing(solver_fact)
+    solver_fact = klu(J)
+    # Customize: Use our permutation instead of internal AMD
+    K = solver_fact
+    K.common.ordering = 3  # User-provided ordering
+    klu_analyze!(K, P, Q)  # Provide permutation
+else
+    klu!(solver_fact, J)  # Refactor with same pattern
+end</code></pre><h2 id="Implementation-Challenges"><a class="docs-heading-anchor" href="#Implementation-Challenges">Implementation Challenges</a><a id="Implementation-Challenges-1"></a><a class="docs-heading-anchor-permalink" href="#Implementation-Challenges" title="Permalink"></a></h2><h3 id="Challenge-1:-Variable-Numbering-in-Pattern-Matrix"><a class="docs-heading-anchor" href="#Challenge-1:-Variable-Numbering-in-Pattern-Matrix">Challenge 1: Variable Numbering in Pattern Matrix</a><a id="Challenge-1:-Variable-Numbering-in-Pattern-Matrix-1"></a><a class="docs-heading-anchor-permalink" href="#Challenge-1:-Variable-Numbering-in-Pattern-Matrix" title="Permalink"></a></h3><p>The sparsity pattern is built BEFORE addresses are assigned. We need a temporary numbering scheme:</p><p><strong>Solution</strong>: Use a &quot;logical&quot; numbering based on bus indices and variable types:</p><pre><code class="language-julia hljs"># For each bus i (assuming n buses):
+logical_idx(bus_i, :theta) = 2*(i-1) + 1
+logical_idx(bus_i, :v)     = 2*(i-1) + 2
+# Pattern matrix is 2n × 2n (p and q residuals map to same indices)</code></pre><p>Then AMD permutation operates on this logical space. When assigning actual addresses, we apply the permutation.</p><h3 id="Challenge-2:-Models-with-Different-Key-Schemes"><a class="docs-heading-anchor" href="#Challenge-2:-Models-with-Different-Key-Schemes">Challenge 2: Models with Different Key Schemes</a><a id="Challenge-2:-Models-with-Different-Key-Schemes-1"></a><a class="docs-heading-anchor-permalink" href="#Challenge-2:-Models-with-Different-Key-Schemes" title="Permalink"></a></h3><p>Different models use different keys:</p><ul><li>Bus: <code>i</code> (bus number)</li><li>PQ: <code>(i, id)</code> (bus + load ID)</li><li>Branch: <code>(i, j, ckt)</code> (from-bus, to-bus, circuit)</li></ul><p><strong>Solution</strong>: Readdressing operates at the <strong>bus variable level</strong> only:</p><pre><code class="language-julia hljs"># Only reorder bus variables (theta, v) and bus residuals (p, q)
+# Other models (PQ, PV, Branch) reference bus variables via indexer
+# Their addressing is derived from bus addressing</code></pre><h3 id="Challenge-3:-Permutation-Storage-and-Use"><a class="docs-heading-anchor" href="#Challenge-3:-Permutation-Storage-and-Use">Challenge 3: Permutation Storage and Use</a><a id="Challenge-3:-Permutation-Storage-and-Use-1"></a><a class="docs-heading-anchor-permalink" href="#Challenge-3:-Permutation-Storage-and-Use" title="Permalink"></a></h3><p>The permutation must be:</p><ol><li>Computed once during system setup</li><li>Stored in the address manager</li><li>Provided to KLU during first factorization</li></ol><p><strong>Solution</strong>: Add permutation field to AddressManager:</p><pre><code class="language-julia hljs">mutable struct AddressManager
+    addresses::Dict{...}
+    next_idx::Dict{...}
+    assignments::Dict{...}
+    retrieved::Dict{...}
+    permutation::Union{Nothing, Vector{Int}}  # &lt;-- NEW
+end</code></pre><h2 id="Sparsity-Pattern-Construction"><a class="docs-heading-anchor" href="#Sparsity-Pattern-Construction">Sparsity Pattern Construction</a><a id="Sparsity-Pattern-Construction-1"></a><a class="docs-heading-anchor-permalink" href="#Sparsity-Pattern-Construction" title="Permalink"></a></h2><h3 id="Diagonal-Blocks-(Self-Coupling)"><a class="docs-heading-anchor" href="#Diagonal-Blocks-(Self-Coupling)">Diagonal Blocks (Self-Coupling)</a><a id="Diagonal-Blocks-(Self-Coupling)-1"></a><a class="docs-heading-anchor-permalink" href="#Diagonal-Blocks-(Self-Coupling)" title="Permalink"></a></h3><p>Each bus <code>i</code> has a 2×2 diagonal block in the Jacobian:</p><pre><code class="nohighlight hljs">∂p[i]/∂theta[i]   ∂p[i]/∂v[i]
+∂q[i]/∂theta[i]   ∂q[i]/∂v[i]</code></pre><h3 id="Off-Diagonal-Blocks-(Network-Coupling)"><a class="docs-heading-anchor" href="#Off-Diagonal-Blocks-(Network-Coupling)">Off-Diagonal Blocks (Network Coupling)</a><a id="Off-Diagonal-Blocks-(Network-Coupling)-1"></a><a class="docs-heading-anchor-permalink" href="#Off-Diagonal-Blocks-(Network-Coupling)" title="Permalink"></a></h3><p>Each branch connecting buses <code>i</code> and <code>j</code> creates four 2×2 blocks:</p><pre><code class="nohighlight hljs"># Bus i residuals depend on bus j variables
+∂p[i]/∂theta[j]   ∂p[i]/∂v[j]
+∂q[i]/∂theta[j]   ∂q[i]/∂v[j]
+
+# Bus j residuals depend on bus i variables
+∂p[j]/∂theta[i]   ∂p[j]/∂v[i]
+∂q[j]/∂theta[i]   ∂q[j]/∂v[i]</code></pre><h3 id="Implementation"><a class="docs-heading-anchor" href="#Implementation">Implementation</a><a id="Implementation-1"></a><a class="docs-heading-anchor-permalink" href="#Implementation" title="Permalink"></a></h3><pre><code class="language-julia hljs">function build_topology_sparsity(models::NamedTuple)
+    buses = models[:Bus]
+    n_buses = length(buses)
+    bus_numbers = buses.i  # Bus numbering from data
+
+    # Build mapping: bus_number → index in array
+    bus_to_idx = Dict(buses.i[k] =&gt; k for k in 1:n_buses)
+
+    I = Int[]  # Row indices
+    J = Int[]  # Column indices
+
+    # Diagonal blocks: Each bus coupled to itself
+    for idx in 1:n_buses
+        # theta[idx] and v[idx] affect p[idx] and q[idx]
+        for res_var in 1:2, col_var in 1:2
+            push!(I, 2*(idx-1) + res_var)  # p or q residual
+            push!(J, 2*(idx-1) + col_var)  # theta or v variable
+        end
+    end
+
+    # Off-diagonal blocks: Branch/transformer coupling
+    for branch_model_name in [:Branch, :Transformer]
+        if haskey(models, branch_model_name)
+            branches = models[branch_model_name]
+            for k in 1:length(branches)
+                i_bus = bus_to_idx[branches.i[k]]
+                j_bus = bus_to_idx[branches.j[k]]
+
+                # Bus i depends on bus j
+                for res_var in 1:2, col_var in 1:2
+                    push!(I, 2*(i_bus-1) + res_var)
+                    push!(J, 2*(j_bus-1) + col_var)
+                end
+
+                # Bus j depends on bus i
+                for res_var in 1:2, col_var in 1:2
+                    push!(I, 2*(j_bus-1) + res_var)
+                    push!(J, 2*(i_bus-1) + col_var)
+                end
+            end
+        end
+    end
+
+    # Build sparse pattern
+    m = 2 * n_buses
+    return sparse(I, J, ones(Bool, length(I)), m, m)
+end</code></pre><h2 id="AMD-Integration"><a class="docs-heading-anchor" href="#AMD-Integration">AMD Integration</a><a id="AMD-Integration-1"></a><a class="docs-heading-anchor-permalink" href="#AMD-Integration" title="Permalink"></a></h2><pre><code class="language-julia hljs">using AMD  # AMD.jl package
+
+function compute_amd_permutation(sparsity::SparseMatrixCSC{Bool})
+    # AMD expects symmetric matrix for best results
+    # Make symmetric if not already
+    pattern = sparsity .| sparsity&#39;
+
+    # Compute AMD ordering
+    perm = amd(pattern)
+
+    return perm
+end</code></pre><h2 id="Expected-Benefits"><a class="docs-heading-anchor" href="#Expected-Benefits">Expected Benefits</a><a id="Expected-Benefits-1"></a><a class="docs-heading-anchor-permalink" href="#Expected-Benefits" title="Permalink"></a></h2><ol><li><strong>Reduced fill-in</strong>: AMD minimizes new nonzeros during factorization</li><li><strong>Faster factorization</strong>: Less fill-in → faster numerical factorization</li><li><strong>Lower memory</strong>: Smaller factorized matrix</li><li><strong>Skip AMD in KLU</strong>: Provide pre-computed ordering, save ~10-20ms per factorization</li></ol><h3 id="Estimated-Performance-Impact"><a class="docs-heading-anchor" href="#Estimated-Performance-Impact">Estimated Performance Impact</a><a id="Estimated-Performance-Impact-1"></a><a class="docs-heading-anchor-permalink" href="#Estimated-Performance-Impact" title="Permalink"></a></h3><p>For large systems (70k bus):</p><ul><li><strong>Pattern construction</strong>: ~1ms (lightweight connectivity analysis)</li><li><strong>AMD ordering</strong>: ~50-100ms (one-time cost during setup)</li><li><strong>Saved per iteration</strong>: ~10-20ms (skip KLU&#39;s internal AMD)</li><li><strong>Net benefit</strong>: Significant for multi-iteration solves</li></ul><p>For small systems (14 bus):</p><ul><li>Negligible overhead, small benefit</li><li>Main value is in algorithm correctness and large-system scalability</li></ul><h2 id="Usage-API"><a class="docs-heading-anchor" href="#Usage-API">Usage API</a><a id="Usage-API-1"></a><a class="docs-heading-anchor-permalink" href="#Usage-API" title="Permalink"></a></h2><pre><code class="language-julia hljs"># Option 1: Automatic (default behavior)
+sys = SystemModel(am, models; reorder=true)  # Uses AMD automatically
+
+# Option 2: Manual control
+pattern = build_topology_sparsity(models)
+perm = compute_amd_permutation(pattern)
+sys = SystemModel(am, models; permutation=perm)
+
+# Option 3: Custom permutation
+perm_custom = custom_ordering(models)  # User-defined
+sys = SystemModel(am, models; permutation=perm_custom)</code></pre><h2 id="Testing-Strategy"><a class="docs-heading-anchor" href="#Testing-Strategy">Testing Strategy</a><a id="Testing-Strategy-1"></a><a class="docs-heading-anchor-permalink" href="#Testing-Strategy" title="Permalink"></a></h2><ol><li><strong>Correctness</strong>: Verify reordered system produces same power flow solution</li><li><strong>Sparsity accuracy</strong>: Compare topology-based pattern vs. current address-based pattern</li><li><strong>Performance</strong>: Benchmark factorization time with/without reordering</li><li><strong>KLU integration</strong>: Verify permutation is correctly provided to KLU</li></ol><h2 id="Future-Extensions"><a class="docs-heading-anchor" href="#Future-Extensions">Future Extensions</a><a id="Future-Extensions-1"></a><a class="docs-heading-anchor-permalink" href="#Future-Extensions" title="Permalink"></a></h2><ol><li><strong>Island-aware ordering</strong>: Respect electrical islands in permutation</li><li><strong>Geographical ordering</strong>: Use physical bus locations</li><li><strong>Hierarchical ordering</strong>: Partition by voltage levels (transmission/distribution)</li><li><strong>Custom constraints</strong>: Allow users to fix certain variables at specific addresses</li></ol></article><nav class="docs-footer"><p class="footer-message">Powered by <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> and the <a href="https://julialang.org/">Julia Programming Language</a>.</p></nav></div><div class="modal" id="documenter-settings"><div class="modal-background"></div><div class="modal-card"><header class="modal-card-head"><p class="modal-card-title">Settings</p><button class="delete"></button></header><section class="modal-card-body"><p><label class="label">Theme</label><div class="select"><select id="documenter-themepicker"><option value="auto">Automatic (OS)</option><option value="documenter-light">documenter-light</option><option value="documenter-dark">documenter-dark</option><option value="catppuccin-latte">catppuccin-latte</option><option value="catppuccin-frappe">catppuccin-frappe</option><option value="catppuccin-macchiato">catppuccin-macchiato</option><option value="catppuccin-mocha">catppuccin-mocha</option></select></div></p><hr/><p>This document was generated with <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> version 1.16.1 on <span class="colophon-date" title="Wednesday 3 December 2025 12:47">Wednesday 3 December 2025</span>. Using Julia version 1.11.7.</p></section><footer class="modal-card-foot"></footer></div></div></div></body></html>

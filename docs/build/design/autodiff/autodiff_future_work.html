@@ -1,0 +1,204 @@
+<!DOCTYPE html>
+<html lang="en"><head><meta charset="UTF-8"/><meta name="viewport" content="width=device-width, initial-scale=1.0"/><title>Autodiff Future Work - Implementation Roadmap · Powerful.jl</title><meta name="title" content="Autodiff Future Work - Implementation Roadmap · Powerful.jl"/><meta property="og:title" content="Autodiff Future Work - Implementation Roadmap · Powerful.jl"/><meta property="twitter:title" content="Autodiff Future Work - Implementation Roadmap · Powerful.jl"/><meta name="description" content="Documentation for Powerful.jl."/><meta property="og:description" content="Documentation for Powerful.jl."/><meta property="twitter:description" content="Documentation for Powerful.jl."/><meta property="og:url" content="https://sensl.gitlab.io/Powerful.jl/design/autodiff/autodiff_future_work.html"/><meta property="twitter:url" content="https://sensl.gitlab.io/Powerful.jl/design/autodiff/autodiff_future_work.html"/><link rel="canonical" href="https://sensl.gitlab.io/Powerful.jl/design/autodiff/autodiff_future_work.html"/><script data-outdated-warner src="../../assets/warner.js"></script><link href="https://cdnjs.cloudflare.com/ajax/libs/lato-font/3.0.0/css/lato-font.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/juliamono/0.050/juliamono.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/fontawesome.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/solid.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/brands.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.16.8/katex.min.css" rel="stylesheet" type="text/css"/><script>documenterBaseURL="../.."</script><script src="https://cdnjs.cloudflare.com/ajax/libs/require.js/2.3.6/require.min.js" data-main="../../assets/documenter.js"></script><script src="../../search_index.js"></script><script src="../../siteinfo.js"></script><script src="../../../versions.js"></script><link class="docs-theme-link" rel="stylesheet" type="text/css" href="../../assets/themes/catppuccin-mocha.css" data-theme-name="catppuccin-mocha"/><link class="docs-theme-link" rel="stylesheet" type="text/css" href="../../assets/themes/catppuccin-macchiato.css" data-theme-name="catppuccin-macchiato"/><link class="docs-theme-link" rel="stylesheet" type="text/css" href="../../assets/themes/catppuccin-frappe.css" data-theme-name="catppuccin-frappe"/><link class="docs-theme-link" rel="stylesheet" type="text/css" href="../../assets/themes/catppuccin-latte.css" data-theme-name="catppuccin-latte"/><link class="docs-theme-link" rel="stylesheet" type="text/css" href="../../assets/themes/documenter-dark.css" data-theme-name="documenter-dark" data-theme-primary-dark/><link class="docs-theme-link" rel="stylesheet" type="text/css" href="../../assets/themes/documenter-light.css" data-theme-name="documenter-light" data-theme-primary/><script src="../../assets/themeswap.js"></script></head><body><div id="documenter"><nav class="docs-sidebar"><div class="docs-package-name"><span class="docs-autofit"><a href="../../index.html">Powerful.jl</a></span></div><button class="docs-search-query input is-rounded is-small is-clickable my-2 mx-auto py-1 px-2" id="documenter-search-query">Search docs (Ctrl + /)</button><ul class="docs-menu"><li><a class="tocitem" href="../../index.html">Home</a></li><li><input class="collapse-toggle" id="menuitem-2" type="checkbox"/><label class="tocitem" for="menuitem-2"><span class="docs-label">Guides</span><i class="docs-chevron"></i></label><ul class="collapsed"><li><a class="tocitem" href="../../guides/index.html">Overview</a></li><li><a class="tocitem" href="../../guides/getting_started.html">Getting Started</a></li><li><a class="tocitem" href="../../guides/powerflow.html">Power Flow Analysis</a></li><li><a class="tocitem" href="../../guides/tds.html">Time-Domain Simulation</a></li><li><a class="tocitem" href="../../guides/configuration.html">Configuration</a></li><li><a class="tocitem" href="../../guides/accessing_variables.html">Accessing Results</a></li><li><a class="tocitem" href="../../guides/reports.html">Report Customization</a></li></ul></li><li><input class="collapse-toggle" id="menuitem-3" type="checkbox"/><label class="tocitem" for="menuitem-3"><span class="docs-label">Notebooks</span><i class="docs-chevron"></i></label><ul class="collapsed"><li><a class="tocitem" href="../../notebooks/index.html">Overview</a></li><li><a class="tocitem" href="../../notebooks/01_getting_started.html">01 Getting Started</a></li><li><a class="tocitem" href="../../notebooks/02_formulations_and_solvers.html">02 Formulations And Solvers</a></li><li><a class="tocitem" href="../../notebooks/03_gpu_acceleration.html">03 Gpu Acceleration</a></li><li><a class="tocitem" href="../../notebooks/03_multi_island_power_flow.html">03 Multi Island Power Flow</a></li><li><a class="tocitem" href="../../notebooks/04_multi_island_power_flow.html">04 Multi Island Power Flow</a></li><li><a class="tocitem" href="../../notebooks/05_tds_initialization_validation.html">05 Tds Initialization Validation</a></li></ul></li><li><input class="collapse-toggle" id="menuitem-4" type="checkbox"/><label class="tocitem" for="menuitem-4"><span class="docs-label">Developer Documentation</span><i class="docs-chevron"></i></label><ul class="collapsed"><li><a class="tocitem" href="../../developer/overview.html">Overview</a></li><li><a class="tocitem" href="../../developer/indexing.html">Three-Layer Indexing</a></li><li><a class="tocitem" href="../../developer/formulations.html">Multi-Physics Formulations</a></li><li><a class="tocitem" href="../../developer/workspaces.html">Computation Architecture</a></li><li><a class="tocitem" href="../../developer/models.html">Implementing Models</a></li><li><a class="tocitem" href="../../developer/events.html">TDS Event System</a></li><li><a class="tocitem" href="../../developer/miscellaneous.html">Per-Unit &amp; Multi-Island</a></li></ul></li><li><input class="collapse-toggle" id="menuitem-5" type="checkbox"/><label class="tocitem" for="menuitem-5"><span class="docs-label">API Reference</span><i class="docs-chevron"></i></label><ul class="collapsed"><li><a class="tocitem" href="../../api.html">Overview</a></li><li><a class="tocitem" href="../../api/system.html">System &amp; DAE</a></li><li><a class="tocitem" href="../../api/models.html">Models</a></li><li><a class="tocitem" href="../../api/powerflow.html">Power Flow</a></li><li><a class="tocitem" href="../../api/tds.html">Time-Domain Simulation</a></li><li><a class="tocitem" href="../../api/advanced.html">Advanced Features</a></li></ul></li><li><a class="tocitem" href="../../index_page.html">Index</a></li></ul><div class="docs-version-selector field has-addons"><div class="control"><span class="docs-label button is-static is-size-7">Version</span></div><div class="docs-selector control is-expanded"><div class="select is-fullwidth is-size-7"><select id="documenter-version-selector"></select></div></div></div></nav><div class="docs-main"><header class="docs-navbar"><a class="docs-sidebar-button docs-navbar-link fa-solid fa-bars is-hidden-desktop" id="documenter-sidebar-button" href="#"></a><nav class="breadcrumb"><ul class="is-hidden-mobile"><li class="is-active"><a href="autodiff_future_work.html">Autodiff Future Work - Implementation Roadmap</a></li></ul><ul class="is-hidden-tablet"><li class="is-active"><a href="autodiff_future_work.html">Autodiff Future Work - Implementation Roadmap</a></li></ul></nav><div class="docs-right"><a class="docs-navbar-link" href="https://github.com/sensl/Powerful.jl/blob/main/docs/src/design/autodiff/autodiff_future_work.md#" title="Edit source on GitHub"><span class="docs-icon fa-solid"></span></a><a class="docs-settings-button docs-navbar-link fa-solid fa-gear" id="documenter-settings-button" href="#" title="Settings"></a><a class="docs-article-toggle-button fa-solid fa-chevron-up" id="documenter-article-toggle-button" href="javascript:;" title="Collapse all docstrings"></a></div></header><article class="content" id="documenter-page"><h1 id="Autodiff-Future-Work-Implementation-Roadmap"><a class="docs-heading-anchor" href="#Autodiff-Future-Work-Implementation-Roadmap">Autodiff Future Work - Implementation Roadmap</a><a id="Autodiff-Future-Work-Implementation-Roadmap-1"></a><a class="docs-heading-anchor-permalink" href="#Autodiff-Future-Work-Implementation-Roadmap" title="Permalink"></a></h1><h2 id="Current-Status-(Completed-)"><a class="docs-heading-anchor" href="#Current-Status-(Completed-)">Current Status (Completed ✅)</a><a id="Current-Status-(Completed-)-1"></a><a class="docs-heading-anchor-permalink" href="#Current-Status-(Completed-)" title="Permalink"></a></h2><h3 id="What&#39;s-Working-Now"><a class="docs-heading-anchor" href="#What&#39;s-Working-Now">What&#39;s Working Now</a><a id="What&#39;s-Working-Now-1"></a><a class="docs-heading-anchor-permalink" href="#What&#39;s-Working-Now" title="Permalink"></a></h3><ol><li><strong>Fully generic workspace</strong> - Supports ForwardDiff.Dual numbers</li><li><strong>Workspace caching</strong> - Eliminates allocation overhead</li><li><strong>Automatic sparsity pattern</strong> - Fast detection from model structure</li><li><strong>Sparse colored Jacobian</strong> - Production-ready performance</li></ol><h3 id="Performance-Benchmarks"><a class="docs-heading-anchor" href="#Performance-Benchmarks">Performance Benchmarks</a><a id="Performance-Benchmarks-1"></a><a class="docs-heading-anchor-permalink" href="#Performance-Benchmarks" title="Permalink"></a></h3><p><strong>IEEE 14-bus system (28 variables):</strong></p><ul><li>Jacobian: ~2ms (after warmup)</li><li>Sparsity: 98.4% efficient</li><li>2.8x speedup from coloring</li></ul><p><strong>ACTIVSg 70k-bus system (135,800 variables):</strong></p><ul><li>Jacobian: ~140ms (after warmup)</li><li>Sparsity: 99.996% sparse</li><li>1,717x speedup vs dense</li><li>34 colors (from 135,800 columns)</li></ul><h3 id="Key-Files-Modified"><a class="docs-heading-anchor" href="#Key-Files-Modified">Key Files Modified</a><a id="Key-Files-Modified-1"></a><a class="docs-heading-anchor-permalink" href="#Key-Files-Modified" title="Permalink"></a></h3><pre><code class="nohighlight hljs">src/powercore/
+├── residual_workspace.jl    # Changed T&lt;:AbstractFloat → T&lt;:Number
+├── dae.jl                    # Changed T&lt;:AbstractFloat → T&lt;:Number
+├── system.jl                 # Changed T&lt;:AbstractFloat → T&lt;:Number, fixed zero(T) bug
+├── autodiff_cache.jl         # NEW: CachedAutodiffWorkspace
+└── sparsity_pattern.jl       # NEW: jacobian_sparsity_pattern
+
+src/models/
+├── pq.jl                     # Removed {T} from calc_residuals! signature
+├── pv.jl                     # Removed {T} from calc_residuals! signature
+└── branch.jl                 # Removed {T} from calc_residuals! signature</code></pre><h2 id="Remaining-Future-Work"><a class="docs-heading-anchor" href="#Remaining-Future-Work">Remaining Future Work</a><a id="Remaining-Future-Work-1"></a><a class="docs-heading-anchor-permalink" href="#Remaining-Future-Work" title="Permalink"></a></h2><h3 id="Priority-1:-Production-Integration-(High-Value,-Medium-Effort)"><a class="docs-heading-anchor" href="#Priority-1:-Production-Integration-(High-Value,-Medium-Effort)">Priority 1: Production Integration (High Value, Medium Effort)</a><a id="Priority-1:-Production-Integration-(High-Value,-Medium-Effort)-1"></a><a class="docs-heading-anchor-permalink" href="#Priority-1:-Production-Integration-(High-Value,-Medium-Effort)" title="Permalink"></a></h3><h4 id="1.1-NonlinearSolve.jl-Integration"><a class="docs-heading-anchor" href="#1.1-NonlinearSolve.jl-Integration">1.1 NonlinearSolve.jl Integration</a><a id="1.1-NonlinearSolve.jl-Integration-1"></a><a class="docs-heading-anchor-permalink" href="#1.1-NonlinearSolve.jl-Integration" title="Permalink"></a></h4><p><strong>Goal</strong>: High-level API for users who want automatic everything.</p><p><strong>Implementation</strong>:</p><p>Create <code>src/solvers/nonlinear_solve.jl</code>:</p><pre><code class="language-julia hljs">using NonlinearSolve
+
+&quot;&quot;&quot;
+    solve_power_flow(sys::SystemModel;
+                    method=NewtonRaphson(),
+                    autodiff=AutoSparseForwardDiff(),
+                    tol=1e-8,
+                    maxiter=20)
+
+Solve power flow using NonlinearSolve.jl with automatic differentiation.
+
+# Example
+\```julia
+sys = SystemModel(am, models)
+sol = solve_power_flow(sys)
+\```
+&quot;&quot;&quot;
+function solve_power_flow(
+    sys::SystemModel;
+    method=NewtonRaphson(),
+    autodiff=AutoSparseForwardDiff(),
+    tol=1e-8,
+    maxiter=20
+)
+    # Create cached workspace
+    cache = CachedAutodiffWorkspace(sys)
+
+    # Get sparsity pattern
+    sparsity = jacobian_sparsity_pattern(sys)
+
+    # Create NonlinearFunction with sparsity info
+    nlfunc = NonlinearFunction(
+        cache;
+        jac_prototype = float.(sparsity)
+    )
+
+    # Create problem
+    prob = NonlinearProblem(nlfunc, copy(cache.sys.dae.y))
+
+    # Solve
+    sol = solve(prob, method; autodiff=autodiff, abstol=tol, maxiters=maxiter)
+
+    return sol
+end</code></pre><p><strong>Files to modify</strong>:</p><ul><li>Create <code>src/solvers/nonlinear_solve.jl</code></li><li>Add to <code>src/Powerful.jl</code>: <code>include(&quot;solvers/nonlinear_solve.jl&quot;)</code></li><li>Export <code>solve_power_flow</code></li></ul><p><strong>Dependencies</strong>: Add to Project.toml:</p><pre><code class="language-toml hljs">NonlinearSolve = &quot;8913a72c-1f9b-4ce2-8d82-65094dcecaec&quot;</code></pre><p><strong>Testing</strong>:</p><pre><code class="language-julia hljs"># test/test_nonlinear_solve.jl
+@testitem &quot;NonlinearSolve.jl Integration&quot; begin
+    using Powerful, PowerFlowData
+
+    case = PowerFlowData.parse_network(joinpath(pkgdir(Powerful), &quot;cases&quot;, &quot;ieee14.raw&quot;))
+    bus = parse_model(Bus, case)
+    pq = parse_model(PQ, case)
+    pv = parse_model(PV, case)
+    branch = parse_model(Branch, case)
+
+    sys = SystemModel(AddressManager(), (; Bus=bus, PQ=pq, PV=pv, Branch=branch))
+
+    sol = solve_power_flow(sys)
+
+    @test SciMLBase.successful_retcode(sol.retcode)
+    @test norm(sol.resid, Inf) &lt; 1e-6
+end</code></pre><p><strong>Estimated effort</strong>: 4-6 hours</p><hr/><h4 id="1.2-Per-Model-Sparsity-Refinement-(Optional-Optimization)"><a class="docs-heading-anchor" href="#1.2-Per-Model-Sparsity-Refinement-(Optional-Optimization)">1.2 Per-Model Sparsity Refinement (Optional Optimization)</a><a id="1.2-Per-Model-Sparsity-Refinement-(Optional-Optimization)-1"></a><a class="docs-heading-anchor-permalink" href="#1.2-Per-Model-Sparsity-Refinement-(Optional-Optimization)" title="Permalink"></a></h4><p><strong>Goal</strong>: Allow models to declare finer-grained variable dependencies.</p><p><strong>Current limitation</strong>: <code>jacobian_sparsity_pattern</code> assumes each residual depends on ALL variables of that instance. This is conservative - some variables might not affect certain residuals.</p><p><strong>Implementation</strong>:</p><p>Add to <code>src/powercore/model_var.jl</code>:</p><pre><code class="language-julia hljs">&quot;&quot;&quot;
+    residual_dependencies(::Type{Model}, residual_name::Symbol) -&gt; Vector{Symbol}
+
+Declare which variables a specific residual depends on.
+
+Default: All variables (conservative but correct)
+Models can override for tighter sparsity.
+
+# Example
+\```julia
+# PQ residuals only depend on voltage magnitude, not angle
+function residual_dependencies(::Type{PQ}, residual_name::Symbol)
+    if residual_name == :p || residual_name == :q
+        return [:v]  # Only voltage magnitude
+    end
+    return all_variables(PQ)  # Fallback
+end
+\```
+&quot;&quot;&quot;
+function residual_dependencies(::Type{M}, residual_name::Symbol) where M&lt;:AbstractModel
+    # Default: all variables
+    meta = model_metadata(M)
+    return [var.name for var in meta.vars]
+end</code></pre><p>Update <code>src/powercore/sparsity_pattern.jl</code>:</p><pre><code class="language-julia hljs">function jacobian_sparsity_pattern(sys::SystemModel; refined::Bool=false)
+    # ... existing code ...
+
+    for residual in metadata.residuals
+        res_addrs = # ... get addresses ...
+
+        if refined
+            # Use model-specific dependencies
+            dep_vars = residual_dependencies(base_type, residual.name)
+            var_addr_lists_filtered = [var_addr_lists[i] for (i, var) in enumerate(metadata.vars)
+                                       if var.name in dep_vars]
+        else
+            # Conservative: all variables
+            var_addr_lists_filtered = var_addr_lists
+        end
+
+        # ... rest of loop ...
+    end
+end</code></pre><p><strong>Models to refine</strong> (examples):</p><ul><li><strong>PQ</strong>: Both p and q residuals only depend on voltage magnitude v (not angle theta)</li><li><strong>Branch</strong>: Could separate which residuals depend on which bus angles</li><li><strong>PV</strong>: v_ctrl residual only depends on local voltage</li></ul><p><strong>Estimated effort</strong>: 2-3 hours <strong>Expected benefit</strong>: 5-10% fewer nonzeros (marginal) <strong>Recommendation</strong>: Low priority - current conservative pattern works well</p><hr/><h3 id="Priority-2:-Alternative-Autodiff-Backends-(Research,-High-Risk)"><a class="docs-heading-anchor" href="#Priority-2:-Alternative-Autodiff-Backends-(Research,-High-Risk)">Priority 2: Alternative Autodiff Backends (Research, High Risk)</a><a id="Priority-2:-Alternative-Autodiff-Backends-(Research,-High-Risk)-1"></a><a class="docs-heading-anchor-permalink" href="#Priority-2:-Alternative-Autodiff-Backends-(Research,-High-Risk)" title="Permalink"></a></h3><h4 id="2.1-Reverse-Mode-AD-(Enzyme.jl-or-Zygote.jl)"><a class="docs-heading-anchor" href="#2.1-Reverse-Mode-AD-(Enzyme.jl-or-Zygote.jl)">2.1 Reverse-Mode AD (Enzyme.jl or Zygote.jl)</a><a id="2.1-Reverse-Mode-AD-(Enzyme.jl-or-Zygote.jl)-1"></a><a class="docs-heading-anchor-permalink" href="#2.1-Reverse-Mode-AD-(Enzyme.jl-or-Zygote.jl)" title="Permalink"></a></h4><p><strong>Goal</strong>: For optimization problems where you need gradients of scalar objectives.</p><p><strong>Use case</strong>: Optimal power flow, parameter estimation, objective = scalar cost function</p><p><strong>Current state</strong>: ForwardDiff is great for Jacobians (many outputs from many inputs). For gradients (one output from many inputs), reverse-mode is more efficient.</p><p><strong>Implementation sketch</strong>:</p><pre><code class="language-julia hljs">using Enzyme
+
+&quot;&quot;&quot;
+    compute_gradient(objective!, sys::SystemModel, y::Vector{Float64})
+
+Compute ∇_y f(y) where f is a scalar objective function.
+
+# Example
+\```julia
+# Minimize total generation cost
+function objective!(cost, y, sys)
+    # Evaluate residuals to get power flows
+    cache = CachedAutodiffWorkspace(sys)
+    g = similar(y)
+    cache(g, y)
+
+    # Extract generator outputs and compute cost
+    cost[1] = sum(compute_cost(pgen))
+end
+
+grad = compute_gradient(objective!, sys, y)
+\```
+&quot;&quot;&quot;
+function compute_gradient(objective!, sys::SystemModel, y::Vector{Float64})
+    cost = [0.0]
+
+    # Enzyme reverse-mode
+    autodiff(Reverse, objective!, Duplicated(cost, [1.0]), Const(y), Const(sys))
+
+    return # gradient (extracted from Enzyme)
+end</code></pre><p><strong>Files to create</strong>:</p><ul><li><code>src/powercore/reverse_autodiff.jl</code></li></ul><p><strong>Challenges</strong>:</p><ul><li>Enzyme requires mutation-free code (our code mutates workspaces)</li><li>Would need to refactor for functional style</li><li>Zygote doesn&#39;t support mutation at all</li><li>Complex type interactions</li></ul><p><strong>Estimated effort</strong>: 2-3 weeks (research project) <strong>Recommendation</strong>: Only if you need optimization, not just power flow</p><hr/><h4 id="2.2-GPU-Autodiff-(Enzyme.jl-CUDA)"><a class="docs-heading-anchor" href="#2.2-GPU-Autodiff-(Enzyme.jl-CUDA)">2.2 GPU Autodiff (Enzyme.jl + CUDA)</a><a id="2.2-GPU-Autodiff-(Enzyme.jl-CUDA)-1"></a><a class="docs-heading-anchor-permalink" href="#2.2-GPU-Autodiff-(Enzyme.jl-CUDA)" title="Permalink"></a></h4><p><strong>Goal</strong>: Compute Jacobian on GPU using autodiff.</p><p><strong>Current state</strong>:</p><ul><li>We have GPU kernels for residuals (manual, fast)</li><li>No GPU autodiff yet</li></ul><p><strong>Why this is hard</strong>:</p><ul><li>Enzyme.jl CUDA support is experimental</li><li>ForwardDiff doesn&#39;t support GPU arrays well</li><li>Would need to make entire workspace generic over Array types</li><li>Memory management is tricky with Dual numbers on GPU</li></ul><p><strong>Implementation notes</strong>:</p><p>Would require:</p><ol><li>Generic workspace over CuArray{Dual}</li><li>Enzyme integration for CUDA kernels</li><li>Careful memory management</li></ol><p><strong>Benchmark comparison needed</strong>:</p><ul><li>Manual GPU Jacobian kernel (if implemented): ~fast</li><li>Enzyme GPU autodiff: ~unknown</li><li>CPU autodiff + data transfer: Current approach (~140ms for 135k system)</li></ul><p><strong>Estimated effort</strong>: 1-2 months (PhD-level research) <strong>Recommendation</strong>: Skip unless:</p><ul><li>You implement manual analytical Jacobian and it&#39;s too slow on GPU</li><li>Enzyme CUDA support matures significantly</li><li>You have &gt;1M variables</li></ul><hr/><h3 id="Priority-3:-Symbolic/Analytical-Jacobian-(Alternative-Approach)"><a class="docs-heading-anchor" href="#Priority-3:-Symbolic/Analytical-Jacobian-(Alternative-Approach)">Priority 3: Symbolic/Analytical Jacobian (Alternative Approach)</a><a id="Priority-3:-Symbolic/Analytical-Jacobian-(Alternative-Approach)-1"></a><a class="docs-heading-anchor-permalink" href="#Priority-3:-Symbolic/Analytical-Jacobian-(Alternative-Approach)" title="Permalink"></a></h3><h4 id="3.1-Symbolics.jl-Integration"><a class="docs-heading-anchor" href="#3.1-Symbolics.jl-Integration">3.1 Symbolics.jl Integration</a><a id="3.1-Symbolics.jl-Integration-1"></a><a class="docs-heading-anchor-permalink" href="#3.1-Symbolics.jl-Integration" title="Permalink"></a></h4><p><strong>Goal</strong>: Use Symbolics.jl to compute sparsity pattern (alternative to our structural approach).</p><p><strong>Current state</strong>: We use model structure. Symbolics would trace execution symbolically.</p><p><strong>Implementation</strong>:</p><pre><code class="language-julia hljs">using Symbolics
+
+function jacobian_sparsity_symbolic(sys::SystemModel)
+    cache = CachedAutodiffWorkspace(sys)
+    y = copy(cache.sys.dae.y)
+    g = similar(y)
+
+    # Symbolics traces execution
+    sparsity = Symbolics.jacobian_sparsity(
+        (g, y) -&gt; cache(g, y),
+        g, y
+    )
+
+    return sparsity
+end</code></pre><p><strong>Pros</strong>:</p><ul><li>Automatic (no manual pattern declaration)</li><li>Handles complex control flow</li></ul><p><strong>Cons</strong>:</p><ul><li>Slower than structural approach (~100ms vs &lt;1ms)</li><li>Requires tracing through entire evaluation</li><li>More dependencies</li></ul><p><strong>Recommendation</strong>: Our structural approach is faster and simpler. Only use Symbolics if:</p><ul><li>Model structure is too complex to analyze</li><li>You want cross-validation of sparsity patterns</li></ul><p><strong>Estimated effort</strong>: 2-3 hours <strong>Expected benefit</strong>: Validation tool, not production</p><hr/><h4 id="3.2-Analytical-Jacobian-Generation"><a class="docs-heading-anchor" href="#3.2-Analytical-Jacobian-Generation">3.2 Analytical Jacobian Generation</a><a id="3.2-Analytical-Jacobian-Generation-1"></a><a class="docs-heading-anchor-permalink" href="#3.2-Analytical-Jacobian-Generation" title="Permalink"></a></h4><p><strong>Goal</strong>: Derive analytical Jacobian formulas and implement directly (no autodiff).</p><p><strong>Example for PQ model</strong>:</p><pre><code class="language-julia hljs">function analytical_jacobian_pq!(J::AbstractMatrix, pq::PQVec, y::Vector{Float64}, ...)
+    # Hand-derived formulas
+    # ∂p/∂v = -(ip + 2*yp*v)
+    # ∂q/∂v = -(iq + 2*yq*v)
+
+    for i in 1:length(pq)
+        v_idx = get_voltage_index(i)
+        p_idx = get_p_residual_index(i)
+        q_idx = get_q_residual_index(i)
+
+        J[p_idx, v_idx] = -(pq.ip[i] + 2 * pq.yp[i] * y[v_idx])
+        J[q_idx, v_idx] = -(pq.iq[i] + 2 * pq.yq[i] * y[v_idx])
+    end
+end</code></pre><p><strong>Pros</strong>:</p><ul><li>Fastest possible (no autodiff overhead)</li><li>Educational (see exact formulas)</li><li>Ultimate performance</li></ul><p><strong>Cons</strong>:</p><ul><li>Manual work for every model</li><li>Error-prone (easy to make mistakes in derivatives)</li><li>Maintenance burden (code changes require derivative updates)</li></ul><p><strong>Recommendation</strong>: Implement if:</p><ul><li>Autodiff is proven bottleneck (unlikely after our optimizations)</li><li>You want ultimate performance</li><li>You have test cases to validate against autodiff</li></ul><p><strong>Files to create</strong>:</p><ul><li><code>src/models/pq_jacobian.jl</code></li><li><code>src/models/pv_jacobian.jl</code></li><li><code>src/models/branch_jacobian.jl</code></li><li><code>src/powercore/analytical_jacobian.jl</code> (dispatcher)</li></ul><p><strong>Estimated effort</strong>: 1-2 weeks <strong>Expected speedup</strong>: 2-3x over autodiff (diminishing returns)</p><hr/><h2 id="Decision-Matrix"><a class="docs-heading-anchor" href="#Decision-Matrix">Decision Matrix</a><a id="Decision-Matrix-1"></a><a class="docs-heading-anchor-permalink" href="#Decision-Matrix" title="Permalink"></a></h2><table><tr><th style="text-align: right">Feature</th><th style="text-align: right">Priority</th><th style="text-align: right">Effort</th><th style="text-align: right">Value</th><th style="text-align: right">Recommendation</th></tr><tr><td style="text-align: right">NonlinearSolve.jl integration</td><td style="text-align: right">⭐⭐⭐</td><td style="text-align: right">Medium</td><td style="text-align: right">High</td><td style="text-align: right"><strong>Do it</strong></td></tr><tr><td style="text-align: right">Per-model sparsity</td><td style="text-align: right">⭐</td><td style="text-align: right">Low</td><td style="text-align: right">Low</td><td style="text-align: right">Skip (marginal)</td></tr><tr><td style="text-align: right">Reverse-mode AD</td><td style="text-align: right">⭐⭐</td><td style="text-align: right">High</td><td style="text-align: right">Medium</td><td style="text-align: right">Only for OPF</td></tr><tr><td style="text-align: right">GPU autodiff</td><td style="text-align: right">⭐</td><td style="text-align: right">Very High</td><td style="text-align: right">Low</td><td style="text-align: right">Skip for now</td></tr><tr><td style="text-align: right">Symbolics sparsity</td><td style="text-align: right">⭐</td><td style="text-align: right">Low</td><td style="text-align: right">Low</td><td style="text-align: right">Validation only</td></tr><tr><td style="text-align: right">Analytical Jacobian</td><td style="text-align: right">⭐⭐</td><td style="text-align: right">High</td><td style="text-align: right">Medium</td><td style="text-align: right">Compare first</td></tr></table><h2 id="How-to-Pick-Up-This-Work"><a class="docs-heading-anchor" href="#How-to-Pick-Up-This-Work">How to Pick Up This Work</a><a id="How-to-Pick-Up-This-Work-1"></a><a class="docs-heading-anchor-permalink" href="#How-to-Pick-Up-This-Work" title="Permalink"></a></h2><h3 id="For-NonlinearSolve.jl-Integration"><a class="docs-heading-anchor" href="#For-NonlinearSolve.jl-Integration">For NonlinearSolve.jl Integration</a><a id="For-NonlinearSolve.jl-Integration-1"></a><a class="docs-heading-anchor-permalink" href="#For-NonlinearSolve.jl-Integration" title="Permalink"></a></h3><ol><li><p><strong>Read these files first</strong>:</p><ul><li><code>src/analysis/autodiff_cache.jl</code> - Understand CachedAutodiffWorkspace</li><li><code>src/powercore/sparsity_pattern.jl</code> - Understand sparsity detection</li><li><code>examples/autodiff_success.jl</code> - See usage patterns</li></ul></li><li><p><strong>Install dependencies</strong>:</p><pre><code class="language-julia hljs">using Pkg
+Pkg.add(&quot;NonlinearSolve&quot;)</code></pre></li><li><p><strong>Create the solver file</strong>:</p><pre><code class="language-bash hljs">touch src/solvers/nonlinear_solve.jl</code></pre></li><li><p><strong>Start with the basic wrapper</strong>:</p><ul><li>Wrap <code>CachedAutodiffWorkspace</code> as a <code>NonlinearFunction</code></li><li>Pass sparsity pattern to <code>jac_prototype</code></li><li>Test on IEEE 14-bus first</li></ul></li><li><p><strong>Reference implementation</strong>:</p><ul><li>See NonlinearSolve.jl docs: https://docs.sciml.ai/NonlinearSolve/stable/</li><li>Look at sparse Jacobian examples in their tutorials</li></ul></li></ol><h3 id="For-Per-Model-Sparsity-Refinement"><a class="docs-heading-anchor" href="#For-Per-Model-Sparsity-Refinement">For Per-Model Sparsity Refinement</a><a id="For-Per-Model-Sparsity-Refinement-1"></a><a class="docs-heading-anchor-permalink" href="#For-Per-Model-Sparsity-Refinement" title="Permalink"></a></h3><ol><li><p><strong>Understand current implementation</strong>:</p><ul><li>Read <code>jacobian_sparsity_pattern</code> in <code>src/powercore/sparsity_pattern.jl</code></li><li>Note how it loops over models and variables</li></ul></li><li><p><strong>Add the trait</strong>:</p><ul><li>Define <code>residual_dependencies</code> in <code>src/powercore/model_var.jl</code></li><li>Default implementation returns all variables</li></ul></li><li><p><strong>Refine PQ model</strong> (easiest):</p><pre><code class="language-julia hljs"># In src/models/pq.jl
+function Powerful.residual_dependencies(::Type{PQ}, residual_name::Symbol)
+    return [:v]  # Both p and q only depend on voltage magnitude
+end</code></pre></li><li><p><strong>Test</strong>:</p><ul><li>Compare sparsity before/after</li><li>Validate Jacobian values match</li></ul></li></ol><h3 id="For-Analytical-Jacobian"><a class="docs-heading-anchor" href="#For-Analytical-Jacobian">For Analytical Jacobian</a><a id="For-Analytical-Jacobian-1"></a><a class="docs-heading-anchor-permalink" href="#For-Analytical-Jacobian" title="Permalink"></a></h3><ol><li><p><strong>Benchmark first</strong>:</p><ul><li>Profile current autodiff Jacobian</li><li>Identify if it&#39;s actually a bottleneck</li><li>Get baseline times</li></ul></li><li><p><strong>Start with PQ</strong> (simplest model):</p><ul><li>Derive ∂p/∂v and ∂q/∂v by hand</li><li>Implement in <code>src/models/pq_jacobian.jl</code></li><li>Test against autodiff output</li></ul></li><li><p><strong>Validation is critical</strong>:</p><pre><code class="language-julia hljs">using Test
+
+J_auto = compute_jacobian_autodiff(sys, y)
+J_anal = compute_jacobian_analytical(sys, y)
+
+@test maximum(abs.(J_auto - J_anal)) &lt; 1e-10</code></pre></li></ol><h2 id="Testing-Strategy"><a class="docs-heading-anchor" href="#Testing-Strategy">Testing Strategy</a><a id="Testing-Strategy-1"></a><a class="docs-heading-anchor-permalink" href="#Testing-Strategy" title="Permalink"></a></h2><p>For any new feature, add tests:</p><pre><code class="language-julia hljs"># test/test_new_feature.jl
+@testitem &quot;Feature Name&quot; begin
+    using Powerful, PowerFlowData
+
+    # Load test case
+    case = PowerFlowData.parse_network(...)
+    sys = create_system(case)
+
+    # Test feature
+    result = new_feature(sys)
+
+    # Validate
+    @test is_correct(result)
+end</code></pre><p>Run tests:</p><pre><code class="language-bash hljs">julia --project -e &#39;using TestItemRunner; @run_package_tests&#39;</code></pre><h2 id="Performance-Benchmarking"><a class="docs-heading-anchor" href="#Performance-Benchmarking">Performance Benchmarking</a><a id="Performance-Benchmarking-1"></a><a class="docs-heading-anchor-permalink" href="#Performance-Benchmarking" title="Permalink"></a></h2><p>Always benchmark against current implementation:</p><pre><code class="language-julia hljs">using BenchmarkTools
+
+# Current approach
+cache = CachedAutodiffWorkspace(sys)
+sparsity = jacobian_sparsity_pattern(sys)
+colors = matrix_colors(sparsity)
+J = Float64.(sparsity)
+
+@benchmark forwarddiff_color_jacobian!($J, $cache, $y0; colorvec=$colors)
+
+# New approach
+@benchmark new_jacobian_method!($J, $sys, $y0)
+
+# Compare</code></pre><h2 id="Documentation-Requirements"><a class="docs-heading-anchor" href="#Documentation-Requirements">Documentation Requirements</a><a id="Documentation-Requirements-1"></a><a class="docs-heading-anchor-permalink" href="#Documentation-Requirements" title="Permalink"></a></h2><p>For any implemented feature:</p><ol><li><strong>Docstrings</strong> - All public functions</li><li><strong>Examples</strong> - At least one working example</li><li><strong>Tests</strong> - Unit tests + integration test</li><li><strong>Performance</strong> - Benchmark vs baseline</li><li><strong>README update</strong> - Add to main README if user-facing</li></ol><h2 id="Questions?"><a class="docs-heading-anchor" href="#Questions?">Questions?</a><a id="Questions?-1"></a><a class="docs-heading-anchor-permalink" href="#Questions?" title="Permalink"></a></h2><p>If picking up this work:</p><ol><li>Check <code>examples/autodiff_success.jl</code> for usage patterns</li><li>Run <code>examples/large_system_jacobian.jl</code> for performance baseline</li><li>File issues at: https://github.com/user/Powerful.jl/issues</li></ol><h2 id="Summary"><a class="docs-heading-anchor" href="#Summary">Summary</a><a id="Summary-1"></a><a class="docs-heading-anchor-permalink" href="#Summary" title="Permalink"></a></h2><p><strong>What&#39;s done</strong>: Full autodiff integration with sparse Jacobians (~140ms for 135k variables)</p><p><strong>What&#39;s recommended next</strong>: NonlinearSolve.jl integration (4-6 hours, high value)</p><p><strong>What&#39;s optional</strong>: Everything else is optimization or research</p><p><strong>Current performance is production-ready</strong> - remaining work is about API convenience and edge case optimization, not core functionality.</p></article><nav class="docs-footer"><p class="footer-message">Powered by <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> and the <a href="https://julialang.org/">Julia Programming Language</a>.</p></nav></div><div class="modal" id="documenter-settings"><div class="modal-background"></div><div class="modal-card"><header class="modal-card-head"><p class="modal-card-title">Settings</p><button class="delete"></button></header><section class="modal-card-body"><p><label class="label">Theme</label><div class="select"><select id="documenter-themepicker"><option value="auto">Automatic (OS)</option><option value="documenter-light">documenter-light</option><option value="documenter-dark">documenter-dark</option><option value="catppuccin-latte">catppuccin-latte</option><option value="catppuccin-frappe">catppuccin-frappe</option><option value="catppuccin-macchiato">catppuccin-macchiato</option><option value="catppuccin-mocha">catppuccin-mocha</option></select></div></p><hr/><p>This document was generated with <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> version 1.16.1 on <span class="colophon-date" title="Wednesday 3 December 2025 12:47">Wednesday 3 December 2025</span>. Using Julia version 1.11.7.</p></section><footer class="modal-card-foot"></footer></div></div></div></body></html>

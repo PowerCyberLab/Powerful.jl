@@ -1,0 +1,308 @@
+<!DOCTYPE html>
+<html lang="en"><head><meta charset="UTF-8"/><meta name="viewport" content="width=device-width, initial-scale=1.0"/><title>Type System &amp; Interface Centralization Analysis · Powerful.jl</title><meta name="title" content="Type System &amp; Interface Centralization Analysis · Powerful.jl"/><meta property="og:title" content="Type System &amp; Interface Centralization Analysis · Powerful.jl"/><meta property="twitter:title" content="Type System &amp; Interface Centralization Analysis · Powerful.jl"/><meta name="description" content="Documentation for Powerful.jl."/><meta property="og:description" content="Documentation for Powerful.jl."/><meta property="twitter:description" content="Documentation for Powerful.jl."/><meta property="og:url" content="https://sensl.gitlab.io/Powerful.jl/design/architecture/TYPE_SYSTEM_ANALYSIS.html"/><meta property="twitter:url" content="https://sensl.gitlab.io/Powerful.jl/design/architecture/TYPE_SYSTEM_ANALYSIS.html"/><link rel="canonical" href="https://sensl.gitlab.io/Powerful.jl/design/architecture/TYPE_SYSTEM_ANALYSIS.html"/><script data-outdated-warner src="../../assets/warner.js"></script><link href="https://cdnjs.cloudflare.com/ajax/libs/lato-font/3.0.0/css/lato-font.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/juliamono/0.050/juliamono.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/fontawesome.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/solid.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/brands.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.16.8/katex.min.css" rel="stylesheet" type="text/css"/><script>documenterBaseURL="../.."</script><script src="https://cdnjs.cloudflare.com/ajax/libs/require.js/2.3.6/require.min.js" data-main="../../assets/documenter.js"></script><script src="../../search_index.js"></script><script src="../../siteinfo.js"></script><script src="../../../versions.js"></script><link class="docs-theme-link" rel="stylesheet" type="text/css" href="../../assets/themes/catppuccin-mocha.css" data-theme-name="catppuccin-mocha"/><link class="docs-theme-link" rel="stylesheet" type="text/css" href="../../assets/themes/catppuccin-macchiato.css" data-theme-name="catppuccin-macchiato"/><link class="docs-theme-link" rel="stylesheet" type="text/css" href="../../assets/themes/catppuccin-frappe.css" data-theme-name="catppuccin-frappe"/><link class="docs-theme-link" rel="stylesheet" type="text/css" href="../../assets/themes/catppuccin-latte.css" data-theme-name="catppuccin-latte"/><link class="docs-theme-link" rel="stylesheet" type="text/css" href="../../assets/themes/documenter-dark.css" data-theme-name="documenter-dark" data-theme-primary-dark/><link class="docs-theme-link" rel="stylesheet" type="text/css" href="../../assets/themes/documenter-light.css" data-theme-name="documenter-light" data-theme-primary/><script src="../../assets/themeswap.js"></script></head><body><div id="documenter"><nav class="docs-sidebar"><div class="docs-package-name"><span class="docs-autofit"><a href="../../index.html">Powerful.jl</a></span></div><button class="docs-search-query input is-rounded is-small is-clickable my-2 mx-auto py-1 px-2" id="documenter-search-query">Search docs (Ctrl + /)</button><ul class="docs-menu"><li><a class="tocitem" href="../../index.html">Home</a></li><li><input class="collapse-toggle" id="menuitem-2" type="checkbox"/><label class="tocitem" for="menuitem-2"><span class="docs-label">Guides</span><i class="docs-chevron"></i></label><ul class="collapsed"><li><a class="tocitem" href="../../guides/index.html">Overview</a></li><li><a class="tocitem" href="../../guides/getting_started.html">Getting Started</a></li><li><a class="tocitem" href="../../guides/powerflow.html">Power Flow Analysis</a></li><li><a class="tocitem" href="../../guides/tds.html">Time-Domain Simulation</a></li><li><a class="tocitem" href="../../guides/configuration.html">Configuration</a></li><li><a class="tocitem" href="../../guides/accessing_variables.html">Accessing Results</a></li><li><a class="tocitem" href="../../guides/reports.html">Report Customization</a></li></ul></li><li><input class="collapse-toggle" id="menuitem-3" type="checkbox"/><label class="tocitem" for="menuitem-3"><span class="docs-label">Notebooks</span><i class="docs-chevron"></i></label><ul class="collapsed"><li><a class="tocitem" href="../../notebooks/index.html">Overview</a></li><li><a class="tocitem" href="../../notebooks/01_getting_started.html">01 Getting Started</a></li><li><a class="tocitem" href="../../notebooks/02_formulations_and_solvers.html">02 Formulations And Solvers</a></li><li><a class="tocitem" href="../../notebooks/03_gpu_acceleration.html">03 Gpu Acceleration</a></li><li><a class="tocitem" href="../../notebooks/03_multi_island_power_flow.html">03 Multi Island Power Flow</a></li><li><a class="tocitem" href="../../notebooks/04_multi_island_power_flow.html">04 Multi Island Power Flow</a></li><li><a class="tocitem" href="../../notebooks/05_tds_initialization_validation.html">05 Tds Initialization Validation</a></li></ul></li><li><input class="collapse-toggle" id="menuitem-4" type="checkbox"/><label class="tocitem" for="menuitem-4"><span class="docs-label">Developer Documentation</span><i class="docs-chevron"></i></label><ul class="collapsed"><li><a class="tocitem" href="../../developer/overview.html">Overview</a></li><li><a class="tocitem" href="../../developer/indexing.html">Three-Layer Indexing</a></li><li><a class="tocitem" href="../../developer/formulations.html">Multi-Physics Formulations</a></li><li><a class="tocitem" href="../../developer/workspaces.html">Computation Architecture</a></li><li><a class="tocitem" href="../../developer/models.html">Implementing Models</a></li><li><a class="tocitem" href="../../developer/events.html">TDS Event System</a></li><li><a class="tocitem" href="../../developer/miscellaneous.html">Per-Unit &amp; Multi-Island</a></li></ul></li><li><input class="collapse-toggle" id="menuitem-5" type="checkbox"/><label class="tocitem" for="menuitem-5"><span class="docs-label">API Reference</span><i class="docs-chevron"></i></label><ul class="collapsed"><li><a class="tocitem" href="../../api.html">Overview</a></li><li><a class="tocitem" href="../../api/system.html">System &amp; DAE</a></li><li><a class="tocitem" href="../../api/models.html">Models</a></li><li><a class="tocitem" href="../../api/powerflow.html">Power Flow</a></li><li><a class="tocitem" href="../../api/tds.html">Time-Domain Simulation</a></li><li><a class="tocitem" href="../../api/advanced.html">Advanced Features</a></li></ul></li><li><a class="tocitem" href="../../index_page.html">Index</a></li></ul><div class="docs-version-selector field has-addons"><div class="control"><span class="docs-label button is-static is-size-7">Version</span></div><div class="docs-selector control is-expanded"><div class="select is-fullwidth is-size-7"><select id="documenter-version-selector"></select></div></div></div></nav><div class="docs-main"><header class="docs-navbar"><a class="docs-sidebar-button docs-navbar-link fa-solid fa-bars is-hidden-desktop" id="documenter-sidebar-button" href="#"></a><nav class="breadcrumb"><ul class="is-hidden-mobile"><li class="is-active"><a href="TYPE_SYSTEM_ANALYSIS.html">Type System &amp; Interface Centralization Analysis</a></li></ul><ul class="is-hidden-tablet"><li class="is-active"><a href="TYPE_SYSTEM_ANALYSIS.html">Type System &amp; Interface Centralization Analysis</a></li></ul></nav><div class="docs-right"><a class="docs-navbar-link" href="https://github.com/sensl/Powerful.jl/blob/main/docs/src/design/architecture/TYPE_SYSTEM_ANALYSIS.md#" title="Edit source on GitHub"><span class="docs-icon fa-solid"></span></a><a class="docs-settings-button docs-navbar-link fa-solid fa-gear" id="documenter-settings-button" href="#" title="Settings"></a><a class="docs-article-toggle-button fa-solid fa-chevron-up" id="documenter-article-toggle-button" href="javascript:;" title="Collapse all docstrings"></a></div></header><article class="content" id="documenter-page"><h1 id="Type-System-and-Interface-Centralization-Analysis"><a class="docs-heading-anchor" href="#Type-System-and-Interface-Centralization-Analysis">Type System &amp; Interface Centralization Analysis</a><a id="Type-System-and-Interface-Centralization-Analysis-1"></a><a class="docs-heading-anchor-permalink" href="#Type-System-and-Interface-Centralization-Analysis" title="Permalink"></a></h1><p><strong>Date</strong>: 2025-01-07 <strong>Analysis</strong>: Complete inventory of abstract types, concrete types, and interface signatures in Powerful.jl</p><h2 id="Executive-Summary"><a class="docs-heading-anchor" href="#Executive-Summary">Executive Summary</a><a id="Executive-Summary-1"></a><a class="docs-heading-anchor-permalink" href="#Executive-Summary" title="Permalink"></a></h2><p><strong>Verdict: HIGHLY CENTRALIZED</strong> ✅</p><ul><li><strong>66% of abstract types</strong> are in <code>foundation/</code> (interface layer)</li><li><strong>100% of core interface signatures</strong> defined in <code>foundation/</code></li><li><strong>Clean separation</strong>: Foundation defines, Models implement, Solvers consume</li><li><strong>Well-prepared for splitting</strong> into <code>PowerfulBase.jl</code> + <code>Powerful.jl</code></li></ul><hr/><h2 id="1.-Abstract-Type-Hierarchy"><a class="docs-heading-anchor" href="#1.-Abstract-Type-Hierarchy">1. Abstract Type Hierarchy</a><a id="1.-Abstract-Type-Hierarchy-1"></a><a class="docs-heading-anchor-permalink" href="#1.-Abstract-Type-Hierarchy" title="Permalink"></a></h2><h3 id="Total-Count:-29-Abstract-Types"><a class="docs-heading-anchor" href="#Total-Count:-29-Abstract-Types">Total Count: 29 Abstract Types</a><a id="Total-Count:-29-Abstract-Types-1"></a><a class="docs-heading-anchor-permalink" href="#Total-Count:-29-Abstract-Types" title="Permalink"></a></h3><h4 id="Foundation-Layer:-19-types-(65.5%)"><a class="docs-heading-anchor" href="#Foundation-Layer:-19-types-(65.5%)">Foundation Layer: 19 types (65.5%)</a><a id="Foundation-Layer:-19-types-(65.5%)-1"></a><a class="docs-heading-anchor-permalink" href="#Foundation-Layer:-19-types-(65.5%)" title="Permalink"></a></h4><p><strong>Core Model System:</strong></p><pre><code class="language-julia hljs">src/foundation/core_types.jl
+├── AbstractModel                    # Root type for all models (line 1)
+├── AbstractLoad{Tv} &lt;: AbstractModel # Base for load models (line 536)
+└── NodeTrait                        # AC vs DC nodes (line 531)
+    ├── ACNode
+    └── DCNode</code></pre><p><strong>Variable/Residual System:</strong></p><pre><code class="language-julia hljs">src/foundation/core_types.jl
+├── VarOwnership                     # Variable ownership patterns (line 16)
+│   ├── OwnVar
+│   └── ForeignVar{Ti, T}
+├── VarTrait                         # Internal vs External (line 43)
+│   ├── Internal
+│   └── External
+├── AddressableType                  # DAE addressable types (line 47)
+│   ├── AddressableVar
+│   │   ├── AlgebVar                # Algebraic variables
+│   │   ├── StateVar                # Differential states
+│   │   └── ObservedVar             # Computed outputs
+│   └── AddressableRes
+│       ├── AlgebRes                # Algebraic residuals
+│       └── StateRes                # Differential residuals
+├── VarProperty                      # Variable metadata (line 25)
+│   ├── Description
+│   ├── Units
+│   └── Bounds
+└── ResAccess                        # Residual access patterns (line 82)
+    ├── SharedRes                   # Bus balance (accumulate or set)
+    └── PrivateRes                  # Model-local residuals</code></pre><p><strong>Per-Unit Conversion System:</strong></p><pre><code class="language-julia hljs">src/foundation/core_types.jl
+├── PUType                           # Per-unit conversion types (line 293)
+│   ├── NoPU                        # No conversion needed
+│   ├── PowerNominal, ActivePower, ReactivePower
+│   ├── VoltageNominal, CurrentNominal
+│   ├── ImpedanceNominal, AdmittanceNominal
+│   ├── AngleDegrees
+│   └── PowerPU, VoltagePU, CurrentPU, ImpedancePU, AdmittancePU
+├── RatingType                       # Device ratings (line 314)
+│   ├── NominalPower
+│   ├── NominalVoltage
+│   └── NominalCurrent
+├── ReferenceType                    # External references (line 320)
+│   ├── BaseVoltage
+│   ├── BasePower
+│   ├── BaseCurrent
+│   └── Dimensionless
+└── RetrievalPhase                   # When to retrieve (line 327)
+    ├── PrePerUnit                  # Before per-unit conversion
+    └── PostPerUnit                 # After per-unit conversion</code></pre><p><strong>Base Quantity Traits:</strong></p><pre><code class="language-julia hljs">src/foundation/base_quantity_traits.jl
+└── BaseQuantityRole                 # Per-unit base inheritance (line 28)
+    ├── OwnsBase                    # Model stores base in field
+    ├── InheritsBase                # Model receives from ExtParam
+    └── NoBase                      # Model doesn&#39;t use this base</code></pre><p><strong>Infrastructure:</strong></p><pre><code class="language-julia hljs">src/foundation/core_types.jl
+├── AddressingStrategy               # Address reordering (line 180)
+│   ├── NaturalAddressing           # Sequential (default)
+│   ├── AMDAddressing               # Sparse matrix ordering
+│   └── CustomPermutation{P}        # User-defined
+├── ModelAddresses                   # Model address storage (line 148)
+└── DataFormat                       # Data format types (line 626)
+    ├── PSSE
+    └── MATPOWER
+
+src/foundation/formulation_traits.jl
+└── FormulationTrait                 # Power flow formulations (line 26)
+    ├── PowerInjection              # Polar coordinates (θ, V)
+    └── CurrentInjection            # Rectangular (Vr, Vi)</code></pre><h4 id="Model-Layer:-4-types-(13.8%)"><a class="docs-heading-anchor" href="#Model-Layer:-4-types-(13.8%)">Model Layer: 4 types (13.8%)</a><a id="Model-Layer:-4-types-(13.8%)-1"></a><a class="docs-heading-anchor-permalink" href="#Model-Layer:-4-types-(13.8%)" title="Permalink"></a></h4><p><strong>Model Specializations:</strong></p><pre><code class="language-julia hljs">src/models/
+├── bus/bus.jl
+│   └── AbstractBus{Tv} &lt;: AbstractModel
+├── pv.jl
+│   └── AbstractGenerator{Tv} &lt;: AbstractModel
+├── branch.jl
+│   └── AbstractBranch{T} &lt;: AbstractModel
+└── transformer.jl
+    └── AbstractTransformer{T} &lt;: AbstractModel</code></pre><p><strong>Rationale</strong>: These are <em>domain-specific</em> abstractions, not interface abstractions. They represent power system concepts (bus, generator, branch), not the core interface.</p><h4 id="Solver-Layer:-6-types-(20.7%)"><a class="docs-heading-anchor" href="#Solver-Layer:-6-types-(20.7%)">Solver Layer: 6 types (20.7%)</a><a id="Solver-Layer:-6-types-(20.7%)-1"></a><a class="docs-heading-anchor-permalink" href="#Solver-Layer:-6-types-(20.7%)" title="Permalink"></a></h4><p><strong>Algorithm Hierarchy:</strong></p><pre><code class="language-julia hljs">src/solvers/power_flow_api.jl
+├── PowerFlowProblem                 # Base problem type (line 53)
+│   ├── ACPowerFlowProblem          # Nonlinear AC power flow
+│   └── DCPowerFlowProblem          # Linear DC power flow (future)
+├── PowerFlowAlgorithm               # Base algorithm type (line 221)
+│   └── ACMethod                    # AC-specific methods (line 228)
+│       ├── NewtonRaphsonMethod     # Full Newton (internal)
+│       ├── FastDecoupled           # Fast decoupled (future)
+│       ├── GaussSeidel             # Gauss-Seidel (future)
+│       └── DishonestNewton         # Modified Newton (future)
+├── GlobalizationStrategy            # Convergence aids (line 340)
+│   ├── NoGlobalization
+│   ├── LineSearch
+│   └── TrustRegion
+├── ImplementationBackend            # Which package (line 402)
+│   ├── NativeBackend               # Built-in solver
+│   └── NonlinearSolveBackend       # NonlinearSolve.jl
+└── LinearSolver                     # Factorization method (line 443)
+    ├── KLUSolver                   # Sparse direct (default)
+    ├── CUDSSSolver                 # GPU sparse direct
+    └── IterativeGMRES              # Iterative (future)</code></pre><p><strong>Design Philosophy</strong>: Following SciML&#39;s composable algorithm pattern (like DifferentialEquations.jl)</p><hr/><h2 id="2.-Core-Interface-Functions"><a class="docs-heading-anchor" href="#2.-Core-Interface-Functions">2. Core Interface Functions</a><a id="2.-Core-Interface-Functions-1"></a><a class="docs-heading-anchor-permalink" href="#2.-Core-Interface-Functions" title="Permalink"></a></h2><h3 id="Primary-Model-Interface-(foundation/)"><a class="docs-heading-anchor" href="#Primary-Model-Interface-(foundation/)">Primary Model Interface (foundation/)</a><a id="Primary-Model-Interface-(foundation/)-1"></a><a class="docs-heading-anchor-permalink" href="#Primary-Model-Interface-(foundation/)" title="Permalink"></a></h3><p><strong>Defined in</strong>: <code>src/foundation/model_metadata.jl</code></p><pre><code class="language-julia hljs"># Interface declaration (line 45-48)
+function model_metadata(model::Type)
+    error(&quot;No `model_metadata` function defined for model $model. ...&quot;)
+end
+
+# Convenience wrapper (line 72-75)
+function model_metadata(model_vec::AbstractModel)
+    base_type = get_base_model_type(model_vec)
+    return model_metadata(base_type)
+end
+
+# Residual calculation interface (line 78-99)
+function calc_residuals!(ws::ResidualBuffers, model_vec::AbstractModel)
+    # Models implement this to compute residuals
+end
+
+# Default fallback for passive models (line 105-116)
+function calc_residuals!(ws::ResidualBuffers{T, AT},
+                        model_vec::StructArray{M},
+                        _external::NamedTuple) where {T, AT, M&lt;:AbstractModel}
+    # Default: do nothing (passive models like Area, Owner, Zone)
+    nothing
+end
+
+# Formulation-specific dispatch (line 119-122)
+function calc_residuals!(ws::ResidualBuffers{T, AT},
+                        model_vec::StructArray{M},
+                        external::NamedTuple,
+                        formulation::FormulationTrait) where {T, AT, M&lt;:AbstractModel}
+    # Forward to 3-argument version for backward compatibility
+    calc_residuals!(ws, model_vec, external)
+end
+
+# Observation outputs (line 125-150)
+function get_output_value(::SystemModel, ::AbstractVector,
+                         model_type::Type{&lt;:AbstractModel}, var::Symbol, ::Int)
+    error(&quot;No get_output_value implementation for model type $model_type and variable $var&quot;)
+end
+
+# Status field retrieval (line 153-186)
+function get_status_field(model_type::Type{&lt;:AbstractModel})
+    metadata = model_metadata(model_type)
+    return metadata.status_field
+end
+
+# Formulation-specific metadata (line 217-249)
+function get_metadata_for_formulation(metadata::ModelMetadata, formulation::Type{F})
+    # Returns (vars, residuals) for the requested formulation
+end</code></pre><p><strong>Defined in</strong>: <code>src/foundation/format_traits.jl</code></p><pre><code class="language-julia hljs"># Format support check (line 1-10)
+abstract type FormatSupport{F} end
+struct NoFormatSupport end
+
+function supports_format(model_type::Type{&lt;:AbstractModel},
+                        format::Type{&lt;:DataFormat})
+    return NoFormatSupport()
+end
+
+# Parser interface
+function parse_model end</code></pre><p><strong>Defined in</strong>: <code>src/foundation/formulation_traits.jl</code></p><pre><code class="language-julia hljs"># Formulation support check (line 86-104)
+function supports_formulation(::Type{M}, ::Type{F}) where {M&lt;:AbstractModel, F&lt;:FormulationTrait}
+    error(&quot;Model $M does not support formulation $F&quot;)
+end</code></pre><h3 id="Implementation-Count"><a class="docs-heading-anchor" href="#Implementation-Count">Implementation Count</a><a id="Implementation-Count-1"></a><a class="docs-heading-anchor-permalink" href="#Implementation-Count" title="Permalink"></a></h3><table><tr><th style="text-align: right">Interface Function</th><th style="text-align: right">Implementations</th><th style="text-align: right">Location</th></tr><tr><td style="text-align: right"><code>model_metadata()</code></td><td style="text-align: right">9</td><td style="text-align: right">All concrete models</td></tr><tr><td style="text-align: right"><code>calc_residuals!()</code></td><td style="text-align: right">6</td><td style="text-align: right">Active models (Bus, PQ, PV, Branch, Transformer2W, Shunt)</td></tr><tr><td style="text-align: right"><code>get_output_value()</code></td><td style="text-align: right">4</td><td style="text-align: right">Models with observations (Branch, PQ, PV, Shunt)</td></tr><tr><td style="text-align: right"><code>supports_format()</code></td><td style="text-align: right">9</td><td style="text-align: right">All concrete models</td></tr><tr><td style="text-align: right"><code>supports_formulation()</code></td><td style="text-align: right">6</td><td style="text-align: right">Models with formulation variants</td></tr></table><p><strong>Note</strong>: Passive models (AreaInterchange, Owner, Zone) use the default <code>calc_residuals!</code> fallback (does nothing).</p><hr/><h2 id="3.-Concrete-Type-Distribution"><a class="docs-heading-anchor" href="#3.-Concrete-Type-Distribution">3. Concrete Type Distribution</a><a id="3.-Concrete-Type-Distribution-1"></a><a class="docs-heading-anchor-permalink" href="#3.-Concrete-Type-Distribution" title="Permalink"></a></h2><h3 id="Total-Count:-88-Concrete-Structs"><a class="docs-heading-anchor" href="#Total-Count:-88-Concrete-Structs">Total Count: 88 Concrete Structs</a><a id="Total-Count:-88-Concrete-Structs-1"></a><a class="docs-heading-anchor-permalink" href="#Total-Count:-88-Concrete-Structs" title="Permalink"></a></h3><p><strong>Breakdown by Directory:</strong></p><pre><code class="nohighlight hljs">foundation/          60 structs  (68.2%)  - Type system infrastructure
+models/               3 structs  (3.4%)   - Power system components
+solvers/             17 structs  (19.3%)  - Algorithm configuration
+dae/                  2 structs  (2.3%)   - DAE infrastructure
+system/               3 structs  (3.4%)   - System management
+access/               1 struct   (1.1%)   - Parameter system
+topology/             1 struct   (1.1%)   - Network topology
+analysis/             1 struct   (1.1%)   - Sparsity detection
+io/                   0 structs  (0.0%)   - Reports (uses base types)
+formats/              0 structs  (0.0%)   - Parsers (uses base types)</code></pre><h3 id="Foundation-Layer:-60-structs-(68.2%)"><a class="docs-heading-anchor" href="#Foundation-Layer:-60-structs-(68.2%)">Foundation Layer: 60 structs (68.2%)</a><a id="Foundation-Layer:-60-structs-(68.2%)-1"></a><a class="docs-heading-anchor-permalink" href="#Foundation-Layer:-60-structs-(68.2%)" title="Permalink"></a></h3><p><strong>Variable/Residual Types:</strong></p><pre><code class="language-julia hljs">src/foundation/core_types.jl
+├── OwnVar
+├── ForeignVar{Ti, T}
+├── Description, Units, Bounds
+├── Internal, External
+├── AlgebVar, StateVar, ObservedVar
+├── AlgebRes, StateRes
+├── ModelVar{T, AT, SM, IN, Props}
+├── SharedRes
+├── PrivateRes
+└── ModelResidual{T, AT, RA, SM, SR, IN}</code></pre><p><strong>Address Management:</strong></p><pre><code class="language-julia hljs">src/foundation/core_types.jl
+├── ModelAddressAssignment
+├── ModelRetrievedAddresses
+├── NaturalAddressing
+├── AMDAddressing
+├── CustomPermutation{P}
+└── AddressManager</code></pre><p><strong>External-to-Internal Indexing:</strong></p><pre><code class="language-julia hljs">src/foundation/core_types.jl
+└── IndexOrder</code></pre><p><strong>Per-Unit Types (11 nominal, 5 pu-to-pu):</strong></p><pre><code class="language-julia hljs">src/foundation/core_types.jl
+├── NoPU
+├── PowerNominal, ActivePower, ReactivePower
+├── VoltageNominal, CurrentNominal
+├── ImpedanceNominal, AdmittanceNominal
+├── AngleDegrees
+├── PowerPU, VoltagePU, CurrentPU, ImpedancePU, AdmittancePU
+├── NominalPower, NominalVoltage, NominalCurrent
+├── BaseVoltage, BasePower, BaseCurrent, Dimensionless
+├── PrePerUnit, PostPerUnit
+├── ModelParam
+├── ModelObservation
+├── ModelRating
+├── Terminal
+├── ExtParam
+├── ModelMetadata
+├── ACNode, DCNode
+├── PSSE, MATPOWER
+└── SystemModel</code></pre><p><strong>Base Quantity Traits:</strong></p><pre><code class="language-julia hljs">src/foundation/base_quantity_traits.jl
+├── OwnsBase
+├── InheritsBase
+└── NoBase</code></pre><p><strong>Format Support:</strong></p><pre><code class="language-julia hljs">src/foundation/format_traits.jl
+├── FormatSupport{F}
+└── NoFormatSupport</code></pre><p><strong>Formulation Traits:</strong></p><pre><code class="language-julia hljs">src/foundation/formulation_traits.jl
+├── PowerInjection
+└── CurrentInjection</code></pre><h3 id="Model-Layer:-3-structs-(3.4%)"><a class="docs-heading-anchor" href="#Model-Layer:-3-structs-(3.4%)">Model Layer: 3 structs (3.4%)</a><a id="Model-Layer:-3-structs-(3.4%)-1"></a><a class="docs-heading-anchor-permalink" href="#Model-Layer:-3-structs-(3.4%)" title="Permalink"></a></h3><p><strong>Active Models</strong> (contribute residuals to DAE):</p><pre><code class="language-julia hljs">src/models/
+├── bus/bus1ph.jl
+│   └── Bus{Tv} &lt;: AbstractBus{Tv}              # Power/current balance
+├── pq.jl
+│   └── PQ{Tv} &lt;: AbstractLoad{Tv}              # ZIP load model
+├── pv.jl
+│   └── PV{Tv} &lt;: AbstractGenerator{Tv}         # Constant P &amp; V generator
+├── branch.jl
+│   └── Branch{Tv} &lt;: AbstractBranch{Tv}        # Pi-model line
+├── transformer.jl
+│   ├── Transformer2W{Tv} &lt;: AbstractTransformer{Tv}
+│   └── Transformer3W{Tv} &lt;: AbstractTransformer{Tv}  # Parsed, converted to 2W
+└── shunt.jl
+    └── Shunt{Tv} &lt;: AbstractLoad{Tv}           # Fixed shunt</code></pre><p><strong>Note</strong>: Transformer3W is parsed but converted to 3x Transformer2W + virtual bus before simulation.</p><p><strong>Passive Models</strong> (topology only, no residuals):</p><pre><code class="language-julia hljs">src/models/topological/
+├── area_interchange.jl  → AreaInterchange
+├── owner.jl            → Owner
+└── zone.jl             → Zone</code></pre><p><strong>Note</strong>: Count shows 3 because many are in same files. Actual model structs:</p><ul><li>Bus (1)</li><li>PQ (1)</li><li>PV (1)</li><li>Branch (1)</li><li>Transformer2W (1)</li><li>Transformer3W (1) [converted before use]</li><li>Shunt (1)</li><li>AreaInterchange (implicit)</li><li>Owner (implicit)</li><li>Zone (implicit)</li></ul><h3 id="Solver-Layer:-17-structs-(19.3%)"><a class="docs-heading-anchor" href="#Solver-Layer:-17-structs-(19.3%)">Solver Layer: 17 structs (19.3%)</a><a id="Solver-Layer:-17-structs-(19.3%)-1"></a><a class="docs-heading-anchor-permalink" href="#Solver-Layer:-17-structs-(19.3%)" title="Permalink"></a></h3><p><strong>Problem Types:</strong></p><pre><code class="language-julia hljs">src/solvers/power_flow_api.jl
+├── ACPowerFlowProblem{F&lt;:FormulationTrait}
+├── DCPowerFlowProblem
+└── MultiIslandSolution{T}</code></pre><p><strong>Algorithm Configuration:</strong></p><pre><code class="language-julia hljs">src/solvers/power_flow_api.jl
+├── FastDecoupled
+├── GaussSeidel
+├── DishonestNewton
+├── NoGlobalization
+├── LineSearch
+├── TrustRegion
+├── NativeBackend
+├── NonlinearSolveBackend
+├── CUDSSSolver
+├── IterativeGMRES
+└── AlgorithmConfig{M, G, B, L}</code></pre><p><strong>Solution Types:</strong></p><pre><code class="language-julia hljs">src/solvers/powerflow.jl
+├── PowerFlowSolution{T, PROB}
+├── NonlinearSolveWorkspace{PROB, JT, BT, PT}
+└── NewtonWorkspace{PROB, AT, JT, BT, PT}</code></pre><h3 id="DAE-Layer:-2-structs-(2.3%)"><a class="docs-heading-anchor" href="#DAE-Layer:-2-structs-(2.3%)">DAE Layer: 2 structs (2.3%)</a><a id="DAE-Layer:-2-structs-(2.3%)-1"></a><a class="docs-heading-anchor-permalink" href="#DAE-Layer:-2-structs-(2.3%)" title="Permalink"></a></h3><pre><code class="language-julia hljs">src/dae/dae.jl
+└── DAE{AT&lt;:AbstractVector}
+
+src/dae/residual_workspace.jl
+└── ResidualBuffers{T&lt;:Number, AT, VV, RV, AM}</code></pre><h3 id="System-Layer:-3-structs-(3.4%)"><a class="docs-heading-anchor" href="#System-Layer:-3-structs-(3.4%)">System Layer: 3 structs (3.4%)</a><a id="System-Layer:-3-structs-(3.4%)-1"></a><a class="docs-heading-anchor-permalink" href="#System-Layer:-3-structs-(3.4%)" title="Permalink"></a></h3><pre><code class="language-julia hljs">src/system/system.jl
+├── ComponentIterator
+└── SystemBuffers{T, SYS, F, WS, MD, SMN}
+
+src/system/per_unit.jl
+└── ParsedSystemData</code></pre><h3 id="Other-Infrastructure:-3-structs-(3.4%)"><a class="docs-heading-anchor" href="#Other-Infrastructure:-3-structs-(3.4%)">Other Infrastructure: 3 structs (3.4%)</a><a id="Other-Infrastructure:-3-structs-(3.4%)-1"></a><a class="docs-heading-anchor-permalink" href="#Other-Infrastructure:-3-structs-(3.4%)" title="Permalink"></a></h3><pre><code class="language-julia hljs">src/access/parameter_system.jl
+└── ParameterSlice
+
+src/topology/topology.jl
+└── TopologyInfo
+
+src/analysis/sparsity_pattern.jl
+└── PrecomputedSparsityDetector</code></pre><hr/><h2 id="4.-Centralization-Analysis"><a class="docs-heading-anchor" href="#4.-Centralization-Analysis">4. Centralization Analysis</a><a id="4.-Centralization-Analysis-1"></a><a class="docs-heading-anchor-permalink" href="#4.-Centralization-Analysis" title="Permalink"></a></h2><h3 id="HIGHLY-CENTRALIZED-Interface"><a class="docs-heading-anchor" href="#HIGHLY-CENTRALIZED-Interface">✅ HIGHLY CENTRALIZED Interface</a><a id="HIGHLY-CENTRALIZED-Interface-1"></a><a class="docs-heading-anchor-permalink" href="#HIGHLY-CENTRALIZED-Interface" title="Permalink"></a></h3><p><strong>Evidence:</strong></p><ol><li><p><strong>Single Source of Truth</strong>: All interface signatures in <code>foundation/</code></p><ul><li><code>model_metadata()</code> - model_metadata.jl line 45</li><li><code>calc_residuals!()</code> - model_metadata.jl line 78</li><li><code>get_output_value()</code> - model_metadata.jl line 125</li><li><code>supports_format()</code> - format_traits.jl</li><li><code>supports_formulation()</code> - formulation_traits.jl</li></ul></li><li><p><strong>Clear Import Pattern</strong>: Models import interface, don&#39;t define it</p><pre><code class="language-julia hljs"># src/models/Models.jl
+import Powerful: model_metadata, calc_residuals!, get_output_value</code></pre></li><li><p><strong>Fallback Implementations</strong>: Foundation provides sensible defaults</p><pre><code class="language-julia hljs"># line 105-116: Default calc_residuals! does nothing (passive models)</code></pre></li><li><p><strong>Trait-Based Extension</strong>: Uses traits for optional capabilities</p><pre><code class="language-julia hljs"># Format support via traits
+supports_format(::Type{PQ}, ::Type{PSSE}) = FormatSupport{PSSE}()
+
+# Formulation support via traits
+supports_formulation(::Type{Bus}, ::Type{PowerInjection}) = PowerInjection()
+supports_formulation(::Type{Bus}, ::Type{CurrentInjection}) = CurrentInjection()</code></pre></li><li><p><strong>Formulation System</strong>: Models declare support for multiple formulations</p><pre><code class="language-julia hljs"># Models store formulation-specific metadata
+metadata.vars_by_formulation[CurrentInjection] = CURRENT_VARS
+metadata.residuals_by_formulation[CurrentInjection] = CURRENT_RESIDUALS</code></pre></li></ol><h3 id="Location-of-Key-Components"><a class="docs-heading-anchor" href="#Location-of-Key-Components">Location of Key Components</a><a id="Location-of-Key-Components-1"></a><a class="docs-heading-anchor-permalink" href="#Location-of-Key-Components" title="Permalink"></a></h3><table><tr><th style="text-align: right">Component</th><th style="text-align: right">Definition</th><th style="text-align: right">Implementation</th><th style="text-align: right">Consumer</th></tr><tr><td style="text-align: right">Abstract types</td><td style="text-align: right"><code>foundation/</code> (66%)</td><td style="text-align: right">N/A</td><td style="text-align: right">All layers</td></tr><tr><td style="text-align: right">Interface signatures</td><td style="text-align: right"><code>foundation/</code> (100%)</td><td style="text-align: right"><code>models/</code></td><td style="text-align: right"><code>system/</code>, <code>solvers/</code></td></tr><tr><td style="text-align: right">Model structs</td><td style="text-align: right"><code>models/</code> (100%)</td><td style="text-align: right"><code>models/</code></td><td style="text-align: right"><code>system/</code></td></tr><tr><td style="text-align: right">Algorithm types</td><td style="text-align: right"><code>solvers/</code> (100%)</td><td style="text-align: right"><code>solvers/</code></td><td style="text-align: right">User code</td></tr><tr><td style="text-align: right">DAE infrastructure</td><td style="text-align: right"><code>dae/</code></td><td style="text-align: right"><code>dae/</code></td><td style="text-align: right"><code>system/</code>, <code>solvers/</code></td></tr><tr><td style="text-align: right">Formulation traits</td><td style="text-align: right"><code>foundation/</code> (100%)</td><td style="text-align: right"><code>models/</code></td><td style="text-align: right"><code>solvers/</code></td></tr></table><hr/><h2 id="5.-What-Would-PowerfulBase.jl-Contain?"><a class="docs-heading-anchor" href="#5.-What-Would-PowerfulBase.jl-Contain?">5. What Would PowerfulBase.jl Contain?</a><a id="5.-What-Would-PowerfulBase.jl-Contain?-1"></a><a class="docs-heading-anchor-permalink" href="#5.-What-Would-PowerfulBase.jl-Contain?" title="Permalink"></a></h2><p>If split today, the interface package would include:</p><h3 id="Minimal-Dependencies-(2500-LOC)"><a class="docs-heading-anchor" href="#Minimal-Dependencies-(2500-LOC)">Minimal Dependencies (~2500 LOC)</a><a id="Minimal-Dependencies-(2500-LOC)-1"></a><a class="docs-heading-anchor-permalink" href="#Minimal-Dependencies-(2500-LOC)" title="Permalink"></a></h3><pre><code class="language-julia hljs">[deps]
+StructArrays = &quot;...&quot;
+DocStringExtensions = &quot;...&quot;
+# NO: ForwardDiff, NonlinearSolve, CUDA, KLU</code></pre><h3 id="Contents"><a class="docs-heading-anchor" href="#Contents">Contents</a><a id="Contents-1"></a><a class="docs-heading-anchor-permalink" href="#Contents" title="Permalink"></a></h3><p><strong>Foundation Layer</strong> (complete):</p><pre><code class="nohighlight hljs">src/foundation/
+├── core_types.jl              # AbstractModel, traits, metadata structs
+├── base_quantity_traits.jl    # Per-unit base inheritance traits
+├── model_var.jl              # ModelVar, ModelResidual constructors
+├── model_metadata.jl          # Interface declarations
+├── format_traits.jl           # Parser interface
+├── formulation_traits.jl      # Formulation trait system
+└── coordinate_conversions.jl  # Polar ↔ rectangular conversions</code></pre><p><strong>Indexing Layer</strong> (complete):</p><pre><code class="nohighlight hljs">src/indexing/
+├── address_manager.jl         # AddressManager (no algorithms)
+└── ext2int.jl                # Index mapping (no topology)</code></pre><p><strong>DAE Layer</strong> (types only):</p><pre><code class="nohighlight hljs">src/dae/
+└── dae.jl                    # DAE struct definition (no residual evaluation)</code></pre><p><strong>System Layer</strong> (minimal):</p><pre><code class="nohighlight hljs">src/system/
+└── system.jl                 # SystemModel struct (no setup! implementation)</code></pre><h3 id="What-Stays-in-Powerful.jl"><a class="docs-heading-anchor" href="#What-Stays-in-Powerful.jl">What Stays in Powerful.jl</a><a id="What-Stays-in-Powerful.jl-1"></a><a class="docs-heading-anchor-permalink" href="#What-Stays-in-Powerful.jl" title="Permalink"></a></h3><p><strong>Everything else</strong> (~15,000 LOC):</p><pre><code class="nohighlight hljs">src/models/                    # All implementations
+src/solvers/                   # All solvers
+src/analysis/                  # AD caching, sparsity
+src/topology/                  # Island detection
+src/dae/residual_workspace.jl  # Residual evaluation
+src/dae/gather_scatter.jl      # GPU gather/scatter kernels
+src/system/setup, per_unit     # System algorithms
+src/io/                        # Reports
+src/formats/                   # Parsers</code></pre><hr/><h2 id="6.-Comparison-to-Julia-Ecosystem-Patterns"><a class="docs-heading-anchor" href="#6.-Comparison-to-Julia-Ecosystem-Patterns">6. Comparison to Julia Ecosystem Patterns</a><a id="6.-Comparison-to-Julia-Ecosystem-Patterns-1"></a><a class="docs-heading-anchor-permalink" href="#6.-Comparison-to-Julia-Ecosystem-Patterns" title="Permalink"></a></h2><h3 id="Matches-SciML-Pattern"><a class="docs-heading-anchor" href="#Matches-SciML-Pattern">Matches SciML Pattern</a><a id="Matches-SciML-Pattern-1"></a><a class="docs-heading-anchor-permalink" href="#Matches-SciML-Pattern" title="Permalink"></a></h3><p><strong>Your structure</strong>:</p><pre><code class="nohighlight hljs">foundation/  → PowerfulBase.jl (interface)
+models/      → Powerful.jl (implementations)
+solvers/     → Powerful.jl (algorithms)</code></pre><p><strong>SciML structure</strong>:</p><pre><code class="nohighlight hljs">SciMLBase.jl      → Problem types, solve() interface
+OrdinaryDiffEq.jl → Concrete ODE solvers
+NonlinearSolve.jl → Nonlinear solvers</code></pre><h3 id="Matches-Tables.jl-Pattern"><a class="docs-heading-anchor" href="#Matches-Tables.jl-Pattern">Matches Tables.jl Pattern</a><a id="Matches-Tables.jl-Pattern-1"></a><a class="docs-heading-anchor-permalink" href="#Matches-Tables.jl-Pattern" title="Permalink"></a></h3><p><strong>Your trait-based interfaces</strong>:</p><pre><code class="language-julia hljs">function model_metadata(::Type{M}) where M &lt;: AbstractModel
+    # Models implement this to describe their structure
+end
+
+function calc_residuals!(ws::ResidualBuffers, model::M) where M
+    # Models implement this to compute residuals
+end</code></pre><p><strong>Tables.jl traits</strong>:</p><pre><code class="language-julia hljs">Tables.istable(::Type{MyTable}) = true
+Tables.rowaccess(::Type{MyTable}) = true
+Tables.rows(t::MyTable) = ...</code></pre><h3 id="Matches-GeoInterface.jl-Pattern"><a class="docs-heading-anchor" href="#Matches-GeoInterface.jl-Pattern">Matches GeoInterface.jl Pattern</a><a id="Matches-GeoInterface.jl-Pattern-1"></a><a class="docs-heading-anchor-permalink" href="#Matches-GeoInterface.jl-Pattern" title="Permalink"></a></h3><p><strong>Your terminals/connectivity</strong>:</p><pre><code class="language-julia hljs">const PQ_TERMINALS = (Terminal(:Bus, :i),)
+Powerful.get_terminals(::Type{&lt;:PQ}) = PQ_TERMINALS</code></pre><p><strong>GeoInterface traits</strong>:</p><pre><code class="language-julia hljs">GeoInterface.geomtrait(geom::MyGeom) = PointTrait()
+GeoInterface.getcoord(::PointTrait, geom, i) = ...</code></pre><hr/><h2 id="7.-Scattering-vs-Centralization-Score"><a class="docs-heading-anchor" href="#7.-Scattering-vs-Centralization-Score">7. Scattering vs Centralization Score</a><a id="7.-Scattering-vs-Centralization-Score-1"></a><a class="docs-heading-anchor-permalink" href="#7.-Scattering-vs-Centralization-Score" title="Permalink"></a></h2><h3 id="Score:-9.5/10-(Highly-Centralized)"><a class="docs-heading-anchor" href="#Score:-9.5/10-(Highly-Centralized)">Score: 9.5/10 (Highly Centralized) ✅</a><a id="Score:-9.5/10-(Highly-Centralized)-1"></a><a class="docs-heading-anchor-permalink" href="#Score:-9.5/10-(Highly-Centralized)" title="Permalink"></a></h3><p><strong>Strengths:</strong></p><ol><li>✅ <strong>All interface signatures</strong> in one place (<code>foundation/model_metadata.jl</code>)</li><li>✅ <strong>Abstract type hierarchy</strong> clearly organized by concern</li><li>✅ <strong>Trait-based extension</strong> (no need to touch interface for new models)</li><li>✅ <strong>Single import point</strong> for model developers (<code>Models.jl</code>)</li><li>✅ <strong>Fallback implementations</strong> prevent boilerplate</li><li>✅ <strong>Documentation as contract</strong> (error messages guide implementers)</li><li>✅ <strong>Layered architecture</strong> (foundation → models → solvers)</li><li>✅ <strong>Formulation system</strong> enables multiple equation types per model</li></ol><p><strong>Minor Scattering:</strong></p><ol><li>⚠️ <strong>4 abstract types in models/</strong> (AbstractBus, AbstractGenerator, AbstractBranch, AbstractTransformer)<ul><li><em>Acceptable</em>: These are domain concepts, not interface abstractions</li></ul></li><li>⚠️ <strong>6 abstract types in solvers/</strong> (Algorithm hierarchy)<ul><li><em>Acceptable</em>: Solver interface separate from model interface</li></ul></li></ol><hr/><h2 id="8.-Recommendations"><a class="docs-heading-anchor" href="#8.-Recommendations">8. Recommendations</a><a id="8.-Recommendations-1"></a><a class="docs-heading-anchor-permalink" href="#8.-Recommendations" title="Permalink"></a></h2><h3 id="For-Current-Monolithic-Structure"><a class="docs-heading-anchor" href="#For-Current-Monolithic-Structure">For Current Monolithic Structure</a><a id="For-Current-Monolithic-Structure-1"></a><a class="docs-heading-anchor-permalink" href="#For-Current-Monolithic-Structure" title="Permalink"></a></h3><p><strong>Continue as-is</strong> ✅ You&#39;re already following best practices:</p><ol><li><p>Keep foundation/ as &quot;interface layer documentation&quot;</p></li><li><p>Add comment headers marking stable API:</p><pre><code class="language-julia hljs"># ============================================================================
+# STABLE API (v1.0 candidate) - Do not change signatures
+# ============================================================================</code></pre></li><li><p>Create <code>src/foundation/INTERFACE.md</code>:</p><pre><code class="language-markdown hljs"># Core Model Interface
+
+This directory defines the public interface that PowerfulBase.jl would expose.
+
+**Rule**: Files in this directory MUST NOT import from:
+- `../models/`
+- `../solvers/`
+- `../analysis/`</code></pre></li><li><p>Add interface-only tests:</p><pre><code class="language-julia hljs">@testset &quot;Interface completeness&quot; begin
+    # Can a model be defined using only foundation/ exports?
+end</code></pre></li></ol><h3 id="For-Future-Split"><a class="docs-heading-anchor" href="#For-Future-Split">For Future Split</a><a id="For-Future-Split-1"></a><a class="docs-heading-anchor-permalink" href="#For-Future-Split" title="Permalink"></a></h3><p><strong>When to split</strong> (wait for these signals):</p><ol><li>✅ External package requests interface access</li><li>✅ Version 1.0 reached (interface stable)</li><li>✅ Alternative solver implementations emerge</li><li>✅ Compile times problematic (&gt;30s precompilation)</li></ol><p><strong>How to split</strong>:</p><ol><li>Create <code>PowerfulBase.jl</code> with contents from section 5</li><li>Add CI test: <code>PowerfulBase</code> has zero deps on <code>Powerful</code></li><li><code>Powerful.jl</code> depends on and re-exports <code>PowerfulBase.jl</code></li><li>Users see no difference (transparent migration)</li></ol><hr/><h2 id="9.-Recent-Architectural-Improvements"><a class="docs-heading-anchor" href="#9.-Recent-Architectural-Improvements">9. Recent Architectural Improvements</a><a id="9.-Recent-Architectural-Improvements-1"></a><a class="docs-heading-anchor-permalink" href="#9.-Recent-Architectural-Improvements" title="Permalink"></a></h2><h3 id="Formulation-Trait-System-(2025-01)"><a class="docs-heading-anchor" href="#Formulation-Trait-System-(2025-01)">Formulation Trait System (2025-01)</a><a id="Formulation-Trait-System-(2025-01)-1"></a><a class="docs-heading-anchor-permalink" href="#Formulation-Trait-System-(2025-01)" title="Permalink"></a></h3><p><strong>Addition</strong>: <code>FormulationTrait</code> hierarchy enables multiple equation types per model:</p><ul><li><code>PowerInjection</code>: Power balance with polar coordinates (θ, V)</li><li><code>CurrentInjection</code>: Current balance with rectangular coordinates (Vr, Vi)</li></ul><p><strong>Impact</strong>:</p><ul><li>Models declare formulation support via <code>supports_formulation()</code></li><li>Metadata stores formulation-specific variables/residuals</li><li>AddressManager created per-problem, not stored in SystemModel</li><li>Same model can serve multiple formulation types</li></ul><h3 id="Address-Manager-Decoupling-(2025-01)"><a class="docs-heading-anchor" href="#Address-Manager-Decoupling-(2025-01)">Address Manager Decoupling (2025-01)</a><a id="Address-Manager-Decoupling-(2025-01)-1"></a><a class="docs-heading-anchor-permalink" href="#Address-Manager-Decoupling-(2025-01)" title="Permalink"></a></h3><p><strong>Change</strong>: <code>AddressManager</code> is NO LONGER stored in <code>SystemModel</code></p><p><strong>Rationale</strong>:</p><ul><li>Different formulations have different variable layouts</li><li>PowerInjection uses (θ, V), CurrentInjection uses (Vr, Vi)</li><li>AddressManager is formulation-specific, so created during problem setup</li><li>SystemModel remains formulation-agnostic (pure data)</li></ul><p><strong>Impact</strong>:</p><ul><li><code>ACPowerFlowProblem</code> constructor creates fresh <code>AddressManager</code></li><li><code>setup_with_formulation!(am, sys, formulation)</code> allocates addresses</li><li>Cleaner separation: data (SystemModel) vs computation (Problem)</li></ul><h3 id="Residual-Access-Modes-(2024-12)"><a class="docs-heading-anchor" href="#Residual-Access-Modes-(2024-12)">Residual Access Modes (2024-12)</a><a id="Residual-Access-Modes-(2024-12)-1"></a><a class="docs-heading-anchor-permalink" href="#Residual-Access-Modes-(2024-12)" title="Permalink"></a></h3><p><strong>Enhancement</strong>: <code>SharedRes</code> now supports two modes:</p><ul><li><code>:add</code> - Accumulate contributions (default, for power balance)</li><li><code>:set</code> - Overwrite accumulated values (for control equations)</li></ul><p><strong>Use case</strong>: PV generators in CurrentInjection formulation</p><ul><li>Branches accumulate current flows into bus: <code>SharedRes(:add)</code></li><li>PV reads accumulated currents, replaces one with power equation: <code>SharedRes(:set)</code></li><li>Requires <code>gather_residuals!()</code> before <code>calc_residuals!()</code> for <code>:set</code> models</li></ul><hr/><h2 id="10.-Conclusion"><a class="docs-heading-anchor" href="#10.-Conclusion">10. Conclusion</a><a id="10.-Conclusion-1"></a><a class="docs-heading-anchor-permalink" href="#10.-Conclusion" title="Permalink"></a></h2><p><strong>Your type system is exemplary for a v0.1.0 package.</strong></p><ul><li><strong>Interface</strong>: Centralized in <code>foundation/</code> ✅</li><li><strong>Implementation</strong>: Cleanly separated in <code>models/</code> ✅</li><li><strong>Consumption</strong>: Isolated in <code>solvers/</code> ✅</li><li><strong>Extension</strong>: Trait-based, minimal boilerplate ✅</li><li><strong>Formulations</strong>: Multi-formulation support via traits ✅</li></ul><p><strong>You&#39;ve done the hard work already.</strong> When the ecosystem demands it, splitting into <code>PowerfulBase.jl</code> would be a straightforward refactor, not a rewrite.</p><p>Until then: Document the interface clearly, mark stable APIs, and let v1.0 emerge naturally. 🎯</p><hr/><h2 id="Appendix-A:-Complete-Model-Inventory"><a class="docs-heading-anchor" href="#Appendix-A:-Complete-Model-Inventory">Appendix A: Complete Model Inventory</a><a id="Appendix-A:-Complete-Model-Inventory-1"></a><a class="docs-heading-anchor-permalink" href="#Appendix-A:-Complete-Model-Inventory" title="Permalink"></a></h2><h3 id="Models-with-model_metadata()-Implementation-(9)"><a class="docs-heading-anchor" href="#Models-with-model_metadata()-Implementation-(9)">Models with <code>model_metadata()</code> Implementation (9)</a><a id="Models-with-model_metadata()-Implementation-(9)-1"></a><a class="docs-heading-anchor-permalink" href="#Models-with-model_metadata()-Implementation-(9)" title="Permalink"></a></h3><ol><li><strong>Bus</strong> - Network buses (AC nodes)</li><li><strong>PQ</strong> - Constant power loads (ZIP model)</li><li><strong>PV</strong> - Constant P &amp; V generators</li><li><strong>Branch</strong> - Transmission lines (Pi model)</li><li><strong>Transformer2W</strong> - Two-winding transformers</li><li><strong>Shunt</strong> - Fixed shunt compensators</li><li><strong>AreaInterchange</strong> - Area interchange data (passive)</li><li><strong>Owner</strong> - Ownership data (passive)</li><li><strong>Zone</strong> - Zone data (passive)</li></ol><h3 id="Models-with-calc_residuals!()-Implementation-(6)"><a class="docs-heading-anchor" href="#Models-with-calc_residuals!()-Implementation-(6)">Models with <code>calc_residuals!()</code> Implementation (6)</a><a id="Models-with-calc_residuals!()-Implementation-(6)-1"></a><a class="docs-heading-anchor-permalink" href="#Models-with-calc_residuals!()-Implementation-(6)" title="Permalink"></a></h3><ol><li><strong>Bus</strong> - Power/current balance at nodes</li><li><strong>PQ</strong> - Load consumption</li><li><strong>PV</strong> - Generator injection + voltage control</li><li><strong>Branch</strong> - Power/current flows</li><li><strong>Transformer2W</strong> - Transformer flows</li><li><strong>Shunt</strong> - Shunt admittance</li></ol><p><strong>Note</strong>: AreaInterchange, Owner, Zone use default fallback (do nothing).</p><h3 id="Models-with-get_output_value()-Implementation-(4)"><a class="docs-heading-anchor" href="#Models-with-get_output_value()-Implementation-(4)">Models with <code>get_output_value()</code> Implementation (4)</a><a id="Models-with-get_output_value()-Implementation-(4)-1"></a><a class="docs-heading-anchor-permalink" href="#Models-with-get_output_value()-Implementation-(4)" title="Permalink"></a></h3><ol><li><strong>Branch</strong> - Power flows, current flows</li><li><strong>PQ</strong> - Computed power consumption</li><li><strong>PV</strong> - Reactive power output</li><li><strong>Shunt</strong> - Reactive power absorption</li></ol><hr/><h2 id="Appendix-B:-Type-Counts-by-File"><a class="docs-heading-anchor" href="#Appendix-B:-Type-Counts-by-File">Appendix B: Type Counts by File</a><a id="Appendix-B:-Type-Counts-by-File-1"></a><a class="docs-heading-anchor-permalink" href="#Appendix-B:-Type-Counts-by-File" title="Permalink"></a></h2><h3 id="Foundation-(60-structs,-19-abstract-types)"><a class="docs-heading-anchor" href="#Foundation-(60-structs,-19-abstract-types)">Foundation (60 structs, 19 abstract types)</a><a id="Foundation-(60-structs,-19-abstract-types)-1"></a><a class="docs-heading-anchor-permalink" href="#Foundation-(60-structs,-19-abstract-types)" title="Permalink"></a></h3><p><strong>core_types.jl</strong>: 52 structs, 16 abstract types <strong>base<em>quantity</em>traits.jl</strong>: 3 structs, 1 abstract type <strong>format_traits.jl</strong>: 2 structs <strong>formulation_traits.jl</strong>: 2 structs, 1 abstract type <strong>model_var.jl</strong>: 0 structs (uses types from core<em>types.jl) **model</em>metadata.jl<strong>: 0 structs (interface only) **coordinate_conversions.jl</strong>: 0 structs (pure functions)</p><h3 id="Models-(3-structs,-4-abstract-types)"><a class="docs-heading-anchor" href="#Models-(3-structs,-4-abstract-types)">Models (3+ structs, 4 abstract types)</a><a id="Models-(3-structs,-4-abstract-types)-1"></a><a class="docs-heading-anchor-permalink" href="#Models-(3-structs,-4-abstract-types)" title="Permalink"></a></h3><p><strong>bus/bus1ph.jl</strong>: 1 struct (Bus) <strong>pq.jl</strong>: 1 struct (PQ) <strong>pv.jl</strong>: 1 struct (PV) <strong>branch.jl</strong>: 1 struct (Branch) <strong>transformer.jl</strong>: 2 structs (Transformer2W, Transformer3W) <strong>shunt.jl</strong>: 1 struct (Shunt) <strong>topological/*.jl</strong>: 3 structs (AreaInterchange, Owner, Zone)</p><h3 id="Solvers-(17-structs,-6-abstract-types)"><a class="docs-heading-anchor" href="#Solvers-(17-structs,-6-abstract-types)">Solvers (17 structs, 6 abstract types)</a><a id="Solvers-(17-structs,-6-abstract-types)-1"></a><a class="docs-heading-anchor-permalink" href="#Solvers-(17-structs,-6-abstract-types)" title="Permalink"></a></h3><p><strong>power<em>flow</em>api.jl</strong>: 14 structs, 6 abstract types <strong>powerflow.jl</strong>: 3 structs</p><hr/><p><strong>Document Version</strong>: 2.0 (2025-01-07) <strong>Previous Version</strong>: TYPE<em>SYSTEM</em>ANALYSIS<em>OLD</em>2025-01-05.md <strong>Major Changes from v1.0</strong>:</p><ul><li>Updated struct counts (87→88, foundation 21→60)</li><li>Added formulation trait system</li><li>Documented AddressManager decoupling</li><li>Added SharedRes access modes</li><li>Updated model count to 9 (added topological models)</li><li>Corrected interface function locations</li></ul></article><nav class="docs-footer"><p class="footer-message">Powered by <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> and the <a href="https://julialang.org/">Julia Programming Language</a>.</p></nav></div><div class="modal" id="documenter-settings"><div class="modal-background"></div><div class="modal-card"><header class="modal-card-head"><p class="modal-card-title">Settings</p><button class="delete"></button></header><section class="modal-card-body"><p><label class="label">Theme</label><div class="select"><select id="documenter-themepicker"><option value="auto">Automatic (OS)</option><option value="documenter-light">documenter-light</option><option value="documenter-dark">documenter-dark</option><option value="catppuccin-latte">catppuccin-latte</option><option value="catppuccin-frappe">catppuccin-frappe</option><option value="catppuccin-macchiato">catppuccin-macchiato</option><option value="catppuccin-mocha">catppuccin-mocha</option></select></div></p><hr/><p>This document was generated with <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> version 1.16.1 on <span class="colophon-date" title="Wednesday 3 December 2025 12:47">Wednesday 3 December 2025</span>. Using Julia version 1.11.7.</p></section><footer class="modal-card-foot"></footer></div></div></div></body></html>

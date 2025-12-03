@@ -1,0 +1,214 @@
+<!DOCTYPE html>
+<html lang="en"><head><meta charset="UTF-8"/><meta name="viewport" content="width=device-width, initial-scale=1.0"/><title>API Design: Supporting Forward and Reverse Mode AD · Powerful.jl</title><meta name="title" content="API Design: Supporting Forward and Reverse Mode AD · Powerful.jl"/><meta property="og:title" content="API Design: Supporting Forward and Reverse Mode AD · Powerful.jl"/><meta property="twitter:title" content="API Design: Supporting Forward and Reverse Mode AD · Powerful.jl"/><meta name="description" content="Documentation for Powerful.jl."/><meta property="og:description" content="Documentation for Powerful.jl."/><meta property="twitter:description" content="Documentation for Powerful.jl."/><meta property="og:url" content="https://sensl.gitlab.io/Powerful.jl/design/autodiff/API_DESIGN_FORWARD_REVERSE.html"/><meta property="twitter:url" content="https://sensl.gitlab.io/Powerful.jl/design/autodiff/API_DESIGN_FORWARD_REVERSE.html"/><link rel="canonical" href="https://sensl.gitlab.io/Powerful.jl/design/autodiff/API_DESIGN_FORWARD_REVERSE.html"/><script data-outdated-warner src="../../assets/warner.js"></script><link href="https://cdnjs.cloudflare.com/ajax/libs/lato-font/3.0.0/css/lato-font.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/juliamono/0.050/juliamono.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/fontawesome.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/solid.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/brands.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.16.8/katex.min.css" rel="stylesheet" type="text/css"/><script>documenterBaseURL="../.."</script><script src="https://cdnjs.cloudflare.com/ajax/libs/require.js/2.3.6/require.min.js" data-main="../../assets/documenter.js"></script><script src="../../search_index.js"></script><script src="../../siteinfo.js"></script><script src="../../../versions.js"></script><link class="docs-theme-link" rel="stylesheet" type="text/css" href="../../assets/themes/catppuccin-mocha.css" data-theme-name="catppuccin-mocha"/><link class="docs-theme-link" rel="stylesheet" type="text/css" href="../../assets/themes/catppuccin-macchiato.css" data-theme-name="catppuccin-macchiato"/><link class="docs-theme-link" rel="stylesheet" type="text/css" href="../../assets/themes/catppuccin-frappe.css" data-theme-name="catppuccin-frappe"/><link class="docs-theme-link" rel="stylesheet" type="text/css" href="../../assets/themes/catppuccin-latte.css" data-theme-name="catppuccin-latte"/><link class="docs-theme-link" rel="stylesheet" type="text/css" href="../../assets/themes/documenter-dark.css" data-theme-name="documenter-dark" data-theme-primary-dark/><link class="docs-theme-link" rel="stylesheet" type="text/css" href="../../assets/themes/documenter-light.css" data-theme-name="documenter-light" data-theme-primary/><script src="../../assets/themeswap.js"></script></head><body><div id="documenter"><nav class="docs-sidebar"><div class="docs-package-name"><span class="docs-autofit"><a href="../../index.html">Powerful.jl</a></span></div><button class="docs-search-query input is-rounded is-small is-clickable my-2 mx-auto py-1 px-2" id="documenter-search-query">Search docs (Ctrl + /)</button><ul class="docs-menu"><li><a class="tocitem" href="../../index.html">Home</a></li><li><input class="collapse-toggle" id="menuitem-2" type="checkbox"/><label class="tocitem" for="menuitem-2"><span class="docs-label">Guides</span><i class="docs-chevron"></i></label><ul class="collapsed"><li><a class="tocitem" href="../../guides/index.html">Overview</a></li><li><a class="tocitem" href="../../guides/getting_started.html">Getting Started</a></li><li><a class="tocitem" href="../../guides/powerflow.html">Power Flow Analysis</a></li><li><a class="tocitem" href="../../guides/tds.html">Time-Domain Simulation</a></li><li><a class="tocitem" href="../../guides/configuration.html">Configuration</a></li><li><a class="tocitem" href="../../guides/accessing_variables.html">Accessing Results</a></li><li><a class="tocitem" href="../../guides/reports.html">Report Customization</a></li></ul></li><li><input class="collapse-toggle" id="menuitem-3" type="checkbox"/><label class="tocitem" for="menuitem-3"><span class="docs-label">Notebooks</span><i class="docs-chevron"></i></label><ul class="collapsed"><li><a class="tocitem" href="../../notebooks/index.html">Overview</a></li><li><a class="tocitem" href="../../notebooks/01_getting_started.html">01 Getting Started</a></li><li><a class="tocitem" href="../../notebooks/02_formulations_and_solvers.html">02 Formulations And Solvers</a></li><li><a class="tocitem" href="../../notebooks/03_gpu_acceleration.html">03 Gpu Acceleration</a></li><li><a class="tocitem" href="../../notebooks/03_multi_island_power_flow.html">03 Multi Island Power Flow</a></li><li><a class="tocitem" href="../../notebooks/04_multi_island_power_flow.html">04 Multi Island Power Flow</a></li><li><a class="tocitem" href="../../notebooks/05_tds_initialization_validation.html">05 Tds Initialization Validation</a></li></ul></li><li><input class="collapse-toggle" id="menuitem-4" type="checkbox"/><label class="tocitem" for="menuitem-4"><span class="docs-label">Developer Documentation</span><i class="docs-chevron"></i></label><ul class="collapsed"><li><a class="tocitem" href="../../developer/overview.html">Overview</a></li><li><a class="tocitem" href="../../developer/indexing.html">Three-Layer Indexing</a></li><li><a class="tocitem" href="../../developer/formulations.html">Multi-Physics Formulations</a></li><li><a class="tocitem" href="../../developer/workspaces.html">Computation Architecture</a></li><li><a class="tocitem" href="../../developer/models.html">Implementing Models</a></li><li><a class="tocitem" href="../../developer/events.html">TDS Event System</a></li><li><a class="tocitem" href="../../developer/miscellaneous.html">Per-Unit &amp; Multi-Island</a></li></ul></li><li><input class="collapse-toggle" id="menuitem-5" type="checkbox"/><label class="tocitem" for="menuitem-5"><span class="docs-label">API Reference</span><i class="docs-chevron"></i></label><ul class="collapsed"><li><a class="tocitem" href="../../api.html">Overview</a></li><li><a class="tocitem" href="../../api/system.html">System &amp; DAE</a></li><li><a class="tocitem" href="../../api/models.html">Models</a></li><li><a class="tocitem" href="../../api/powerflow.html">Power Flow</a></li><li><a class="tocitem" href="../../api/tds.html">Time-Domain Simulation</a></li><li><a class="tocitem" href="../../api/advanced.html">Advanced Features</a></li></ul></li><li><a class="tocitem" href="../../index_page.html">Index</a></li></ul><div class="docs-version-selector field has-addons"><div class="control"><span class="docs-label button is-static is-size-7">Version</span></div><div class="docs-selector control is-expanded"><div class="select is-fullwidth is-size-7"><select id="documenter-version-selector"></select></div></div></div></nav><div class="docs-main"><header class="docs-navbar"><a class="docs-sidebar-button docs-navbar-link fa-solid fa-bars is-hidden-desktop" id="documenter-sidebar-button" href="#"></a><nav class="breadcrumb"><ul class="is-hidden-mobile"><li class="is-active"><a href="API_DESIGN_FORWARD_REVERSE.html">API Design: Supporting Forward and Reverse Mode AD</a></li></ul><ul class="is-hidden-tablet"><li class="is-active"><a href="API_DESIGN_FORWARD_REVERSE.html">API Design: Supporting Forward and Reverse Mode AD</a></li></ul></nav><div class="docs-right"><a class="docs-navbar-link" href="https://github.com/sensl/Powerful.jl/blob/main/docs/src/design/autodiff/API_DESIGN_FORWARD_REVERSE.md#" title="Edit source on GitHub"><span class="docs-icon fa-solid"></span></a><a class="docs-settings-button docs-navbar-link fa-solid fa-gear" id="documenter-settings-button" href="#" title="Settings"></a><a class="docs-article-toggle-button fa-solid fa-chevron-up" id="documenter-article-toggle-button" href="javascript:;" title="Collapse all docstrings"></a></div></header><article class="content" id="documenter-page"><h1 id="API-Design:-Supporting-Forward-and-Reverse-Mode-AD"><a class="docs-heading-anchor" href="#API-Design:-Supporting-Forward-and-Reverse-Mode-AD">API Design: Supporting Forward and Reverse Mode AD</a><a id="API-Design:-Supporting-Forward-and-Reverse-Mode-AD-1"></a><a class="docs-heading-anchor-permalink" href="#API-Design:-Supporting-Forward-and-Reverse-Mode-AD" title="Permalink"></a></h1><h2 id="Design-Challenge"><a class="docs-heading-anchor" href="#Design-Challenge">Design Challenge</a><a id="Design-Challenge-1"></a><a class="docs-heading-anchor-permalink" href="#Design-Challenge" title="Permalink"></a></h2><p><strong>Forward-mode AD (ForwardDiff):</strong></p><ul><li>Works by propagating Dual numbers through computations</li><li>Efficient for few outputs, many inputs (e.g., Jacobians)</li><li>Requires explicit control over when Dual numbers are introduced</li><li>Benefits from manual composition of operations</li></ul><p><strong>Reverse-mode AD (Zygote/Enzyme):</strong></p><ul><li>Works by recording computation graph and backpropagating</li><li>Efficient for many outputs, few inputs (e.g., gradients of scalar loss)</li><li>Requires pure functions (no mutation)</li><li>Needs <code>rrule</code> definitions for custom operations</li></ul><p><strong>The Tension:</strong></p><ul><li>Forward-mode wants: <code>scatter_parameters!(psys, p_dual)</code> (mutation)</li><li>Reverse-mode wants: <code>y = f(p)</code> (pure function with rrule)</li></ul><hr/><h2 id="Recommended-Design:-Dual-Level-API"><a class="docs-heading-anchor" href="#Recommended-Design:-Dual-Level-API">Recommended Design: Dual-Level API</a><a id="Recommended-Design:-Dual-Level-API-1"></a><a class="docs-heading-anchor-permalink" href="#Recommended-Design:-Dual-Level-API" title="Permalink"></a></h2><h3 id="Principle:-**Separate-concerns-by-use-case,-not-by-AD-backend**"><a class="docs-heading-anchor" href="#Principle:-**Separate-concerns-by-use-case,-not-by-AD-backend**">Principle: <strong>Separate concerns by use case, not by AD backend</strong></a><a id="Principle:-**Separate-concerns-by-use-case,-not-by-AD-backend**-1"></a><a class="docs-heading-anchor-permalink" href="#Principle:-**Separate-concerns-by-use-case,-not-by-AD-backend**" title="Permalink"></a></h3><pre><code class="nohighlight hljs">Low-level API (Explicit)     →  For forward-mode, manual control, debugging
+High-level API (Declarative) →  For reverse-mode, optimization, composition</code></pre><p>Both APIs use the same underlying primitives!</p><hr/><h2 id="Low-Level-API-(Explicit-Operations)"><a class="docs-heading-anchor" href="#Low-Level-API-(Explicit-Operations)">Low-Level API (Explicit Operations)</a><a id="Low-Level-API-(Explicit-Operations)-1"></a><a class="docs-heading-anchor-permalink" href="#Low-Level-API-(Explicit-Operations)" title="Permalink"></a></h2><p><strong>Purpose:</strong> Direct control, forward-mode AD, inspecting intermediate values</p><p><strong>API:</strong></p><pre><code class="language-julia hljs"># 1. Create system
+psys = ParameterizedSystem(sys)
+add_parameter!(psys, :PV, :pg, 1:100)
+finalize_parameters!(psys)
+
+# 2. Manually scatter parameters
+p = gather_parameters(psys)
+scatter_parameters!(psys, p)  # Can use Dual numbers here!
+
+# 3. Manually solve
+dae = DAE(Float64, sys)
+ws = SystemResidualWorkspace(Float64, sys)
+prob = NonlinearProblem(
+    (g, y, _) -&gt; begin
+        copyto!(dae.y, y)
+        evaluate_system_residuals!(ws, dae)
+        copyto!(g, dae.g)
+    end,
+    dae.y
+)
+result = solve(prob, NewtonRaphson())
+y = result.zero
+
+# 4. Extract quantities
+v = get_bus_voltages(sys, y)</code></pre><p><strong>Use cases:</strong></p><ul><li>Computing Jacobians (<code>parameter_jacobian!</code>, <code>jacobian_sparsity_pattern</code>)</li><li>Debugging</li><li>Custom AD workflows</li><li>Performance-critical code where you want explicit control</li></ul><p><strong>Example - Parameter Jacobian:</strong></p><pre><code class="language-julia hljs"># This is forward-mode friendly
+for param_idx in 1:n_params
+    p_dual[param_idx] = Dual(p[param_idx], 1.0)
+    scatter_parameters!(psys, p_dual)  # Scatter Dual numbers
+    evaluate_system_residuals!(ws, dae)
+    # Extract derivatives...
+end</code></pre><hr/><h2 id="High-Level-API-(Pure-Functions)"><a class="docs-heading-anchor" href="#High-Level-API-(Pure-Functions)">High-Level API (Pure Functions)</a><a id="High-Level-API-(Pure-Functions)-1"></a><a class="docs-heading-anchor-permalink" href="#High-Level-API-(Pure-Functions)" title="Permalink"></a></h2><p><strong>Purpose:</strong> Optimization, reverse-mode AD, composition with other packages</p><p><strong>API:</strong></p><pre><code class="language-julia hljs"># 1. Create system (same)
+psys = ParameterizedSystem(sys)
+add_parameter!(psys, :PV, :pg, 1:100)
+finalize_parameters!(psys)
+
+# 2. Pure function: p → y
+y = solve_power_flow(psys, p; solver_opts...)
+
+# 3. Compose with loss
+function objective(p)
+    y = solve_power_flow(psys, p)
+    v = get_bus_voltages(psys.sys, y)
+    return sum((v .- 1.0).^2)
+end
+
+# 4. Differentiate with ANY AD backend
+using ForwardDiff
+grad_fwd = ForwardDiff.gradient(objective, p)
+
+using Zygote
+grad_rev = Zygote.gradient(objective, p)
+
+# Both work! Same API!</code></pre><p><strong>Key insight:</strong> <code>solve_power_flow</code> is a <strong>pure function</strong> with:</p><ul><li>Clear input/output contract</li><li>No side effects (internally creates temp workspace)</li><li>rrule for reverse-mode efficiency</li></ul><p><strong>Implementation:</strong></p><pre><code class="language-julia hljs">&quot;&quot;&quot;
+    solve_power_flow(psys::ParameterizedSystem, p::AbstractVector; kwargs...)
+
+Solve power flow equations with given parameters.
+
+Pure function: No side effects, deterministic output.
+
+# Returns
+- `y::Vector`: Solution vector (algebraic variables)
+
+# AD Support
+- Forward-mode: Accepts `Vector{Dual}`, returns `Vector{Dual}`
+- Reverse-mode: Has `rrule` for efficient implicit differentiation
+
+# Example</code></pre><p>julia</p><h1 id="Works-with-any-AD-backend"><a class="docs-heading-anchor" href="#Works-with-any-AD-backend">Works with any AD backend</a><a id="Works-with-any-AD-backend-1"></a><a class="docs-heading-anchor-permalink" href="#Works-with-any-AD-backend" title="Permalink"></a></h1><p>using ForwardDiff y = solve<em>power</em>flow(psys, p) J<em>param = ForwardDiff.jacobian(p -&gt; solve</em>power_flow(psys, p), p)</p><p>using Zygote loss(p) = sum(solve<em>power</em>flow(psys, p).^2) grad = Zygote.gradient(loss, p)</p><pre><code class="nohighlight hljs">&quot;&quot;&quot;
+function solve_power_flow(
+    psys::ParameterizedSystem,
+    p::AbstractVector;
+    solver=NewtonRaphson(),
+    ftol=1e-8,
+    maxiter=50
+)
+    # Scatter parameters (internal mutation is OK)
+    scatter_parameters!(psys, p)
+
+    # Create workspace (accepts Dual numbers via type inference)
+    T = eltype(p)
+    sys = psys.sys
+    dae = DAE(T, sys)
+    ws = SystemResidualWorkspace(T, sys)
+
+    # Solve (works for both Float64 and Dual)
+    prob = NonlinearProblem(
+        (g, y, _) -&gt; begin
+            copyto!(dae.y, y)
+            evaluate_system_residuals!(ws, dae)
+            copyto!(g, dae.g)
+        end,
+        dae.y
+    )
+    result = solve(prob, NewtonRaphson(); abstol=ftol, maxiters=maxiter)
+
+    if !SciMLBase.successful_retcode(result.retcode)
+        @warn &quot;Power flow did not converge&quot; result
+    end
+
+    return result.u
+end</code></pre><hr/><h2 id="ChainRules-Integration-(Reverse-Mode-Efficiency)"><a class="docs-heading-anchor" href="#ChainRules-Integration-(Reverse-Mode-Efficiency)">ChainRules Integration (Reverse-Mode Efficiency)</a><a id="ChainRules-Integration-(Reverse-Mode-Efficiency)-1"></a><a class="docs-heading-anchor-permalink" href="#ChainRules-Integration-(Reverse-Mode-Efficiency)" title="Permalink"></a></h2><pre><code class="language-julia hljs">using ChainRulesCore
+
+function ChainRulesCore.rrule(
+    ::typeof(solve_power_flow),
+    psys::ParameterizedSystem,
+    p::AbstractVector;
+    cache=nothing,
+    kwargs...
+)
+    # Forward pass (same as regular call)
+    y = solve_power_flow(psys, p; kwargs...)
+
+    # Prepare for reverse pass
+    if isnothing(cache)
+        cache = CachedAutodiffWorkspace(psys.sys)
+    end
+
+    function solve_power_flow_pullback(ȳ)
+        # ȳ = ∂loss/∂y (from downstream)
+
+        # Step 1: Compute J = ∂g/∂y at solution
+        sparsity_y = jacobian_sparsity_pattern(psys.sys)
+        colors_y = matrix_colors(sparsity_y)
+        J = Float64.(sparsity_y)
+        forwarddiff_color_jacobian!(J, cache, y; colorvec=colors_y)
+
+        # Step 2: Solve adjoint: J^T λ = ȳ
+        λ = J&#39; \ ȳ
+
+        # Step 3: Compute B = ∂g/∂p (use cached sparsity)
+        if isnothing(psys.sparsity_dgdp)
+            parameter_sparsity_pattern!(psys, cache)
+        end
+        B = Float64.(psys.sparsity_dgdp)
+        compute_parameter_jacobian!(B, psys, cache, y, p)
+
+        # Step 4: Chain rule: ∂loss/∂p = -λ^T · B
+        p̄ = -B&#39; * λ
+
+        return (NoTangent(), NoTangent(), p̄)
+    end
+
+    return y, solve_power_flow_pullback
+end</code></pre><p><strong>Key property:</strong> Users don&#39;t need to know rrule exists! It&#39;s automatically used by Zygote.</p><hr/><h2 id="Comparison:-When-to-Use-Each-API"><a class="docs-heading-anchor" href="#Comparison:-When-to-Use-Each-API">Comparison: When to Use Each API</a><a id="Comparison:-When-to-Use-Each-API-1"></a><a class="docs-heading-anchor-permalink" href="#Comparison:-When-to-Use-Each-API" title="Permalink"></a></h2><table><tr><th style="text-align: right">Aspect</th><th style="text-align: right">Low-Level API</th><th style="text-align: right">High-Level API</th></tr><tr><td style="text-align: right"><strong>Control</strong></td><td style="text-align: right">Full control over operations</td><td style="text-align: right">Abstracted</td></tr><tr><td style="text-align: right"><strong>Performance</strong></td><td style="text-align: right">Manually optimized</td><td style="text-align: right">Automatic (via rrule)</td></tr><tr><td style="text-align: right"><strong>Use case</strong></td><td style="text-align: right">Jacobians, debugging</td><td style="text-align: right">Optimization, ML</td></tr><tr><td style="text-align: right"><strong>AD mode</strong></td><td style="text-align: right">Forward-mode (explicit)</td><td style="text-align: right">Both (automatic)</td></tr><tr><td style="text-align: right"><strong>Mutation</strong></td><td style="text-align: right">Allowed (<code>scatter!</code>)</td><td style="text-align: right">Hidden (pure function)</td></tr><tr><td style="text-align: right"><strong>Composability</strong></td><td style="text-align: right">Manual</td><td style="text-align: right">Automatic</td></tr><tr><td style="text-align: right"><strong>Learning curve</strong></td><td style="text-align: right">Steeper</td><td style="text-align: right">Gentle</td></tr></table><p><strong>Decision tree:</strong></p><pre><code class="nohighlight hljs">Need to compute parameter Jacobian?
+├─ Yes → Use low-level API + compute_parameter_jacobian!
+└─ No → Want to optimize parameters?
+    ├─ Yes → Use high-level API + solve_power_flow
+    └─ No → Just solving power flow?
+        └─ Use either (high-level is simpler)</code></pre><hr/><h2 id="Example-Workflows"><a class="docs-heading-anchor" href="#Example-Workflows">Example Workflows</a><a id="Example-Workflows-1"></a><a class="docs-heading-anchor-permalink" href="#Example-Workflows" title="Permalink"></a></h2><h3 id="Workflow-1:-Compute-Parameter-Jacobian-(Low-Level)"><a class="docs-heading-anchor" href="#Workflow-1:-Compute-Parameter-Jacobian-(Low-Level)">Workflow 1: Compute Parameter Jacobian (Low-Level)</a><a id="Workflow-1:-Compute-Parameter-Jacobian-(Low-Level)-1"></a><a class="docs-heading-anchor-permalink" href="#Workflow-1:-Compute-Parameter-Jacobian-(Low-Level)" title="Permalink"></a></h3><pre><code class="language-julia hljs"># Use case: Study sensitivity ∂y/∂p
+psys = ParameterizedSystem(sys)
+add_parameter!(psys, :PV, :pg, 1:100)
+finalize_parameters!(psys)
+cache = CachedAutodiffWorkspace(psys.sys)
+
+# Get baseline solution
+p = gather_parameters(psys)
+scatter_parameters!(psys, p)
+ws = SystemResidualWorkspace(Float64, sys)
+dae = DAE(Float64, sys)
+# ... solve for y ...
+
+# Compute ∂g/∂p
+parameter_sparsity_pattern!(psys, cache)
+B = Float64.(psys.sparsity_dgdp)
+compute_parameter_jacobian!(B, psys, cache, y, p)
+
+# Compute ∂y/∂p = -J^-1 · B (sensitivity)
+J = compute_jacobian(sys, y)
+dy_dp = -J \ B</code></pre><h3 id="Workflow-2:-Optimize-Parameters-(High-Level)"><a class="docs-heading-anchor" href="#Workflow-2:-Optimize-Parameters-(High-Level)">Workflow 2: Optimize Parameters (High-Level)</a><a id="Workflow-2:-Optimize-Parameters-(High-Level)-1"></a><a class="docs-heading-anchor-permalink" href="#Workflow-2:-Optimize-Parameters-(High-Level)" title="Permalink"></a></h3><pre><code class="language-julia hljs"># Use case: Tune parameters to minimize loss
+using Optimization, OptimizationOptimJL, Zygote
+
+psys = ParameterizedSystem(sys)
+add_parameter!(psys, :PV, :pg, 1:100)
+finalize_parameters!(psys)
+
+# Define objective (pure function)
+function objective(p, _)
+    y = solve_power_flow(psys, p)
+    v = get_bus_voltages(psys.sys, y)
+    return sum((v .- 1.0).^2)
+end
+
+# Optimize (gradient via Zygote automatically)
+p0 = gather_parameters(psys)
+prob = OptimizationProblem(objective, p0)
+sol = solve(prob, BFGS())  # Uses rrule internally!
+
+println(&quot;Optimal parameters: &quot;, sol.u)</code></pre><h3 id="Workflow-3:-Mixed-(Advanced)"><a class="docs-heading-anchor" href="#Workflow-3:-Mixed-(Advanced)">Workflow 3: Mixed (Advanced)</a><a id="Workflow-3:-Mixed-(Advanced)-1"></a><a class="docs-heading-anchor-permalink" href="#Workflow-3:-Mixed-(Advanced)" title="Permalink"></a></h3><pre><code class="language-julia hljs"># Use case: Custom optimization with manual Jacobian computation
+
+# Pre-compute sparsity (low-level, once)
+parameter_sparsity_pattern!(psys, cache)
+
+# Optimization loop
+for iter in 1:max_iters
+    # High-level: Solve
+    y = solve_power_flow(psys, p)
+
+    # Low-level: Custom gradient computation
+    B = Float64.(psys.sparsity_dgdp)
+    compute_parameter_jacobian!(B, psys, cache, y, p)
+
+    # Custom update rule
+    p -= learning_rate * custom_gradient(B, y)
+end</code></pre><hr/><h2 id="Design-Principles-Followed"><a class="docs-heading-anchor" href="#Design-Principles-Followed">Design Principles Followed</a><a id="Design-Principles-Followed-1"></a><a class="docs-heading-anchor-permalink" href="#Design-Principles-Followed" title="Permalink"></a></h2><h3 id="1.-**Separation-of-Concerns**"><a class="docs-heading-anchor" href="#1.-**Separation-of-Concerns**">1. <strong>Separation of Concerns</strong></a><a id="1.-**Separation-of-Concerns**-1"></a><a class="docs-heading-anchor-permalink" href="#1.-**Separation-of-Concerns**" title="Permalink"></a></h3><ul><li>Low-level: How (explicit control)</li><li>High-level: What (declarative intent)</li></ul><h3 id="2.-**Progressive-Disclosure**"><a class="docs-heading-anchor" href="#2.-**Progressive-Disclosure**">2. <strong>Progressive Disclosure</strong></a><a id="2.-**Progressive-Disclosure**-1"></a><a class="docs-heading-anchor-permalink" href="#2.-**Progressive-Disclosure**" title="Permalink"></a></h3><ul><li>Beginners use <code>solve_power_flow(psys, p)</code></li><li>Experts use low-level API when needed</li></ul><h3 id="3.-**Zero-Cost-Abstraction**"><a class="docs-heading-anchor" href="#3.-**Zero-Cost-Abstraction**">3. <strong>Zero-Cost Abstraction</strong></a><a id="3.-**Zero-Cost-Abstraction**-1"></a><a class="docs-heading-anchor-permalink" href="#3.-**Zero-Cost-Abstraction**" title="Permalink"></a></h3><ul><li>High-level compiles to same code as manual</li><li>rrule is as efficient as hand-coded adjoint</li></ul><h3 id="4.-**Composability**"><a class="docs-heading-anchor" href="#4.-**Composability**">4. <strong>Composability</strong></a><a id="4.-**Composability**-1"></a><a class="docs-heading-anchor-permalink" href="#4.-**Composability**" title="Permalink"></a></h3><ul><li>High-level functions compose with Julia ecosystem</li><li>Works with Optimization.jl, Flux.jl, etc.</li></ul><h3 id="5.-**Type-Stability**"><a class="docs-heading-anchor" href="#5.-**Type-Stability**">5. <strong>Type Stability</strong></a><a id="5.-**Type-Stability**-1"></a><a class="docs-heading-anchor-permalink" href="#5.-**Type-Stability**" title="Permalink"></a></h3><ul><li>Both APIs fully type-stable</li><li>Compiler can optimize aggressively</li></ul><hr/><h2 id="Implementation-Checklist"><a class="docs-heading-anchor" href="#Implementation-Checklist">Implementation Checklist</a><a id="Implementation-Checklist-1"></a><a class="docs-heading-anchor-permalink" href="#Implementation-Checklist" title="Permalink"></a></h2><h3 id="Phase-1:-Core-Pure-Function"><a class="docs-heading-anchor" href="#Phase-1:-Core-Pure-Function">Phase 1: Core Pure Function</a><a id="Phase-1:-Core-Pure-Function-1"></a><a class="docs-heading-anchor-permalink" href="#Phase-1:-Core-Pure-Function" title="Permalink"></a></h3><ul><li>[ ] Implement <code>solve_power_flow(psys, p)</code> (pure, no rrule yet)</li><li>[ ] Test with ForwardDiff (should work automatically)</li><li>[ ] Test with Float64 and Dual numbers</li><li>[ ] Add docstrings</li></ul><h3 id="Phase-2:-ChainRules-Integration"><a class="docs-heading-anchor" href="#Phase-2:-ChainRules-Integration">Phase 2: ChainRules Integration</a><a id="Phase-2:-ChainRules-Integration-1"></a><a class="docs-heading-anchor-permalink" href="#Phase-2:-ChainRules-Integration" title="Permalink"></a></h3><ul><li>[ ] Add ChainRulesCore dependency</li><li>[ ] Implement <code>rrule</code> for <code>solve_power_flow</code></li><li>[ ] Test with Zygote</li><li>[ ] Verify correctness vs finite differences</li><li>[ ] Benchmark vs ForwardDiff</li></ul><h3 id="Phase-3:-Helper-Functions"><a class="docs-heading-anchor" href="#Phase-3:-Helper-Functions">Phase 3: Helper Functions</a><a id="Phase-3:-Helper-Functions-1"></a><a class="docs-heading-anchor-permalink" href="#Phase-3:-Helper-Functions" title="Permalink"></a></h3><ul><li>[ ] <code>get_bus_voltages(sys, y)</code></li><li>[ ] <code>get_branch_flows(sys, y)</code></li><li>[ ] <code>evaluate_constraints(sys, y)</code></li><li>[ ] All pure functions, potentially with rrules</li></ul><h3 id="Phase-4:-Documentation"><a class="docs-heading-anchor" href="#Phase-4:-Documentation">Phase 4: Documentation</a><a id="Phase-4:-Documentation-1"></a><a class="docs-heading-anchor-permalink" href="#Phase-4:-Documentation" title="Permalink"></a></h3><ul><li>[ ] User guide: When to use which API</li><li>[ ] Examples for each workflow</li><li>[ ] Performance comparison</li><li>[ ] Migration guide (if deprecating old API)</li></ul><hr/><h2 id="Alternative-Considered:-Unified-API-with-Mode-Detection"><a class="docs-heading-anchor" href="#Alternative-Considered:-Unified-API-with-Mode-Detection">Alternative Considered: Unified API with Mode Detection</a><a id="Alternative-Considered:-Unified-API-with-Mode-Detection-1"></a><a class="docs-heading-anchor-permalink" href="#Alternative-Considered:-Unified-API-with-Mode-Detection" title="Permalink"></a></h2><p><strong>Idea:</strong> Single API that detects AD context</p><pre><code class="language-julia hljs"># Automatically works for both modes
+y = solve_power_flow(psys, p)</code></pre><p><strong>How it works:</strong></p><ul><li>Check if <code>p</code> contains Dual numbers → forward mode</li><li>Check if called from Zygote → reverse mode</li><li>Otherwise → Float64</li></ul><p><strong>Rejected because:</strong></p><ul><li>❌ Magical behavior (hard to understand)</li><li>❌ Can&#39;t manually choose mode</li><li>❌ Debugging difficulty</li><li>❌ Performance unpredictability</li></ul><p><strong>Our dual API is better:</strong></p><ul><li>✅ Explicit when needed</li><li>✅ Simple for common case</li><li>✅ Full control when required</li></ul><hr/><h2 id="Long-Term-Vision"><a class="docs-heading-anchor" href="#Long-Term-Vision">Long-Term Vision</a><a id="Long-Term-Vision-1"></a><a class="docs-heading-anchor-permalink" href="#Long-Term-Vision" title="Permalink"></a></h2><h3 id="Short-term-(Phases-6-7)"><a class="docs-heading-anchor" href="#Short-term-(Phases-6-7)">Short-term (Phases 6-7)</a><a id="Short-term-(Phases-6-7)-1"></a><a class="docs-heading-anchor-permalink" href="#Short-term-(Phases-6-7)" title="Permalink"></a></h3><ul><li>Implement high-level <code>solve_power_flow</code> with rrule</li><li>Keep low-level API for Jacobian computation</li><li>Document both clearly</li></ul><h3 id="Medium-term"><a class="docs-heading-anchor" href="#Medium-term">Medium-term</a><a id="Medium-term-1"></a><a class="docs-heading-anchor-permalink" href="#Medium-term" title="Permalink"></a></h3><ul><li>Add more high-level functions:<ul><li><code>optimal_power_flow(psys, p)</code></li><li><code>transient_simulation(psys, p, tspan)</code></li><li><code>contingency_analysis(psys, p, scenarios)</code></li></ul></li><li>Each with rrule for composability</li></ul><h3 id="Long-term"><a class="docs-heading-anchor" href="#Long-term">Long-term</a><a id="Long-term-1"></a><a class="docs-heading-anchor-permalink" href="#Long-term" title="Permalink"></a></h3><ul><li>Integrate with DifferentialEquations.jl (DAE solve with AD)</li><li>GPU support for both APIs</li><li>Symbolic + numeric AD fusion</li></ul><hr/><h2 id="Summary"><a class="docs-heading-anchor" href="#Summary">Summary</a><a id="Summary-1"></a><a class="docs-heading-anchor-permalink" href="#Summary" title="Permalink"></a></h2><p><strong>Recommended API:</strong></p><pre><code class="language-julia hljs"># LOW-LEVEL: Direct control, forward-mode, debugging
+scatter_parameters!(psys, p)
+evaluate_system_residuals!(ws, dae)
+compute_parameter_jacobian!(B, psys, cache, y, p)
+
+# HIGH-LEVEL: Pure functions, reverse-mode, optimization
+y = solve_power_flow(psys, p)  # Has rrule
+loss = objective(y)
+grad = Zygote.gradient(p -&gt; objective(solve_power_flow(psys, p)), p)</code></pre><p><strong>Key insight:</strong> Different tools for different jobs. Both use the same foundation.</p><p><strong>User mental model:</strong></p><ul><li>&quot;I want to compute a Jacobian&quot; → Low-level API</li><li>&quot;I want to optimize something&quot; → High-level API</li><li>&quot;I need custom AD&quot; → Mix both!</li></ul><p>This design gives users <strong>power</strong> (low-level) and <strong>simplicity</strong> (high-level) simultaneously.</p><hr/><p><strong>Created:</strong> 2025-10-25 <strong>Status:</strong> Design Proposal <strong>Next:</strong> Implement <code>solve_power_flow</code> with rrule in Phase 6</p></article><nav class="docs-footer"><p class="footer-message">Powered by <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> and the <a href="https://julialang.org/">Julia Programming Language</a>.</p></nav></div><div class="modal" id="documenter-settings"><div class="modal-background"></div><div class="modal-card"><header class="modal-card-head"><p class="modal-card-title">Settings</p><button class="delete"></button></header><section class="modal-card-body"><p><label class="label">Theme</label><div class="select"><select id="documenter-themepicker"><option value="auto">Automatic (OS)</option><option value="documenter-light">documenter-light</option><option value="documenter-dark">documenter-dark</option><option value="catppuccin-latte">catppuccin-latte</option><option value="catppuccin-frappe">catppuccin-frappe</option><option value="catppuccin-macchiato">catppuccin-macchiato</option><option value="catppuccin-mocha">catppuccin-mocha</option></select></div></p><hr/><p>This document was generated with <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> version 1.16.1 on <span class="colophon-date" title="Wednesday 3 December 2025 12:47">Wednesday 3 December 2025</span>. Using Julia version 1.11.7.</p></section><footer class="modal-card-foot"></footer></div></div></div></body></html>

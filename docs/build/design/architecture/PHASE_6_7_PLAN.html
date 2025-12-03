@@ -1,0 +1,248 @@
+<!DOCTYPE html>
+<html lang="en"><head><meta charset="UTF-8"/><meta name="viewport" content="width=device-width, initial-scale=1.0"/><title>Phase 6-7 Implementation Plan: Implicit Differentiation &amp; Examples · Powerful.jl</title><meta name="title" content="Phase 6-7 Implementation Plan: Implicit Differentiation &amp; Examples · Powerful.jl"/><meta property="og:title" content="Phase 6-7 Implementation Plan: Implicit Differentiation &amp; Examples · Powerful.jl"/><meta property="twitter:title" content="Phase 6-7 Implementation Plan: Implicit Differentiation &amp; Examples · Powerful.jl"/><meta name="description" content="Documentation for Powerful.jl."/><meta property="og:description" content="Documentation for Powerful.jl."/><meta property="twitter:description" content="Documentation for Powerful.jl."/><meta property="og:url" content="https://sensl.gitlab.io/Powerful.jl/design/architecture/PHASE_6_7_PLAN.html"/><meta property="twitter:url" content="https://sensl.gitlab.io/Powerful.jl/design/architecture/PHASE_6_7_PLAN.html"/><link rel="canonical" href="https://sensl.gitlab.io/Powerful.jl/design/architecture/PHASE_6_7_PLAN.html"/><script data-outdated-warner src="../../assets/warner.js"></script><link href="https://cdnjs.cloudflare.com/ajax/libs/lato-font/3.0.0/css/lato-font.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/juliamono/0.050/juliamono.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/fontawesome.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/solid.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/brands.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.16.8/katex.min.css" rel="stylesheet" type="text/css"/><script>documenterBaseURL="../.."</script><script src="https://cdnjs.cloudflare.com/ajax/libs/require.js/2.3.6/require.min.js" data-main="../../assets/documenter.js"></script><script src="../../search_index.js"></script><script src="../../siteinfo.js"></script><script src="../../../versions.js"></script><link class="docs-theme-link" rel="stylesheet" type="text/css" href="../../assets/themes/catppuccin-mocha.css" data-theme-name="catppuccin-mocha"/><link class="docs-theme-link" rel="stylesheet" type="text/css" href="../../assets/themes/catppuccin-macchiato.css" data-theme-name="catppuccin-macchiato"/><link class="docs-theme-link" rel="stylesheet" type="text/css" href="../../assets/themes/catppuccin-frappe.css" data-theme-name="catppuccin-frappe"/><link class="docs-theme-link" rel="stylesheet" type="text/css" href="../../assets/themes/catppuccin-latte.css" data-theme-name="catppuccin-latte"/><link class="docs-theme-link" rel="stylesheet" type="text/css" href="../../assets/themes/documenter-dark.css" data-theme-name="documenter-dark" data-theme-primary-dark/><link class="docs-theme-link" rel="stylesheet" type="text/css" href="../../assets/themes/documenter-light.css" data-theme-name="documenter-light" data-theme-primary/><script src="../../assets/themeswap.js"></script></head><body><div id="documenter"><nav class="docs-sidebar"><div class="docs-package-name"><span class="docs-autofit"><a href="../../index.html">Powerful.jl</a></span></div><button class="docs-search-query input is-rounded is-small is-clickable my-2 mx-auto py-1 px-2" id="documenter-search-query">Search docs (Ctrl + /)</button><ul class="docs-menu"><li><a class="tocitem" href="../../index.html">Home</a></li><li><input class="collapse-toggle" id="menuitem-2" type="checkbox"/><label class="tocitem" for="menuitem-2"><span class="docs-label">Guides</span><i class="docs-chevron"></i></label><ul class="collapsed"><li><a class="tocitem" href="../../guides/index.html">Overview</a></li><li><a class="tocitem" href="../../guides/getting_started.html">Getting Started</a></li><li><a class="tocitem" href="../../guides/powerflow.html">Power Flow Analysis</a></li><li><a class="tocitem" href="../../guides/tds.html">Time-Domain Simulation</a></li><li><a class="tocitem" href="../../guides/configuration.html">Configuration</a></li><li><a class="tocitem" href="../../guides/accessing_variables.html">Accessing Results</a></li><li><a class="tocitem" href="../../guides/reports.html">Report Customization</a></li></ul></li><li><input class="collapse-toggle" id="menuitem-3" type="checkbox"/><label class="tocitem" for="menuitem-3"><span class="docs-label">Notebooks</span><i class="docs-chevron"></i></label><ul class="collapsed"><li><a class="tocitem" href="../../notebooks/index.html">Overview</a></li><li><a class="tocitem" href="../../notebooks/01_getting_started.html">01 Getting Started</a></li><li><a class="tocitem" href="../../notebooks/02_formulations_and_solvers.html">02 Formulations And Solvers</a></li><li><a class="tocitem" href="../../notebooks/03_gpu_acceleration.html">03 Gpu Acceleration</a></li><li><a class="tocitem" href="../../notebooks/03_multi_island_power_flow.html">03 Multi Island Power Flow</a></li><li><a class="tocitem" href="../../notebooks/04_multi_island_power_flow.html">04 Multi Island Power Flow</a></li><li><a class="tocitem" href="../../notebooks/05_tds_initialization_validation.html">05 Tds Initialization Validation</a></li></ul></li><li><input class="collapse-toggle" id="menuitem-4" type="checkbox"/><label class="tocitem" for="menuitem-4"><span class="docs-label">Developer Documentation</span><i class="docs-chevron"></i></label><ul class="collapsed"><li><a class="tocitem" href="../../developer/overview.html">Overview</a></li><li><a class="tocitem" href="../../developer/indexing.html">Three-Layer Indexing</a></li><li><a class="tocitem" href="../../developer/formulations.html">Multi-Physics Formulations</a></li><li><a class="tocitem" href="../../developer/workspaces.html">Computation Architecture</a></li><li><a class="tocitem" href="../../developer/models.html">Implementing Models</a></li><li><a class="tocitem" href="../../developer/events.html">TDS Event System</a></li><li><a class="tocitem" href="../../developer/miscellaneous.html">Per-Unit &amp; Multi-Island</a></li></ul></li><li><input class="collapse-toggle" id="menuitem-5" type="checkbox"/><label class="tocitem" for="menuitem-5"><span class="docs-label">API Reference</span><i class="docs-chevron"></i></label><ul class="collapsed"><li><a class="tocitem" href="../../api.html">Overview</a></li><li><a class="tocitem" href="../../api/system.html">System &amp; DAE</a></li><li><a class="tocitem" href="../../api/models.html">Models</a></li><li><a class="tocitem" href="../../api/powerflow.html">Power Flow</a></li><li><a class="tocitem" href="../../api/tds.html">Time-Domain Simulation</a></li><li><a class="tocitem" href="../../api/advanced.html">Advanced Features</a></li></ul></li><li><a class="tocitem" href="../../index_page.html">Index</a></li></ul><div class="docs-version-selector field has-addons"><div class="control"><span class="docs-label button is-static is-size-7">Version</span></div><div class="docs-selector control is-expanded"><div class="select is-fullwidth is-size-7"><select id="documenter-version-selector"></select></div></div></div></nav><div class="docs-main"><header class="docs-navbar"><a class="docs-sidebar-button docs-navbar-link fa-solid fa-bars is-hidden-desktop" id="documenter-sidebar-button" href="#"></a><nav class="breadcrumb"><ul class="is-hidden-mobile"><li class="is-active"><a href="PHASE_6_7_PLAN.html">Phase 6-7 Implementation Plan: Implicit Differentiation &amp; Examples</a></li></ul><ul class="is-hidden-tablet"><li class="is-active"><a href="PHASE_6_7_PLAN.html">Phase 6-7 Implementation Plan: Implicit Differentiation &amp; Examples</a></li></ul></nav><div class="docs-right"><a class="docs-navbar-link" href="https://github.com/sensl/Powerful.jl/blob/main/docs/src/design/architecture/PHASE_6_7_PLAN.md#" title="Edit source on GitHub"><span class="docs-icon fa-solid"></span></a><a class="docs-settings-button docs-navbar-link fa-solid fa-gear" id="documenter-settings-button" href="#" title="Settings"></a><a class="docs-article-toggle-button fa-solid fa-chevron-up" id="documenter-article-toggle-button" href="javascript:;" title="Collapse all docstrings"></a></div></header><article class="content" id="documenter-page"><h1 id="Phase-6-7-Implementation-Plan:-Implicit-Differentiation-and-Examples"><a class="docs-heading-anchor" href="#Phase-6-7-Implementation-Plan:-Implicit-Differentiation-and-Examples">Phase 6-7 Implementation Plan: Implicit Differentiation &amp; Examples</a><a id="Phase-6-7-Implementation-Plan:-Implicit-Differentiation-and-Examples-1"></a><a class="docs-heading-anchor-permalink" href="#Phase-6-7-Implementation-Plan:-Implicit-Differentiation-and-Examples" title="Permalink"></a></h1><h2 id="Overview"><a class="docs-heading-anchor" href="#Overview">Overview</a><a id="Overview-1"></a><a class="docs-heading-anchor-permalink" href="#Overview" title="Permalink"></a></h2><p><strong>Status:</strong> Phases 1-5 complete ✅</p><ul><li>✅ Phase 1-3: Core parameter infrastructure, gather/scatter, generic field rebuilding</li><li>✅ Phase 4: Parameter sparsity detection (<code>parameter_sparsity_pattern!</code>)</li><li>✅ Phase 5: Colored parameter Jacobian (<code>compute_parameter_jacobian!</code>)</li><li>🔄 Phase 6: Implicit differentiation with ChainRules (NEXT)</li><li>🔄 Phase 7: Examples &amp; documentation</li></ul><hr/><h2 id="Phase-6:-Implicit-Differentiation-with-ChainRules"><a class="docs-heading-anchor" href="#Phase-6:-Implicit-Differentiation-with-ChainRules">Phase 6: Implicit Differentiation with ChainRules</a><a id="Phase-6:-Implicit-Differentiation-with-ChainRules-1"></a><a class="docs-heading-anchor-permalink" href="#Phase-6:-Implicit-Differentiation-with-ChainRules" title="Permalink"></a></h2><h3 id="Goal"><a class="docs-heading-anchor" href="#Goal">Goal</a><a id="Goal-1"></a><a class="docs-heading-anchor-permalink" href="#Goal" title="Permalink"></a></h3><p>Enable efficient reverse-mode AD for parameter gradients through implicit differentiation.</p><h3 id="Mathematical-Background"><a class="docs-heading-anchor" href="#Mathematical-Background">Mathematical Background</a><a id="Mathematical-Background-1"></a><a class="docs-heading-anchor-permalink" href="#Mathematical-Background" title="Permalink"></a></h3><p>For a power flow solve: <code>g(y, p) = 0</code> where <code>y = solve(p)</code></p><p>To compute <code>∂loss/∂p</code> when loss depends on y:</p><pre><code class="nohighlight hljs">∂loss/∂p = ∂loss/∂y · dy/dp</code></pre><p>By implicit function theorem:</p><pre><code class="nohighlight hljs">g(y(p), p) = 0
+dg = 0
+(∂g/∂y)·dy + (∂g/∂p)·dp = 0
+dy/dp = -(∂g/∂y)^-1 · (∂g/∂p)
+     = -J^-1 · B</code></pre><p>So:</p><pre><code class="nohighlight hljs">∂loss/∂p = -∂loss/∂y · J^-1 · B
+         = -λ^T · B</code></pre><p>where <code>λ = J^T \ (∂loss/∂y)</code> (adjoint solve)</p><p><strong>Computational cost:</strong> O(1) in number of parameters!</p><ul><li>1 adjoint solve: O(n) for sparse system</li><li>1 matrix-vector product: O(nnz(B))</li></ul><h3 id="Implementation-Tasks"><a class="docs-heading-anchor" href="#Implementation-Tasks">Implementation Tasks</a><a id="Implementation-Tasks-1"></a><a class="docs-heading-anchor-permalink" href="#Implementation-Tasks" title="Permalink"></a></h3><h4 id="Task-6.1:-Define-ChainRules-rrule-(50-LOC)"><a class="docs-heading-anchor" href="#Task-6.1:-Define-ChainRules-rrule-(50-LOC)">Task 6.1: Define ChainRules rrule (~50 LOC)</a><a id="Task-6.1:-Define-ChainRules-rrule-(50-LOC)-1"></a><a class="docs-heading-anchor-permalink" href="#Task-6.1:-Define-ChainRules-rrule-(50-LOC)" title="Permalink"></a></h4><p><strong>File:</strong> <code>src/powercore/parameter_chainrules.jl</code></p><pre><code class="language-julia hljs">using ChainRulesCore
+
+&quot;&quot;&quot;
+    power_flow_solve(psys::ParameterizedSystem, p::AbstractVector; kwargs...)
+
+Solve power flow with given parameters.
+
+Returns y such that g(y, p) = 0.
+
+This function has an rrule for efficient reverse-mode AD.
+&quot;&quot;&quot;
+function power_flow_solve(psys::ParameterizedSystem, p::AbstractVector; kwargs...)
+    # Scatter parameters to model fields
+    scatter_parameters!(psys, p)
+
+    # Solve power flow
+    sys = psys.sys
+    dae = DAE(Float64, sys)
+
+    # Use NonlinearSolve or similar
+    result = solve(NonlinearProblem(
+        (g, y) -&gt; begin
+            copyto!(dae.y, y)
+            ws = SystemResidualWorkspace(Float64, sys)
+            evaluate_system_residuals!(ws, dae)
+            copyto!(g, dae.g)
+        end,
+        dae.y;
+        kwargs...
+    )
+
+    return result.zero
+end
+
+&quot;&quot;&quot;
+    rrule for power_flow_solve
+
+Implements implicit differentiation for reverse-mode AD.
+
+# Algorithm
+1. Forward pass: Solve g(y, p) = 0 for y
+2. Reverse pass:
+   - Given ȳ = ∂loss/∂y
+   - Solve J^T λ = ȳ for λ (adjoint)
+   - Compute p̄ = -λ^T · B where B = ∂g/∂p
+&quot;&quot;&quot;
+function ChainRulesCore.rrule(
+    ::typeof(power_flow_solve),
+    psys::ParameterizedSystem,
+    p::AbstractVector;
+    cache=nothing,
+    kwargs...
+)
+    # Forward pass: solve for y
+    y = power_flow_solve(psys, p; kwargs...)
+
+    # Setup for reverse pass
+    if isnothing(cache)
+        # Create cache if not provided
+        cache = CachedAutodiffWorkspace(psys.sys)
+    end
+
+    # Pullback function
+    function power_flow_pullback(ȳ)
+        # ȳ = ∂loss/∂y (upstream gradient)
+
+        # Step 1: Compute Jacobian J = ∂g/∂y at solution
+        sparsity_y = jacobian_sparsity_pattern(psys.sys)
+        colors_y = matrix_colors(sparsity_y)
+        J = Float64.(sparsity_y)
+
+        # Use colored Jacobian
+        forwarddiff_color_jacobian!(J, cache, y; colorvec=colors_y)
+
+        # Step 2: Solve adjoint system J^T λ = ȳ
+        λ = J&#39; \ ȳ
+
+        # Step 3: Compute parameter Jacobian B = ∂g/∂p
+        if isnothing(psys.sparsity_dgdp)
+            parameter_sparsity_pattern!(psys, cache)
+        end
+        B = Float64.(psys.sparsity_dgdp)
+        compute_parameter_jacobian!(B, psys, cache, y, p)
+
+        # Step 4: Chain rule: ∂loss/∂p = -λ^T · B
+        p̄ = -B&#39; * λ
+
+        # Return gradients (NoTangent for function and psys)
+        return (NoTangent(), NoTangent(), p̄)
+    end
+
+    return y, power_flow_pullback
+end</code></pre><p><strong>Complexity:</strong></p><ul><li>Forward solve: O(n³) for dense or O(n) for sparse iterative</li><li>Adjoint solve: Same as forward</li><li>B computation: O(n<em>colors × eval</em>cost), already cached</li><li>Matrix-vector: O(nnz(B))</li></ul><p><strong>Total:</strong> Dominated by solves, independent of number of parameters!</p><h4 id="Task-6.2:-Add-Zygote/Enzyme-compatibility-(20-LOC)"><a class="docs-heading-anchor" href="#Task-6.2:-Add-Zygote/Enzyme-compatibility-(20-LOC)">Task 6.2: Add Zygote/Enzyme compatibility (~20 LOC)</a><a id="Task-6.2:-Add-Zygote/Enzyme-compatibility-(20-LOC)-1"></a><a class="docs-heading-anchor-permalink" href="#Task-6.2:-Add-Zygote/Enzyme-compatibility-(20-LOC)" title="Permalink"></a></h4><pre><code class="language-julia hljs"># Test with Zygote
+using Zygote
+
+function loss_function(p, psys)
+    y = power_flow_solve(psys, p)
+
+    # Extract bus voltages
+    v = get_bus_voltages(psys.sys, y)
+
+    # Loss: deviation from nominal voltage
+    return sum((v .- 1.0).^2)
+end
+
+# Compute gradient via Zygote
+grad = Zygote.gradient(p -&gt; loss_function(p, psys), p0)</code></pre><h4 id="Task-6.3:-Add-@testitem-for-rrule-verification-(80-LOC)"><a class="docs-heading-anchor" href="#Task-6.3:-Add-@testitem-for-rrule-verification-(80-LOC)">Task 6.3: Add @testitem for rrule verification (~80 LOC)</a><a id="Task-6.3:-Add-@testitem-for-rrule-verification-(80-LOC)-1"></a><a class="docs-heading-anchor-permalink" href="#Task-6.3:-Add-@testitem-for-rrule-verification-(80-LOC)" title="Permalink"></a></h4><pre><code class="language-julia hljs">@testitem &quot;ChainRules rrule&quot; begin
+    using Powerful
+    using Powerful
+    using ChainRulesCore
+    using ChainRulesTestUtils
+
+    # Load test case
+    case = PowerFlowData.parse_network(joinpath(pkgdir(Powerful), &quot;cases&quot;, &quot;ieee14.raw&quot;))
+    bus = parse_model(Bus, case)
+    pq = parse_model(PQ, case)
+    pv = parse_model(PV, case)
+    branch = parse_model(Branch, case)
+
+    am = AddressManager()
+    sys = SystemModel(am, (; Bus=bus, PQ=pq, PV=pv, Branch=branch))
+
+    # Setup parameters
+    psys = ParameterizedSystem(sys)
+    add_parameter!(psys, :PV, :pg, [1, 3])
+    finalize_parameters!(psys)
+
+    p0 = gather_parameters(psys)
+
+    # Test rrule
+    test_rrule(power_flow_solve, psys, p0; rtol=1e-5)
+
+    println(&quot;✓ ChainRules rrule verified&quot;)
+end</code></pre><h4 id="Task-6.4:-Benchmark-vs-forward-mode-(30-LOC)"><a class="docs-heading-anchor" href="#Task-6.4:-Benchmark-vs-forward-mode-(30-LOC)">Task 6.4: Benchmark vs forward-mode (~30 LOC)</a><a id="Task-6.4:-Benchmark-vs-forward-mode-(30-LOC)-1"></a><a class="docs-heading-anchor-permalink" href="#Task-6.4:-Benchmark-vs-forward-mode-(30-LOC)" title="Permalink"></a></h4><p>Compare:</p><ul><li>Forward-mode: <code>ForwardDiff.gradient(f, p)</code> → O(n_params) evaluations</li><li>Reverse-mode: <code>Zygote.gradient(f, p)</code> → O(1) evaluation</li></ul><p><strong>Expected speedup:</strong> ~100x for 100 parameters</p><h4 id="Task-6.5:-Documentation-and-examples-(50-LOC)"><a class="docs-heading-anchor" href="#Task-6.5:-Documentation-and-examples-(50-LOC)">Task 6.5: Documentation &amp; examples (~50 LOC)</a><a id="Task-6.5:-Documentation-and-examples-(50-LOC)-1"></a><a class="docs-heading-anchor-permalink" href="#Task-6.5:-Documentation-and-examples-(50-LOC)" title="Permalink"></a></h4><p>Document in docstrings:</p><ul><li>When to use forward vs reverse mode</li><li>How to provide cache for efficiency</li><li>Troubleshooting common issues</li></ul><p><strong>Total Phase 6:</strong> ~230 LOC</p><hr/><h2 id="Phase-7:-Examples-and-Documentation"><a class="docs-heading-anchor" href="#Phase-7:-Examples-and-Documentation">Phase 7: Examples &amp; Documentation</a><a id="Phase-7:-Examples-and-Documentation-1"></a><a class="docs-heading-anchor-permalink" href="#Phase-7:-Examples-and-Documentation" title="Permalink"></a></h2><h3 id="Goal-2"><a class="docs-heading-anchor" href="#Goal-2">Goal</a><a class="docs-heading-anchor-permalink" href="#Goal-2" title="Permalink"></a></h3><p>Provide production-ready examples and comprehensive documentation for users.</p><h3 id="Task-7.1:-Droop-Coefficient-Tuning-Example-(150-LOC)"><a class="docs-heading-anchor" href="#Task-7.1:-Droop-Coefficient-Tuning-Example-(150-LOC)">Task 7.1: Droop Coefficient Tuning Example (~150 LOC)</a><a id="Task-7.1:-Droop-Coefficient-Tuning-Example-(150-LOC)-1"></a><a class="docs-heading-anchor-permalink" href="#Task-7.1:-Droop-Coefficient-Tuning-Example-(150-LOC)" title="Permalink"></a></h3><p><strong>File:</strong> <code>examples/optimize_droop_coefficients.jl</code></p><pre><code class="language-julia hljs">&quot;&quot;&quot;
+Tune PV generator droop coefficients to minimize voltage deviations.
+
+Problem:
+- Given: Power system with PV generators
+- Optimize: Droop coefficients R for each generator
+- Objective: Minimize voltage deviations from nominal (1.0 pu)
+- Constraints: R ∈ [0.01, 0.10]
+
+Uses implicit differentiation for efficient gradients.
+&quot;&quot;&quot;
+
+using Powerful, Optimization, OptimizationOptimJL
+
+# Load system
+case = PowerFlowData.parse_network(&quot;ACTIVSg70k.raw&quot;, v=33)
+sys = create_system(case)
+
+# Setup parameters (droop coefficients)
+psys = ParameterizedSystem(sys)
+pv_indices = 1:100  # First 100 generators
+add_parameter!(psys, :PV, :droop_R, pv_indices)
+finalize_parameters!(psys)
+
+# Initial parameters
+p0 = gather_parameters(psys)  # Current droop values
+
+# Objective: minimize voltage deviations
+function objective(p, psys)
+    y = power_flow_solve(psys, p; ftol=1e-8)
+    v = get_bus_voltages(psys.sys, y)
+    return sum((v .- 1.0).^2)
+end
+
+# Optimize using Zygote for gradients
+cache = CachedAutodiffWorkspace(psys.sys)
+prob = OptimizationProblem(
+    (p, _) -&gt; objective(p, psys),
+    p0;
+    lb = fill(0.01, length(p0)),
+    ub = fill(0.10, length(p0))
+)
+
+sol = solve(prob, BFGS(); maxiters=50)
+
+println(&quot;Optimal droop coefficients: &quot;, sol.u)
+println(&quot;Final objective: &quot;, sol.objective)</code></pre><h3 id="Task-7.2:-Parameter-Estimation-from-PMU-Data-(200-LOC)"><a class="docs-heading-anchor" href="#Task-7.2:-Parameter-Estimation-from-PMU-Data-(200-LOC)">Task 7.2: Parameter Estimation from PMU Data (~200 LOC)</a><a id="Task-7.2:-Parameter-Estimation-from-PMU-Data-(200-LOC)-1"></a><a class="docs-heading-anchor-permalink" href="#Task-7.2:-Parameter-Estimation-from-PMU-Data-(200-LOC)" title="Permalink"></a></h3><p><strong>File:</strong> <code>examples/parameter_estimation_pmu.jl</code></p><pre><code class="language-julia hljs">&quot;&quot;&quot;
+Estimate transmission line parameters from PMU measurements.
+
+Problem:
+- Given: Voltage and current phasor measurements from PMUs
+- Estimate: Line impedances (R, X) and shunt susceptances (B)
+- Method: Nonlinear least squares
+
+This example demonstrates:
+- Parameter selection for network topology
+- Using measurement data for calibration
+- Handling real-world noise
+&quot;&quot;&quot;
+
+# Synthetic PMU data (in practice, load from CSV)
+measurements = load_pmu_measurements(&quot;pmu_data.csv&quot;)
+
+# Select parameters to estimate
+psys = ParameterizedSystem(sys)
+add_parameter!(psys, :Branch, :r, 1:50)  # Resistances
+add_parameter!(psys, :Branch, :x, 1:50)  # Reactances
+add_parameter!(psys, :Branch, :b, 1:50)  # Susceptances
+finalize_parameters!(psys)
+
+# Objective: fit to measurements
+function measurement_error(p, psys, measurements)
+    y = power_flow_solve(psys, p)
+
+    # Extract voltages and currents
+    v_calc = get_bus_voltages(psys.sys, y)
+    i_calc = get_branch_currents(psys.sys, y)
+
+    # Compare with measurements
+    v_error = sum((v_calc .- measurements.v).^2)
+    i_error = sum((i_calc .- measurements.i).^2)
+
+    return v_error + i_error
+end
+
+# Solve
+sol = optimize(p -&gt; measurement_error(p, psys, measurements), p0, BFGS())</code></pre><h3 id="Task-7.3:-Battery-Placement-Optimization-(250-LOC)"><a class="docs-heading-anchor" href="#Task-7.3:-Battery-Placement-Optimization-(250-LOC)">Task 7.3: Battery Placement Optimization (~250 LOC)</a><a id="Task-7.3:-Battery-Placement-Optimization-(250-LOC)-1"></a><a class="docs-heading-anchor-permalink" href="#Task-7.3:-Battery-Placement-Optimization-(250-LOC)" title="Permalink"></a></h3><p><strong>File:</strong> <code>examples/battery_placement_codesign.jl</code></p><pre><code class="language-julia hljs">&quot;&quot;&quot;
+Co-design battery placement and sizing for optimal grid performance.
+
+Problem:
+- Decision variables:
+  - Battery locations (discrete: which buses)
+  - Battery capacities (continuous: kWh)
+  - Battery inverter sizes (continuous: kW)
+- Objective: Minimize cost + voltage deviations + losses
+- Constraints: Budget, voltage limits, power balance
+
+This is a mixed-integer nonlinear program (MINLP).
+Demonstrates advanced parameter optimization use case.
+&quot;&quot;&quot;
+
+# Model batteries as controllable PQ devices
+# Parameters: location, capacity, power setpoint
+
+# Two-stage approach:
+# 1. Discrete: Select candidate locations (heuristic or branch-and-bound)
+# 2. Continuous: Optimize sizing and operation (gradient-based)
+
+# ... implementation ...</code></pre><h3 id="Task-7.4:-User-Guide-Documentation-(300-LOC-Markdown)"><a class="docs-heading-anchor" href="#Task-7.4:-User-Guide-Documentation-(300-LOC-Markdown)">Task 7.4: User Guide Documentation (~300 LOC Markdown)</a><a id="Task-7.4:-User-Guide-Documentation-(300-LOC-Markdown)-1"></a><a class="docs-heading-anchor-permalink" href="#Task-7.4:-User-Guide-Documentation-(300-LOC-Markdown)" title="Permalink"></a></h3><p><strong>File:</strong> <code>docs/src/parameter_optimization_guide.md</code></p><p>Sections:</p><ol><li><p><strong>Quick Start</strong></p><ul><li>Basic example in 10 lines</li><li>When to use parameter optimization</li></ul></li><li><p><strong>Core Concepts</strong></p><ul><li>Parameters vs variables</li><li>Why finalize_parameters!</li><li>Cache creation timing</li></ul></li><li><p><strong>API Reference</strong></p><ul><li><code>ParameterizedSystem</code></li><li><code>add_parameter!</code></li><li><code>finalize_parameters!</code></li><li><code>gather_parameters</code></li><li><code>scatter_parameters!</code></li><li><code>parameter_sparsity_pattern!</code></li><li><code>compute_parameter_jacobian!</code></li><li><code>power_flow_solve</code> (with rrule)</li></ul></li><li><p><strong>Advanced Usage</strong></p><ul><li>Non-contiguous instance selection</li><li>GPU compatibility</li><li>Custom objectives</li><li>Constrained optimization</li><li>Mixed-integer problems</li></ul></li><li><p><strong>Performance Tips</strong></p><ul><li>When to use forward vs reverse mode</li><li>Sparsity exploitation</li><li>Caching strategies</li><li>Large-scale systems (&gt;100k buses)</li></ul></li><li><p><strong>Troubleshooting</strong></p><ul><li>Common errors and fixes</li><li>Debugging tips</li><li>Performance bottlenecks</li></ul></li></ol><h3 id="Task-7.5:-Jupyter-Notebook-Tutorial-(400-LOC)"><a class="docs-heading-anchor" href="#Task-7.5:-Jupyter-Notebook-Tutorial-(400-LOC)">Task 7.5: Jupyter Notebook Tutorial (~400 LOC)</a><a id="Task-7.5:-Jupyter-Notebook-Tutorial-(400-LOC)-1"></a><a class="docs-heading-anchor-permalink" href="#Task-7.5:-Jupyter-Notebook-Tutorial-(400-LOC)" title="Permalink"></a></h3><p><strong>File:</strong> <code>dev_notebooks/parameter_optimization_tutorial.ipynb</code></p><p>Interactive tutorial covering:</p><ol><li>Introduction and motivation</li><li>Simple example: Adjust PV setpoints</li><li>Intermediate: Droop tuning with visualization</li><li>Advanced: Parameter estimation</li><li>Exercises for users</li></ol><h3 id="Task-7.6:-Integration-Tests-(200-LOC)"><a class="docs-heading-anchor" href="#Task-7.6:-Integration-Tests-(200-LOC)">Task 7.6: Integration Tests (~200 LOC)</a><a id="Task-7.6:-Integration-Tests-(200-LOC)-1"></a><a class="docs-heading-anchor-permalink" href="#Task-7.6:-Integration-Tests-(200-LOC)" title="Permalink"></a></h3><p><strong>File:</strong> <code>test/test_parameter_optimization_integration.jl</code></p><p>End-to-end tests:</p><ul><li>Load multiple case sizes (14-bus, 118-bus, 70k-bus)</li><li>Test all example workflows</li><li>Verify gradient correctness across scenarios</li><li>Performance regression tests</li></ul><p><strong>Total Phase 7:</strong> ~1500 LOC</p><hr/><h2 id="Implementation-Timeline"><a class="docs-heading-anchor" href="#Implementation-Timeline">Implementation Timeline</a><a id="Implementation-Timeline-1"></a><a class="docs-heading-anchor-permalink" href="#Implementation-Timeline" title="Permalink"></a></h2><h3 id="Phase-6-(Estimated:-2-3-days)"><a class="docs-heading-anchor" href="#Phase-6-(Estimated:-2-3-days)">Phase 6 (Estimated: 2-3 days)</a><a id="Phase-6-(Estimated:-2-3-days)-1"></a><a class="docs-heading-anchor-permalink" href="#Phase-6-(Estimated:-2-3-days)" title="Permalink"></a></h3><ul><li>[ ] Day 1: Implement ChainRules rrule</li><li>[ ] Day 2: Add tests, verify correctness</li><li>[ ] Day 3: Benchmark, optimize, document</li></ul><h3 id="Phase-7-(Estimated:-5-7-days)"><a class="docs-heading-anchor" href="#Phase-7-(Estimated:-5-7-days)">Phase 7 (Estimated: 5-7 days)</a><a id="Phase-7-(Estimated:-5-7-days)-1"></a><a class="docs-heading-anchor-permalink" href="#Phase-7-(Estimated:-5-7-days)" title="Permalink"></a></h3><ul><li>[ ] Day 1-2: Droop tuning + PMU estimation examples</li><li>[ ] Day 3-4: Battery placement + advanced examples</li><li>[ ] Day 5-6: Documentation and tutorial</li><li>[ ] Day 7: Integration tests, polish</li></ul><p><strong>Total Timeline:</strong> 7-10 days</p><hr/><h2 id="Dependencies"><a class="docs-heading-anchor" href="#Dependencies">Dependencies</a><a id="Dependencies-1"></a><a class="docs-heading-anchor-permalink" href="#Dependencies" title="Permalink"></a></h2><h3 id="External-Packages-Needed"><a class="docs-heading-anchor" href="#External-Packages-Needed">External Packages Needed</a><a id="External-Packages-Needed-1"></a><a class="docs-heading-anchor-permalink" href="#External-Packages-Needed" title="Permalink"></a></h3><p><strong>Already have:</strong></p><ul><li>ChainRulesCore (for rrule)</li><li>ForwardDiff (for forward-mode AD)</li><li>SparseArrays, SparseDiffTools</li><li>NonlinearSolve</li></ul><p><strong>May need to add:</strong></p><ul><li>Zygote (reverse-mode AD) - <strong>ADD TO Project.toml</strong></li><li>Optimization.jl (modern optimization interface) - <strong>ADD</strong></li><li>OptimizationOptimJL.jl (Optim.jl wrapper) - <strong>ADD</strong></li><li>ComponentArrays (named parameter vectors) - Optional</li><li>DataFrames (for PMU data example) - Optional</li></ul><h3 id="Documentation-Dependencies"><a class="docs-heading-anchor" href="#Documentation-Dependencies">Documentation Dependencies</a><a id="Documentation-Dependencies-1"></a><a class="docs-heading-anchor-permalink" href="#Documentation-Dependencies" title="Permalink"></a></h3><ul><li>Documenter.jl (already have)</li><li>Literate.jl (for notebook conversion) - Check if needed</li><li>Plots.jl (for visualization examples) - Optional</li></ul><hr/><h2 id="Success-Criteria"><a class="docs-heading-anchor" href="#Success-Criteria">Success Criteria</a><a id="Success-Criteria-1"></a><a class="docs-heading-anchor-permalink" href="#Success-Criteria" title="Permalink"></a></h2><h3 id="Phase-6"><a class="docs-heading-anchor" href="#Phase-6">Phase 6</a><a id="Phase-6-1"></a><a class="docs-heading-anchor-permalink" href="#Phase-6" title="Permalink"></a></h3><ul><li>✅ rrule implementation passes ChainRulesTestUtils</li><li>✅ Zygote.gradient works with power<em>flow</em>solve</li><li>✅ Reverse-mode is &gt;10x faster than forward-mode for 100+ params</li><li>✅ Tests verify implicit differentiation correctness</li><li>✅ Documentation explains when/how to use</li></ul><h3 id="Phase-7"><a class="docs-heading-anchor" href="#Phase-7">Phase 7</a><a id="Phase-7-1"></a><a class="docs-heading-anchor-permalink" href="#Phase-7" title="Permalink"></a></h3><ul><li>✅ All examples run without errors</li><li>✅ Examples demonstrate different use cases</li><li>✅ Documentation covers beginner to advanced</li><li>✅ Tutorial notebook is interactive and educational</li><li>✅ Integration tests pass on CI</li><li>✅ Performance benchmarks establish baseline</li></ul><hr/><h2 id="Risks-and-Mitigations"><a class="docs-heading-anchor" href="#Risks-and-Mitigations">Risks &amp; Mitigations</a><a id="Risks-and-Mitigations-1"></a><a class="docs-heading-anchor-permalink" href="#Risks-and-Mitigations" title="Permalink"></a></h2><h3 id="Risk-1:-ChainRules-compatibility-issues"><a class="docs-heading-anchor" href="#Risk-1:-ChainRules-compatibility-issues">Risk 1: ChainRules compatibility issues</a><a id="Risk-1:-ChainRules-compatibility-issues-1"></a><a class="docs-heading-anchor-permalink" href="#Risk-1:-ChainRules-compatibility-issues" title="Permalink"></a></h3><p><strong>Mitigation:</strong> Start with simple rrule, test incrementally</p><h3 id="Risk-2:-Adjoint-solve-numerical-stability"><a class="docs-heading-anchor" href="#Risk-2:-Adjoint-solve-numerical-stability">Risk 2: Adjoint solve numerical stability</a><a id="Risk-2:-Adjoint-solve-numerical-stability-1"></a><a class="docs-heading-anchor-permalink" href="#Risk-2:-Adjoint-solve-numerical-stability" title="Permalink"></a></h3><p><strong>Mitigation:</strong> Use same solver settings as forward, add condition number checks</p><h3 id="Risk-3:-Example-complexity-vs-clarity"><a class="docs-heading-anchor" href="#Risk-3:-Example-complexity-vs-clarity">Risk 3: Example complexity vs clarity</a><a id="Risk-3:-Example-complexity-vs-clarity-1"></a><a class="docs-heading-anchor-permalink" href="#Risk-3:-Example-complexity-vs-clarity" title="Permalink"></a></h3><p><strong>Mitigation:</strong> Start simple, add complexity gradually, extensive comments</p><h3 id="Risk-4:-Documentation-becomes-stale"><a class="docs-heading-anchor" href="#Risk-4:-Documentation-becomes-stale">Risk 4: Documentation becomes stale</a><a id="Risk-4:-Documentation-becomes-stale-1"></a><a class="docs-heading-anchor-permalink" href="#Risk-4:-Documentation-becomes-stale" title="Permalink"></a></h3><p><strong>Mitigation:</strong> Use doctest, link examples to CI</p><hr/><h2 id="Post-Implementation-Tasks"><a class="docs-heading-anchor" href="#Post-Implementation-Tasks">Post-Implementation Tasks</a><a id="Post-Implementation-Tasks-1"></a><a class="docs-heading-anchor-permalink" href="#Post-Implementation-Tasks" title="Permalink"></a></h2><ol><li><strong>Announce</strong> on Julia Discourse / Slack</li><li><strong>Write blog post</strong> explaining implicit differentiation</li><li><strong>Submit to JuliaCon</strong> (if timeline allows)</li><li><strong>Add to Julia package listings</strong></li><li><strong>Seek feedback</strong> from power systems community</li></ol><hr/><h2 id="Open-Questions"><a class="docs-heading-anchor" href="#Open-Questions">Open Questions</a><a id="Open-Questions-1"></a><a class="docs-heading-anchor-permalink" href="#Open-Questions" title="Permalink"></a></h2><ol><li><p>Should we support Enzyme.jl in addition to Zygote?</p><ul><li>Pro: Better performance for some problems</li><li>Con: Additional complexity</li></ul></li><li><p>Should examples use real data or synthetic?</p><ul><li>Leaning toward synthetic for reproducibility</li><li>Could add optional real-data examples</li></ul></li><li><p>GPU support for implicit differentiation?</p><ul><li>Current focus: CPU</li><li>Future work: Extend to GPU</li></ul></li><li><p>License considerations for example data?</p><ul><li>Use public IEEE cases</li><li>Generate synthetic PMU data</li></ul></li></ol><hr/><p><strong>Created:</strong> 2025-10-25 <strong>Status:</strong> Planning Phase <strong>Next Action:</strong> Begin Phase 6 implementation</p></article><nav class="docs-footer"><p class="footer-message">Powered by <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> and the <a href="https://julialang.org/">Julia Programming Language</a>.</p></nav></div><div class="modal" id="documenter-settings"><div class="modal-background"></div><div class="modal-card"><header class="modal-card-head"><p class="modal-card-title">Settings</p><button class="delete"></button></header><section class="modal-card-body"><p><label class="label">Theme</label><div class="select"><select id="documenter-themepicker"><option value="auto">Automatic (OS)</option><option value="documenter-light">documenter-light</option><option value="documenter-dark">documenter-dark</option><option value="catppuccin-latte">catppuccin-latte</option><option value="catppuccin-frappe">catppuccin-frappe</option><option value="catppuccin-macchiato">catppuccin-macchiato</option><option value="catppuccin-mocha">catppuccin-mocha</option></select></div></p><hr/><p>This document was generated with <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> version 1.16.1 on <span class="colophon-date" title="Wednesday 3 December 2025 12:47">Wednesday 3 December 2025</span>. Using Julia version 1.11.7.</p></section><footer class="modal-card-foot"></footer></div></div></div></body></html>
