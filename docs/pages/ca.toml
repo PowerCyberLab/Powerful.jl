@@ -1,0 +1,20 @@
+# Description of a standalone package's documentation pages, read generically by
+# docs/make.jl (which discovers every docs/pages/*.toml, names none of them). Always
+# present (public).
+package = "PowerfulCA"
+order = 550
+
+[guide]
+title = "Contingency Analysis"
+file = "guides/accc.md"
+list = "studies"
+list_summary = "N-1 and N-k AC contingency analysis"
+study_label = "contingency analysis"
+package_summary = "Contingency analysis (AC and DC screening)"
+
+[api]
+title = "Contingency Analysis"
+
+[[api.pages]]
+file = "api/ca.md"
+summary = "AC contingency analysis, DC screening, PTDF and LODF"

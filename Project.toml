@@ -1,28 +1,48 @@
-name = "Powerful"
-uuid = "542e4350-023d-42c7-b19f-8cb561780c9e"
-authors = ["Hantao Cui <cuihantao@gmail.com>"]
-version = "0.1.0"
-
 [deps]
-CUDA = "052768ef-5323-5732-b1bb-66c8b64840ba"
-DocStringExtensions = "ffbed154-4ef7-542d-bbb7-c09d3a79fcae"
+ControlSystemsBase = "aaaaaaaa-a6ca-5380-bf3e-84a91bcd477e"
+CSV = "336ed68f-0bac-5ca0-87d4-7b16caf5d00b"
+DataFrames = "a93c6f00-e57d-5684-b7b6-d8193f3e46c0"
+DifferentiationInterface = "a0c0ee7d-e4b9-4e03-894e-1c5f64a51d63"
+Enzyme = "7da242da-08ed-463a-9acd-ee780be4f1d9"
+ForwardDiff = "f6369f11-7733-5829-9624-2563aa707210"
 InlineStrings = "842dd82b-1e85-43dc-bf29-5d0ee9dffc48"
-Logging = "56ddb016-857b-54e1-b83d-db4d58db5568"
-NLsolve = "2774e3e8-f4cf-5e23-947b-6d7e65073b56"
+Literate = "98b081ad-f1c9-55d3-8b20-4c87d4299306"
+NonlinearSolve = "8913a72c-1f9b-4ce2-8d82-65094dcecaec"
+OrderedCollections = "bac558e1-5e72-5ebc-8fee-abe8a469f55d"
+OrdinaryDiffEqBDF = "6ad6398a-0878-4a85-9266-38940aa047c8"
+PowerDynData = "8af9307f-baed-4afb-b455-e9e9cc62a748"
 PowerFlowData = "dd99e9e3-7471-40fc-b48d-a10501125371"
+Powerful = "542e4350-023d-42c7-b19f-8cb561780c9e"
+PowerfulCA = "0e0f8f2f-52dd-43db-a14b-50d8879ea210"
+PowerfulCases = "a1b2c3d4-5678-4abc-9def-0123456789ab"
+PowerfulCore = "7ec54247-6ba0-49ff-bb80-8518a6c4e144"
+PowerfulPF = "0cb6c863-8ddf-4b1a-8eaf-6d2c52fed4c2"
+PowerfulTDS = "49b22d1c-5cff-4ee2-8f80-576505bd3255"
+PowerfulYbus = "e6577a40-6fef-4f41-bb80-b0fb95e1b109"
 PrecompileTools = "aea7be01-6a6a-4083-8856-8a6e6704d82a"
-SparseArrays = "2f01184e-e22b-5df5-ae63-d93ebab69eaf"
+PrettyTables = "08abe8d2-0d0c-5749-adfa-8a2ac140af0d"
+Printf = "de0858da-6303-5e67-8744-51eddeeeb8d7"
+SparseConnectivityTracer = "9f842d2f-2579-4b1d-911e-f412cf18a3f5"
+SparseMatrixColorings = "0a514795-09f3-496d-8182-132a7b665d35"
+Statistics = "10745b16-79ce-11e8-11f9-7d13ad32a3b2"
 StructArrays = "09ab397b-f2b6-538f-b94a-2f83cf4a842a"
-TestItemRunner = "f8b46487-2199-4994-9208-9a1283c18c0a"
-TestItems = "1c621080-faea-4a02-84b6-bbd5e436b8fe"
+
+[sources]
+OrdinaryDiffEqBDF = {url = "https://github.com/cuihantao/OrdinaryDiffEq.jl", rev = "ecfef223d90594037acb58a3d25a237eaba19695", subdir = "lib/OrdinaryDiffEqBDF"}
+PowerFlowData = {url = "https://github.com/cuihantao/PowerFlowData.jl", rev = "3086c2c75530c595c191f37b8e1c29e4f0711520"}
+Powerful = {path = "Powerful"}
+PowerfulCA = {path = "PowerfulCA"}
+PowerfulCases = {url = "https://github.com/cuihantao/PowerfulCases", rev = "96dcc6dfce205e42b4473bc3f8ef407ab09b3ce8"}
+PowerfulCore = {path = "PowerfulCore"}
+PowerfulPF = {path = "PowerfulPF"}
+PowerfulTDS = {path = "PowerfulTDS"}
+PowerfulYbus = {path = "PowerfulYbus"}
 
 [compat]
-DocStringExtensions = "0.9.3"
-NLsolve = "4"
-julia = "1.6"
-
-[extras]
-Test = "8dfed614-e22c-5e08-85e1-65c5234f0b40"
-
-[targets]
-test = ["Test"]
+CSV = "0.10.15"
+DataFrames = "1.8.1"
+Literate = "2.21.0"
+PowerDynData = "0.5"
+PrecompileTools = "1.2"
+PrettyTables = "3"
+julia = "1.11"

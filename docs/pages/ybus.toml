@@ -1,0 +1,31 @@
+# Description of a standalone package's documentation pages, read generically by
+# docs/make.jl (which discovers every docs/pages/*.toml, names none of them). Always
+# present (public).
+package = "PowerfulYbus"
+order = 1000
+
+[guide]
+title = "Y-Bus Simulation"
+file = "guides/ybus.md"
+list = "studies"
+list_summary = "Time-domain simulation with a sparse Y-bus network solution"
+study_label = "Y-bus simulation"
+package_summary = "Y-bus time-domain simulation"
+
+[api]
+title = "Y-Bus Simulation"
+
+[[api.pages]]
+title = "Problem and Solvers"
+file = "api/ybus.md"
+summary = "Y-bus problem, solvers, events, Y matrix"
+
+[[api.pages]]
+title = "Network Solution"
+file = "api/ybus_network.md"
+summary = "Network solution, machine sources, system buffers"
+
+[[api.pages]]
+title = "Model Interface"
+file = "api/ybus_traits.md"
+summary = "Network partition roles, nonconforming loads, admittance traits"

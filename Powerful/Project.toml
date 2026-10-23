@@ -1,0 +1,41 @@
+name = "Powerful"
+uuid = "542e4350-023d-42c7-b19f-8cb561780c9e"
+authors = ["Hantao Cui <cuihantao@gmail.com>"]
+version = "0.1.0"
+
+[deps]
+PowerfulCases = "a1b2c3d4-5678-4abc-9def-0123456789ab"
+PowerfulCore = "7ec54247-6ba0-49ff-bb80-8518a6c4e144"
+PowerfulPF = "0cb6c863-8ddf-4b1a-8eaf-6d2c52fed4c2"
+PowerfulTDS = "49b22d1c-5cff-4ee2-8f80-576505bd3255"
+Reexport = "189a3867-3050-52da-a836-e630ba90ab69"
+
+[sources]
+PowerfulCases = {url = "https://github.com/cuihantao/PowerfulCases.git"}
+PowerfulCore = {path = "../PowerfulCore"}
+PowerfulPF = {path = "../PowerfulPF"}
+PowerfulTDS = {path = "../PowerfulTDS"}
+
+[compat]
+PowerfulCases = "0.4"
+PowerfulCore = "0.1"
+PowerfulPF = "0.1"
+PowerfulTDS = "0.1"
+Reexport = "1"
+julia = "1.11"
+
+[extras]
+CondaPkg = "992eb4ea-22a4-4c89-a5bb-47a3300528ab"
+FiniteDifferences = "26cc04aa-876d-5657-8c51-4c34ba976000"
+ForwardDiff = "f6369f11-7733-5829-9624-2563aa707210"
+InlineStrings = "842dd82b-1e85-43dc-bf29-5d0ee9dffc48"
+LinearAlgebra = "37e2e46d-f89d-539d-b4ee-838fcccc9c8e"
+NonlinearSolve = "8913a72c-1f9b-4ce2-8d82-65094dcecaec"
+PythonCall = "6099a3de-0909-46bc-b1f4-468b9a2dfc0d"
+SparseArrays = "2f01184e-e22b-5df5-ae63-d93ebab69eaf"
+StructArrays = "09ab397b-f2b6-538f-b94a-2f83cf4a842a"
+Test = "8dfed614-e22c-5e08-85e1-65c5234f0b40"
+TestItemRunner = "f8b46487-2199-4994-9208-9a1283c18c0a"
+
+[targets]
+test = ["Test", "TestItemRunner", "FiniteDifferences", "ForwardDiff", "InlineStrings", "LinearAlgebra", "NonlinearSolve", "SparseArrays", "StructArrays"]

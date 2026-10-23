@@ -1,0 +1,43 @@
+name = "PowerfulYbus"
+uuid = "e6577a40-6fef-4f41-bb80-b0fb95e1b109"
+version = "0.1.0"
+authors = ["Hantao Cui <cuihantao@gmail.com>"]
+
+[deps]
+CommonSolve = "38540f10-b2f7-11e9-35d8-d573e4eb0ff2"
+DifferentiationInterface = "a0c0ee7d-e4b9-4e03-894e-1c5f64a51d63"
+DocStringExtensions = "ffbed154-4ef7-542d-bbb7-c09d3a79fcae"
+ForwardDiff = "f6369f11-7733-5829-9624-2563aa707210"
+InlineStrings = "842dd82b-1e85-43dc-bf29-5d0ee9dffc48"
+KLU = "ef3ab10e-7fda-4108-b977-705223b18434"
+LinearAlgebra = "37e2e46d-f89d-539d-b4ee-838fcccc9c8e"
+PowerfulCore = "7ec54247-6ba0-49ff-bb80-8518a6c4e144"
+PowerfulPF = "0cb6c863-8ddf-4b1a-8eaf-6d2c52fed4c2"
+PowerfulTDS = "49b22d1c-5cff-4ee2-8f80-576505bd3255"
+SparseArrays = "2f01184e-e22b-5df5-ae63-d93ebab69eaf"
+StructArrays = "09ab397b-f2b6-538f-b94a-2f83cf4a842a"
+
+[sources]
+PowerfulCore = {path = "../PowerfulCore"}
+PowerfulPF = {path = "../PowerfulPF"}
+PowerfulTDS = {path = "../PowerfulTDS"}
+
+[compat]
+CommonSolve = "0.2"
+DifferentiationInterface = "0.7"
+DocStringExtensions = "0.9.5"
+ForwardDiff = "1"
+InlineStrings = "1"
+KLU = "0.6"
+PowerfulCore = "0.1"
+PowerfulPF = "0.1"
+PowerfulTDS = "0.1"
+StructArrays = "0.7"
+julia = "1.11"
+
+[extras]
+Test = "8dfed614-e22c-5e08-85e1-65c5234f0b40"
+TestItemRunner = "f8b46487-2199-4994-9208-9a1283c18c0a"
+
+[targets]
+test = ["Test", "TestItemRunner"]

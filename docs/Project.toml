@@ -1,6 +1,27 @@
 [deps]
+ControlSystemsBase = "aaaaaaaa-a6ca-5380-bf3e-84a91bcd477e"
+DataFrames = "a93c6f00-e57d-5684-b7b6-d8193f3e46c0"
+DifferentiationInterface = "a0c0ee7d-e4b9-4e03-894e-1c5f64a51d63"
 Documenter = "e30172f5-a6a5-5a46-863b-614d45cd2de4"
-JSON = "682c06a0-de6a-54ab-a142-c8b1cf79cde6"
+Literate = "98b081ad-f1c9-55d3-8b20-4c87d4299306"
 LiveServer = "16fef848-5104-11e9-1b77-fb7a48bbb589"
+Plots = "91a5bcdd-55d7-5caf-9e0b-520d859cae80"
+PowerFlowData = "dd99e9e3-7471-40fc-b48d-a10501125371"
 Powerful = "542e4350-023d-42c7-b19f-8cb561780c9e"
-Weave = "44d3d7a6-8a23-5bf8-98c5-b353f8df5ec9"
+PowerfulCA = "0e0f8f2f-52dd-43db-a14b-50d8879ea210"
+PowerfulCases = "a1b2c3d4-5678-4abc-9def-0123456789ab"
+PowerfulCore = "7ec54247-6ba0-49ff-bb80-8518a6c4e144"
+PowerfulPF = "0cb6c863-8ddf-4b1a-8eaf-6d2c52fed4c2"
+PowerfulTDS = "49b22d1c-5cff-4ee2-8f80-576505bd3255"
+PowerfulYbus = "e6577a40-6fef-4f41-bb80-b0fb95e1b109"
+StructArrays = "09ab397b-f2b6-538f-b94a-2f83cf4a842a"
+
+[sources]
+PowerFlowData = {url = "https://github.com/cuihantao/PowerFlowData.jl", rev = "3086c2c75530c595c191f37b8e1c29e4f0711520"}
+Powerful = {path = "../Powerful"}
+PowerfulCA = {path = "../PowerfulCA"}
+PowerfulCases = {url = "https://github.com/cuihantao/PowerfulCases", rev = "96dcc6dfce205e42b4473bc3f8ef407ab09b3ce8"}
+PowerfulCore = {path = "../PowerfulCore"}
+PowerfulPF = {path = "../PowerfulPF"}
+PowerfulTDS = {path = "../PowerfulTDS"}
+PowerfulYbus = {path = "../PowerfulYbus"}

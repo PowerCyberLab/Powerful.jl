@@ -1,0 +1,24 @@
+[deps]
+ControlSystemsBase = "aaaaaaaa-a6ca-5380-bf3e-84a91bcd477e"
+CSV = "336ed68f-0bac-5ca0-87d4-7b16caf5d00b"
+DataFrames = "a93c6f00-e57d-5684-b7b6-d8193f3e46c0"
+LinearAlgebra = "37e2e46d-f89d-539d-b4ee-838fcccc9c8e"
+Plots = "91a5bcdd-55d7-5caf-9e0b-520d859cae80"
+Powerful = "542e4350-023d-42c7-b19f-8cb561780c9e"
+PowerfulCA = "0e0f8f2f-52dd-43db-a14b-50d8879ea210"
+PowerfulCases = "a1b2c3d4-5678-4abc-9def-0123456789ab"
+PowerfulCore = "7ec54247-6ba0-49ff-bb80-8518a6c4e144"
+PowerfulPF = "0cb6c863-8ddf-4b1a-8eaf-6d2c52fed4c2"
+PowerfulTDS = "49b22d1c-5cff-4ee2-8f80-576505bd3255"
+PowerfulYbus = "e6577a40-6fef-4f41-bb80-b0fb95e1b109"
+Printf = "de0858da-6303-5e67-8744-51eddeeeb8d7"
+SparseArrays = "2f01184e-e22b-5df5-ae63-d93ebab69eaf"
+
+[sources]
+Powerful = {path = "../Powerful"}
+PowerfulCA = {path = "../PowerfulCA"}
+PowerfulCases = {url = "https://github.com/cuihantao/PowerfulCases", rev = "96dcc6dfce205e42b4473bc3f8ef407ab09b3ce8"}
+PowerfulCore = {path = "../PowerfulCore"}
+PowerfulPF = {path = "../PowerfulPF"}
+PowerfulTDS = {path = "../PowerfulTDS"}
+PowerfulYbus = {path = "../PowerfulYbus"}

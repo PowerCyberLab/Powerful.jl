@@ -1,0 +1,63 @@
+name = "PowerfulPF"
+uuid = "0cb6c863-8ddf-4b1a-8eaf-6d2c52fed4c2"
+version = "0.1.0"
+authors = ["Hantao Cui <cuihantao@gmail.com>"]
+
+[deps]
+ADTypes = "47edcb42-4c32-4615-8424-f2b9edc5f35b"
+CSV = "336ed68f-0bac-5ca0-87d4-7b16caf5d00b"
+CommonSolve = "38540f10-b2f7-11e9-35d8-d573e4eb0ff2"
+DataFrames = "a93c6f00-e57d-5684-b7b6-d8193f3e46c0"
+DifferentiationInterface = "a0c0ee7d-e4b9-4e03-894e-1c5f64a51d63"
+DocStringExtensions = "ffbed154-4ef7-542d-bbb7-c09d3a79fcae"
+ForwardDiff = "f6369f11-7733-5829-9624-2563aa707210"
+InlineStrings = "842dd82b-1e85-43dc-bf29-5d0ee9dffc48"
+KLU = "ef3ab10e-7fda-4108-b977-705223b18434"
+LinearAlgebra = "37e2e46d-f89d-539d-b4ee-838fcccc9c8e"
+OrderedCollections = "bac558e1-5e72-5ebc-8fee-abe8a469f55d"
+PowerfulCore = "7ec54247-6ba0-49ff-bb80-8518a6c4e144"
+PrecompileTools = "aea7be01-6a6a-4083-8856-8a6e6704d82a"
+PrettyTables = "08abe8d2-0d0c-5749-adfa-8a2ac140af0d"
+Printf = "de0858da-6303-5e67-8744-51eddeeeb8d7"
+Reexport = "189a3867-3050-52da-a836-e630ba90ab69"
+SparseArrays = "2f01184e-e22b-5df5-ae63-d93ebab69eaf"
+SparseMatrixColorings = "0a514795-09f3-496d-8182-132a7b665d35"
+Statistics = "10745b16-79ce-11e8-11f9-7d13ad32a3b2"
+StructArrays = "09ab397b-f2b6-538f-b94a-2f83cf4a842a"
+
+[weakdeps]
+NonlinearSolve = "8913a72c-1f9b-4ce2-8d82-65094dcecaec"
+
+[extensions]
+PowerfulPFNonlinearSolveExt = "NonlinearSolve"
+
+[sources]
+PowerfulCore = {path = "../PowerfulCore"}
+
+[compat]
+ADTypes = "1.18.0"
+CSV = "0.10"
+CommonSolve = "0.2"
+DataFrames = "1.8"
+DifferentiationInterface = "0.7"
+DocStringExtensions = "0.9.5"
+ForwardDiff = "1"
+InlineStrings = "1"
+KLU = "0.6"
+NonlinearSolve = "4"
+OrderedCollections = "1"
+PowerfulCore = "0.1"
+PrecompileTools = "1"
+PrettyTables = "3"
+Reexport = "1.2"
+SparseMatrixColorings = "0.4"
+Statistics = "1"
+StructArrays = "0.7"
+julia = "1.11"
+
+[extras]
+Test = "8dfed614-e22c-5e08-85e1-65c5234f0b40"
+TestItemRunner = "f8b46487-2199-4994-9208-9a1283c18c0a"
+
+[targets]
+test = ["Test", "TestItemRunner"]

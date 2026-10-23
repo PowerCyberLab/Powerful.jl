@@ -1,0 +1,9 @@
+cff-version: 1.2.0
+message: "If you use this software, please cite it as below."
+title: "Powerful.jl"
+authors:
+  - family-names: "Cui"
+    given-names: "Hantao"
+url: "https://github.com/PowerCyberLab/Powerful.jl"
+date-released: "2026-10-21"
+license: "AGPL-3.0"
