@@ -78,6 +78,8 @@ If you use Powerful.jl in your research, please cite:
 
 GNU Affero General Public License v3.0 - see [LICENSE.md](LICENSE.md).
 
+Copyright (C) 2026 Hantao Cui.
+
 ## Contributing
 
 Contributions are welcome! Please open an issue or pull request on
