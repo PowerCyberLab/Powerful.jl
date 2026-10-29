@@ -1,0 +1,251 @@
+<!DOCTYPE html>
+<html lang="en"><head><meta charset="UTF-8"/><meta name="viewport" content="width=device-width, initial-scale=1.0"/><title>TDS Initialization Validation · Powerful.jl</title><meta name="title" content="TDS Initialization Validation · Powerful.jl"/><meta property="og:title" content="TDS Initialization Validation · Powerful.jl"/><meta property="twitter:title" content="TDS Initialization Validation · Powerful.jl"/><meta name="description" content="Documentation for Powerful.jl."/><meta property="og:description" content="Documentation for Powerful.jl."/><meta property="twitter:description" content="Documentation for Powerful.jl."/><meta property="og:url" content="https://powercyberlab.github.io/Powerful.jl/notebooks/04_tds_initialization_validation/"/><meta property="twitter:url" content="https://powercyberlab.github.io/Powerful.jl/notebooks/04_tds_initialization_validation/"/><link rel="canonical" href="https://powercyberlab.github.io/Powerful.jl/notebooks/04_tds_initialization_validation/"/><script data-outdated-warner src="../../assets/warner.js"></script><link href="https://cdnjs.cloudflare.com/ajax/libs/lato-font/3.0.0/css/lato-font.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/juliamono/0.63.2/juliamono.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/fontawesome.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/solid.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/brands.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.16.8/katex.min.css" rel="stylesheet" type="text/css"/><script>documenterBaseURL="../.."</script><script src="https://cdnjs.cloudflare.com/ajax/libs/require.js/2.3.6/require.min.js" data-main="../../assets/documenter.js"></script><script src="../../search_index.js"></script><script src="../../siteinfo.js"></script><script src="../../../versions.js"></script><link class="docs-theme-link" rel="stylesheet" type="text/css" href="../../assets/themes/catppuccin-mocha.css" data-theme-name="catppuccin-mocha"/><link class="docs-theme-link" rel="stylesheet" type="text/css" href="../../assets/themes/catppuccin-macchiato.css" data-theme-name="catppuccin-macchiato"/><link class="docs-theme-link" rel="stylesheet" type="text/css" href="../../assets/themes/catppuccin-frappe.css" data-theme-name="catppuccin-frappe"/><link class="docs-theme-link" rel="stylesheet" type="text/css" href="../../assets/themes/catppuccin-latte.css" data-theme-name="catppuccin-latte"/><link class="docs-theme-link" rel="stylesheet" type="text/css" href="../../assets/themes/documenter-dark.css" data-theme-name="documenter-dark" data-theme-primary-dark/><link class="docs-theme-link" rel="stylesheet" type="text/css" href="../../assets/themes/documenter-light.css" data-theme-name="documenter-light" data-theme-primary/><script src="../../assets/themeswap.js"></script></head><body><div id="documenter"><nav class="docs-sidebar"><div class="docs-package-name"><span class="docs-autofit"><a href="../../">Powerful.jl</a></span></div><button class="docs-search-query input is-rounded is-small is-clickable my-2 mx-auto py-1 px-2" id="documenter-search-query">Search docs (Ctrl + /)</button><ul class="docs-menu"><li><a class="tocitem" href="../../">Home</a></li><li><input class="collapse-toggle" id="menuitem-2" type="checkbox"/><label class="tocitem" for="menuitem-2"><span class="docs-label">Guides</span><i class="docs-chevron"></i></label><ul class="collapsed"><li><a class="tocitem" href="../../guides/">Overview</a></li><li><a class="tocitem" href="../../guides/getting_started/">Getting Started</a></li><li><a class="tocitem" href="../../guides/powerflow/">Power Flow Analysis</a></li><li><a class="tocitem" href="../../guides/multi_island/">Multi-Island Systems</a></li><li><a class="tocitem" href="../../guides/dc_analysis/">DC Analysis</a></li><li><a class="tocitem" href="../../guides/accc/">Contingency Analysis</a></li><li><a class="tocitem" href="../../guides/tds/">Time-Domain Simulation</a></li><li><a class="tocitem" href="../../guides/models/">Dynamic Models</a></li><li><a class="tocitem" href="../../guides/ybus/">Y-Bus Simulation</a></li><li><a class="tocitem" href="../../guides/eigenvalue/">Eigenvalue Analysis</a></li><li><a class="tocitem" href="../../guides/bode/">Frequency Response</a></li><li><a class="tocitem" href="../../guides/autodiff/">Automatic Differentiation</a></li><li><a class="tocitem" href="../../guides/configuration/">Configuration</a></li><li><a class="tocitem" href="../../guides/accessing_variables/">Accessing Results</a></li><li><a class="tocitem" href="../../guides/reports/">Report Customization</a></li></ul></li><li><input class="collapse-toggle" id="menuitem-3" type="checkbox" checked/><label class="tocitem" for="menuitem-3"><span class="docs-label">Notebooks</span><i class="docs-chevron"></i></label><ul class="collapsed"><li><a class="tocitem" href="../">Overview</a></li><li><a class="tocitem" href="../01_getting_started/">Getting Started with Powerful.jl</a></li><li><a class="tocitem" href="../02_formulations_and_solvers/">Power Flow Formulations and Solvers</a></li><li><a class="tocitem" href="../03_multi_island_power_flow/">Multi-Island Power Flow</a></li><li class="is-active"><a class="tocitem" href>TDS Initialization Validation</a><ul class="internal"><li><a class="tocitem" href="#Setup"><span>Setup</span></a></li><li><a class="tocitem" href="#Why-Validation-Matters"><span>Why Validation Matters</span></a></li><li><a class="tocitem" href="#1.-Load-System-and-Solve-Power-Flow"><span>1. Load System and Solve Power Flow</span></a></li><li><a class="tocitem" href="#2.-Load-Dynamic-Models"><span>2. Load Dynamic Models</span></a></li><li><a class="tocitem" href="#3.-Initialize-and-Create-the-TDS-Problem"><span>3. Initialize and Create the TDS Problem</span></a></li><li><a class="tocitem" href="#4.-Validate-Initialization"><span>4. Validate Initialization</span></a></li><li><a class="tocitem" href="#5.-Validation-Report"><span>5. Validation Report</span></a></li><li><a class="tocitem" href="#6.-Understanding-Residuals"><span>6. Understanding Residuals</span></a></li><li><a class="tocitem" href="#7.-What-a-Failed-Validation-Looks-Like"><span>7. What a Failed Validation Looks Like</span></a></li><li><a class="tocitem" href="#8.-Save-the-Validation-Report"><span>8. Save the Validation Report</span></a></li><li><a class="tocitem" href="#9.-Inspect-Initial-States"><span>9. Inspect Initial States</span></a></li><li><a class="tocitem" href="#10.-System-Composition-After-Replacement"><span>10. System Composition After Replacement</span></a></li><li><a class="tocitem" href="#11.-Confirm-with-a-Short-Simulation"><span>11. Confirm with a Short Simulation</span></a></li><li><a class="tocitem" href="#Summary"><span>Summary</span></a></li></ul></li></ul></li><li><input class="collapse-toggle" id="menuitem-4" type="checkbox"/><label class="tocitem" for="menuitem-4"><span class="docs-label">Developer Documentation</span><i class="docs-chevron"></i></label><ul class="collapsed"><li><a class="tocitem" href="../../developer/overview/">Overview</a></li><li><a class="tocitem" href="../../developer/indexing/">Three-Layer Indexing</a></li><li><a class="tocitem" href="../../developer/formulations/">Multi-Physics Formulations</a></li><li><a class="tocitem" href="../../developer/workspaces/">Computation Architecture</a></li><li><a class="tocitem" href="../../developer/models/">Implementing Models</a></li><li><a class="tocitem" href="../../developer/tds/">TDS Architecture</a></li><li><a class="tocitem" href="../../developer/events/">TDS Event System</a></li><li><a class="tocitem" href="../../developer/miscellaneous/">Per-Unit &amp; Multi-Island</a></li><li><a class="tocitem" href="../../developer/docstrings/">Docstring Guidelines</a></li></ul></li><li><input class="collapse-toggle" id="menuitem-5" type="checkbox"/><label class="tocitem" for="menuitem-5"><span class="docs-label">API Reference</span><i class="docs-chevron"></i></label><ul class="collapsed"><li><a class="tocitem" href="../../api/">Overview</a></li><li><a class="tocitem" href="../../api/powerful/">Powerful</a></li><li><input class="collapse-toggle" id="menuitem-5-3" type="checkbox"/><label class="tocitem" for="menuitem-5-3"><span class="docs-label">Core</span><i class="docs-chevron"></i></label><ul class="collapsed"><li><a class="tocitem" href="../../api/foundation/">Types and Variables</a></li><li><a class="tocitem" href="../../api/metadata/">Metadata and Traits</a></li><li><a class="tocitem" href="../../api/formulations/">Formulations, Units and Registry</a></li><li><a class="tocitem" href="../../api/dae/">DAE and Addressing</a></li><li><a class="tocitem" href="../../api/ad/">Jacobians and Newton</a></li><li><a class="tocitem" href="../../api/recording/">Time Series and Injection Recording</a></li><li><a class="tocitem" href="../../api/system/">System</a></li><li><a class="tocitem" href="../../api/outages/">Islands and Outages</a></li></ul></li><li><input class="collapse-toggle" id="menuitem-5-4" type="checkbox"/><label class="tocitem" for="menuitem-5-4"><span class="docs-label">Power Flow</span><i class="docs-chevron"></i></label><ul class="collapsed"><li><a class="tocitem" href="../../api/models/">Network Models</a></li><li><a class="tocitem" href="../../api/powerflow/">Power Flow</a></li><li><a class="tocitem" href="../../api/results/">Results and Reports</a></li></ul></li><li><input class="collapse-toggle" id="menuitem-5-5" type="checkbox"/><label class="tocitem" for="menuitem-5-5"><span class="docs-label">Time-Domain Simulation</span><i class="docs-chevron"></i></label><ul class="collapsed"><li><a class="tocitem" href="../../api/dynamic_models/">Dynamic Models</a></li><li><a class="tocitem" href="../../api/tds/">Simulation</a></li><li><a class="tocitem" href="../../api/small_signal/">Validation and Small-Signal Analysis</a></li></ul></li><li><a class="tocitem" href="../../api/ca/">Contingency Analysis</a></li><li><input class="collapse-toggle" id="menuitem-5-7" type="checkbox"/><label class="tocitem" for="menuitem-5-7"><span class="docs-label">Y-Bus Simulation</span><i class="docs-chevron"></i></label><ul class="collapsed"><li><a class="tocitem" href="../../api/ybus/">Problem and Solvers</a></li><li><a class="tocitem" href="../../api/ybus_network/">Network Solution</a></li><li><a class="tocitem" href="../../api/ybus_traits/">Model Interface</a></li></ul></li><li><a class="tocitem" href="../../api/cases/">Test Cases</a></li></ul></li><li><a class="tocitem" href="../../index_page/">Index</a></li></ul><div class="docs-version-selector field has-addons"><div class="control"><span class="docs-label button is-static is-size-7">Version</span></div><div class="docs-selector control is-expanded"><div class="select is-fullwidth is-size-7"><select id="documenter-version-selector"></select></div></div></div></nav><div class="docs-main"><header class="docs-navbar"><a class="docs-sidebar-button docs-navbar-link fa-solid fa-bars is-hidden-desktop" id="documenter-sidebar-button" href="#"></a><nav class="breadcrumb"><ul class="is-hidden-mobile"><li><a class="is-disabled">Notebooks</a></li><li class="is-active"><a href>TDS Initialization Validation</a></li></ul><ul class="is-hidden-tablet"><li class="is-active"><a href>TDS Initialization Validation</a></li></ul></nav><div class="docs-right"><a class="docs-navbar-link" href="https://github.com/PowerCyberLab/Powerful.jl" title="View the repository on GitHub"><span class="docs-icon fa-brands"></span><span class="docs-label is-hidden-touch">GitHub</span></a><a class="docs-navbar-link" href="https://github.com/PowerCyberLab/Powerful.jl/blob/main/notebooks/04_tds_initialization_validation.jl#" title="Edit source on GitHub"><span class="docs-icon fa-solid"></span></a><a class="docs-settings-button docs-navbar-link fa-solid fa-gear" id="documenter-settings-button" href="#" title="Settings"></a><a class="docs-article-toggle-button fa-solid fa-chevron-up" id="documenter-article-toggle-button" href="javascript:;" title="Collapse all docstrings"></a></div></header><article class="content" id="documenter-page"><h1 id="TDS-Initialization-Validation"><a class="docs-heading-anchor" href="#TDS-Initialization-Validation">TDS Initialization Validation</a><a id="TDS-Initialization-Validation-1"></a><a class="docs-heading-anchor-permalink" href="#TDS-Initialization-Validation" title="Permalink"></a></h1><p>Learn how to check the initial conditions of a time-domain simulation (TDS) and diagnose steady-state problems before simulating.</p><h2 id="Setup"><a class="docs-heading-anchor" href="#Setup">Setup</a><a id="Setup-1"></a><a class="docs-heading-anchor-permalink" href="#Setup" title="Permalink"></a></h2><pre><code class="language-julia hljs">using Powerful
+using PowerfulCases
+using Plots
+
+# Reporting helpers from the TDS package (not exported by Powerful)
+using PowerfulTDS: write_validation_report, print_initialization_summary</code></pre><h2 id="Why-Validation-Matters"><a class="docs-heading-anchor" href="#Why-Validation-Matters">Why Validation Matters</a><a id="Why-Validation-Matters-1"></a><a class="docs-heading-anchor-permalink" href="#Why-Validation-Matters" title="Permalink"></a></h2><p>A time-domain simulation starts from a steady-state operating point. If the initial conditions do not satisfy the differential-algebraic equations (DAE), that is the differential residuals f = 0 and the algebraic residuals g = 0, the simulation starts with a spurious transient before any disturbance is applied.</p><p><strong>Common causes:</strong></p><ul><li>Dynamic model data inconsistent with the power flow data</li><li>Incorrect initial states of a dynamic model</li></ul><p><strong>Approach:</strong> evaluate the residuals at t = 0 before time stepping.</p><h2 id="1.-Load-System-and-Solve-Power-Flow"><a class="docs-heading-anchor" href="#1.-Load-System-and-Solve-Power-Flow">1. Load System and Solve Power Flow</a><a id="1.-Load-System-and-Solve-Power-Flow-1"></a><a class="docs-heading-anchor-permalink" href="#1.-Load-System-and-Solve-Power-Flow" title="Permalink"></a></h2><pre><code class="language-julia hljs"># IEEE 14-bus case with its default dynamic data
+case = load(&quot;ieee14&quot;)
+sys_pf = SystemModel(parse_network(case.raw))
+
+# The power flow solution is the steady state the dynamic models start from
+sol_pf = solve(ACPowerFlowProblem(sys_pf), Newton())
+
+println(&quot;Power flow converged: &quot;, sol_pf.converged)
+println(&quot;Iterations: &quot;, sol_pf.iterations)</code></pre><pre class="documenter-example-output"><code class="nohighlight hljs ansi">Power flow converged: true
+Iterations: 4</code></pre><h2 id="2.-Load-Dynamic-Models"><a class="docs-heading-anchor" href="#2.-Load-Dynamic-Models">2. Load Dynamic Models</a><a id="2.-Load-Dynamic-Models-1"></a><a class="docs-heading-anchor-permalink" href="#2.-Load-Dynamic-Models" title="Permalink"></a></h2><p><code>parse_dynamics</code> reads a PSS/E DYR file and links each generator model to the power flow generator (Slack or PV) at the same bus and ID. The default IEEE 14-bus DYR file contains classical machines (GENCLS), exciters (SEXS) and governors (TGOV1).</p><pre><code class="language-julia hljs">dyr_data = parse_dynamics(case.dyr, sys_pf)
+
+for (model, data) in pairs(dyr_data)
+    println(&quot;$model: $(length(data)) instances&quot;)
+end</code></pre><pre class="documenter-example-output"><code class="nohighlight hljs ansi">TGOV1: 5 instances
+GENCLS: 5 instances
+SEXS: 5 instances</code></pre><h2 id="3.-Initialize-and-Create-the-TDS-Problem"><a class="docs-heading-anchor" href="#3.-Initialize-and-Create-the-TDS-Problem">3. Initialize and Create the TDS Problem</a><a id="3.-Initialize-and-Create-the-TDS-Problem-1"></a><a class="docs-heading-anchor-permalink" href="#3.-Initialize-and-Create-the-TDS-Problem" title="Permalink"></a></h2><p><code>setup_tds</code> replaces the static generators with their dynamic models and computes the initial states and setpoints from the power flow solution.</p><pre><code class="language-julia hljs">init = setup_tds(sol_pf, dyr_data)</code></pre><pre class="documenter-example-output"><code class="nohighlight hljs ansi">TDSInitialization:
+  TGOV1 (5): LAG_y, LL_x, pref, pout
+  GENCLS (5): delta, omega, E_q, P_m
+  SEXS (5): LL_x, LAW_y, vref, E_fd
+  Setpoints: TGOV1, GENCLS, SEXS</code></pre><pre><code class="language-julia hljs">prob = TDSProblem(init; tspan=(0.0, 5.0))</code></pre><pre class="documenter-example-output"><code class="nohighlight hljs ansi">TDSProblem{Float64, PowerInjection}:
+  Time span: 0.0 → 5.0 s
+  State variables: 30
+  Algebraic variables: 58
+  Events: 0
+  Dynamic models: GENCLS, SEXS, TGOV1
+</code></pre><h2 id="4.-Validate-Initialization"><a class="docs-heading-anchor" href="#4.-Validate-Initialization">4. Validate Initialization</a><a id="4.-Validate-Initialization-1"></a><a class="docs-heading-anchor-permalink" href="#4.-Validate-Initialization" title="Permalink"></a></h2><p>Evaluate all residuals at t = 0 and compare them with a tolerance.</p><pre><code class="language-julia hljs">result = validate_tds_initialization(prob; atol=1e-6)
+
+println(&quot;Valid: &quot;, result.is_valid)
+println(&quot;Max differential residual: &quot;, result.max_diff_residual)
+println(&quot;Max algebraic residual: &quot;, result.max_alg_residual)</code></pre><pre class="documenter-example-output"><code class="nohighlight hljs ansi">Valid: true
+Max differential residual: 1.942890293094024e-14
+Max algebraic residual: 3.255784530864503e-12</code></pre><h2 id="5.-Validation-Report"><a class="docs-heading-anchor" href="#5.-Validation-Report">5. Validation Report</a><a id="5.-Validation-Report-1"></a><a class="docs-heading-anchor-permalink" href="#5.-Validation-Report" title="Permalink"></a></h2><p>The report lists the equations whose residuals exceed the tolerance.</p><pre><code class="language-julia hljs">print_validation_report(result)</code></pre><pre class="documenter-example-output"><code class="nohighlight hljs ansi">
+======================================================================
+TDS Initialization Validation Report
+======================================================================
+✓ All residuals within tolerance
+  Max differential residual: 1.94e-14
+  Max algebraic residual:    3.26e-12</code></pre><h2 id="6.-Understanding-Residuals"><a class="docs-heading-anchor" href="#6.-Understanding-Residuals">6. Understanding Residuals</a><a id="6.-Understanding-Residuals-1"></a><a class="docs-heading-anchor-permalink" href="#6.-Understanding-Residuals" title="Permalink"></a></h2><p><strong>Differential residuals (f):</strong> time derivatives of the state variables (for example the rotor angle δ and speed ω). At steady state they are zero; a non-zero value means the state starts moving without any disturbance.</p><p><strong>Algebraic residuals (g):</strong> network equations such as the power balance at each bus. They must be zero at all times; a non-zero value means a mismatch between the dynamic model injections and the network.</p><h2 id="7.-What-a-Failed-Validation-Looks-Like"><a class="docs-heading-anchor" href="#7.-What-a-Failed-Validation-Looks-Like">7. What a Failed Validation Looks Like</a><a id="7.-What-a-Failed-Validation-Looks-Like-1"></a><a class="docs-heading-anchor-permalink" href="#7.-What-a-Failed-Validation-Looks-Like" title="Permalink"></a></h2><p>To see the diagnostics, we build a second problem whose initial rotor angle of the generator at bus 1 is shifted by 0.05 rad away from its computed steady-state value.</p><pre><code class="language-julia hljs">init_bad = setup_tds(sol_pf, dyr_data)
+init_bad.dyn.GENCLS.delta[1] += 0.05
+prob_bad = TDSProblem(init_bad; tspan=(0.0, 5.0))
+
+result_bad = validate_tds_initialization(prob_bad; atol=1e-6)
+print_validation_report(result_bad)</code></pre><pre class="documenter-example-output"><code class="nohighlight hljs ansi">
+======================================================================
+TDS Initialization Validation Report
+======================================================================
+✗ Non-zero residuals detected!
+  Max differential residual: 2.19e-01
+  Max algebraic residual:    2.19e-01
+
+Differential Residuals (f != 0):
+----------------------------------------------------------------------
+┌─────────┬────────┬──────────┬───────────────┐
+│ Address │  Model │ Equation │      Residual │
+├─────────┼────────┼──────────┼───────────────┤
+│      16 │ GENCLS │   domega │ -2.194330e-01 │
+└─────────┴────────┴──────────┴───────────────┘
+
+Algebraic Residuals (g != 0):
+----------------------------------------------------------------------
+┌─────────┬───────┬──────────┬───────────────┐
+│ Address │ Model │ Equation │      Residual │
+├─────────┼───────┼──────────┼───────────────┤
+│       1 │   Bus │        p │  2.194330e-01 │
+│      15 │   Bus │        q │ -4.634440e-02 │
+└─────────┴───────┴──────────┴───────────────┘
+
+======================================================================</code></pre><p>The report points at the equations involved: the speed equation of the shifted machine and the active and reactive power balance at its terminal bus. This point is not a steady state. <code>solve</code> runs the same check before simulating, reports the violations as an error, and the integrator then refuses to start from it.</p><h2 id="8.-Save-the-Validation-Report"><a class="docs-heading-anchor" href="#8.-Save-the-Validation-Report">8. Save the Validation Report</a><a id="8.-Save-the-Validation-Report-1"></a><a class="docs-heading-anchor-permalink" href="#8.-Save-the-Validation-Report" title="Permalink"></a></h2><p><code>write_validation_report</code> writes the same report to a text file, for example to attach to a bug report. Here it goes to a temporary directory.</p><pre><code class="language-julia hljs">report_path = joinpath(mktempdir(), &quot;validation_report.txt&quot;)
+write_validation_report(result_bad, report_path)
+print(read(report_path, String))</code></pre><pre class="documenter-example-output"><code class="nohighlight hljs ansi">Validation report written to /tmp/jl_x5A4id/validation_report.txt
+
+======================================================================
+TDS Initialization Validation Report
+======================================================================
+✗ Non-zero residuals detected!
+  Max differential residual: 2.19e-01
+  Max algebraic residual:    2.19e-01
+
+Differential Residuals (f != 0):
+----------------------------------------------------------------------
+┌─────────┬────────┬──────────┬───────────────┐
+│ Address │  Model │ Equation │      Residual │
+├─────────┼────────┼──────────┼───────────────┤
+│      16 │ GENCLS │   domega │ -2.194330e-01 │
+└─────────┴────────┴──────────┴───────────────┘
+
+Algebraic Residuals (g != 0):
+----------------------------------------------------------------------
+┌─────────┬───────┬──────────┬───────────────┐
+│ Address │ Model │ Equation │      Residual │
+├─────────┼───────┼──────────┼───────────────┤
+│       1 │   Bus │        p │  2.194330e-01 │
+│      15 │   Bus │        q │ -4.634440e-02 │
+└─────────┴───────┴──────────┴───────────────┘
+
+======================================================================</code></pre><h2 id="9.-Inspect-Initial-States"><a class="docs-heading-anchor" href="#9.-Inspect-Initial-States">9. Inspect Initial States</a><a id="9.-Inspect-Initial-States-1"></a><a class="docs-heading-anchor-permalink" href="#9.-Inspect-Initial-States" title="Permalink"></a></h2><p><code>print_initialization_summary</code> prints the computed initial states of every dynamic model.</p><pre><code class="language-julia hljs">print_initialization_summary(prob)</code></pre><pre class="documenter-example-output"><code class="nohighlight hljs ansi">
+======================================================================
+TDS Initialization Summary
+======================================================================
+
+TGOV1: 5 instances
+----------------------------------------------------------------------
+┌─────┬────┬──────────┬──────────┬──────────┬──────────┐
+│ BUS │ ID │    LAG_y │     LL_x │     pref │     pout │
+├─────┼────┼──────────┼──────────┼──────────┼──────────┤
+│   1 │  1 │ 0.816978 │ 0.816978 │ 0.040849 │ 0.816978 │
+│   2 │  1 │ 0.400000 │ 0.400000 │ 0.020000 │ 0.400000 │
+│   3 │  1 │ 0.400000 │ 0.400000 │ 0.020000 │ 0.400000 │
+│   6 │  1 │ 0.300000 │ 0.300000 │ 0.015000 │ 0.300000 │
+│   8 │  1 │ 0.350000 │ 0.350000 │ 0.017500 │ 0.350000 │
+└─────┴────┴──────────┴──────────┴──────────┴──────────┘
+
+
+GENCLS: 5 instances
+----------------------------------------------------------------------
+┌─────┬────┬───────────┬──────────┬──────────┬──────────┐
+│ BUS │ ID │     delta │    omega │      E_q │      P_m │
+├─────┼────┼───────────┼──────────┼──────────┼──────────┤
+│   1 │  1 │  0.183142 │ 1.000000 │ 1.001714 │ 0.816978 │
+│   2 │  1 │  0.016060 │ 1.000000 │ 1.075702 │ 0.400000 │
+│   3 │  1 │ -0.011976 │ 1.000000 │ 1.031263 │ 0.400000 │
+│   6 │  1 │ -0.085246 │ 1.000000 │ 1.076080 │ 0.300000 │
+│   8 │  1 │  0.016928 │ 1.000000 │ 1.050482 │ 0.350000 │
+└─────┴────┴───────────┴──────────┴──────────┴──────────┘
+
+
+SEXS: 5 instances
+----------------------------------------------------------------------
+┌─────┬────┬──────────┬──────────┬──────────┬──────────┐
+│ BUS │ ID │     LL_x │    LAW_y │     vref │     E_fd │
+├─────┼────┼──────────┼──────────┼──────────┼──────────┤
+│   1 │  1 │ 0.010017 │ 1.001714 │ 1.040017 │ 1.001714 │
+│   2 │  1 │ 0.010757 │ 1.075702 │ 1.040757 │ 1.075702 │
+│   3 │  1 │ 0.010313 │ 1.031263 │ 1.020313 │ 1.031263 │
+│   6 │  1 │ 0.010761 │ 1.076080 │ 1.040761 │ 1.076080 │
+│   8 │  1 │ 0.010505 │ 1.050482 │ 1.040505 │ 1.050482 │
+└─────┴────┴──────────┴──────────┴──────────┴──────────┘
+
+======================================================================</code></pre><p>Show only selected instances. Keys are <code>(BUS, ID)</code> tuples; models not listed in <code>keys</code> are shown in full.</p><pre><code class="language-julia hljs">print_initialization_summary(prob; keys = Dict(:GENCLS =&gt; [(1, &quot;1&quot;), (2, &quot;1&quot;)]))</code></pre><pre class="documenter-example-output"><code class="nohighlight hljs ansi">
+======================================================================
+TDS Initialization Summary
+======================================================================
+
+TGOV1: 5 instances
+----------------------------------------------------------------------
+┌─────┬────┬──────────┬──────────┬──────────┬──────────┐
+│ BUS │ ID │    LAG_y │     LL_x │     pref │     pout │
+├─────┼────┼──────────┼──────────┼──────────┼──────────┤
+│   1 │  1 │ 0.816978 │ 0.816978 │ 0.040849 │ 0.816978 │
+│   2 │  1 │ 0.400000 │ 0.400000 │ 0.020000 │ 0.400000 │
+│   3 │  1 │ 0.400000 │ 0.400000 │ 0.020000 │ 0.400000 │
+│   6 │  1 │ 0.300000 │ 0.300000 │ 0.015000 │ 0.300000 │
+│   8 │  1 │ 0.350000 │ 0.350000 │ 0.017500 │ 0.350000 │
+└─────┴────┴──────────┴──────────┴──────────┴──────────┘
+
+
+GENCLS: 2 instances
+----------------------------------------------------------------------
+┌─────┬────┬──────────┬──────────┬──────────┬──────────┐
+│ BUS │ ID │    delta │    omega │      E_q │      P_m │
+├─────┼────┼──────────┼──────────┼──────────┼──────────┤
+│   1 │  1 │ 0.183142 │ 1.000000 │ 1.001714 │ 0.816978 │
+│   2 │  1 │ 0.016060 │ 1.000000 │ 1.075702 │ 0.400000 │
+└─────┴────┴──────────┴──────────┴──────────┴──────────┘
+
+
+SEXS: 5 instances
+----------------------------------------------------------------------
+┌─────┬────┬──────────┬──────────┬──────────┬──────────┐
+│ BUS │ ID │     LL_x │    LAW_y │     vref │     E_fd │
+├─────┼────┼──────────┼──────────┼──────────┼──────────┤
+│   1 │  1 │ 0.010017 │ 1.001714 │ 1.040017 │ 1.001714 │
+│   2 │  1 │ 0.010757 │ 1.075702 │ 1.040757 │ 1.075702 │
+│   3 │  1 │ 0.010313 │ 1.031263 │ 1.020313 │ 1.031263 │
+│   6 │  1 │ 0.010761 │ 1.076080 │ 1.040761 │ 1.076080 │
+│   8 │  1 │ 0.010505 │ 1.050482 │ 1.040505 │ 1.050482 │
+└─────┴────┴──────────┴──────────┴──────────┴──────────┘
+
+======================================================================</code></pre><p>Show only selected variables, including the electrical power output (<code>P_e</code>, <code>Q_e</code>), which requires evaluating the model equations:</p><pre><code class="language-julia hljs">print_initialization_summary(prob; vars = [:delta, :omega, :P_e, :Q_e], include_observable_vars = true)</code></pre><pre class="documenter-example-output"><code class="nohighlight hljs ansi">
+======================================================================
+TDS Initialization Summary
+======================================================================
+
+TGOV1: 5 instances
+----------------------------------------------------------------------
+┌─────┬────┐
+│ BUS │ ID │
+├─────┼────┤
+│   1 │  1 │
+│   2 │  1 │
+│   3 │  1 │
+│   6 │  1 │
+│   8 │  1 │
+└─────┴────┘
+
+
+GENCLS: 5 instances
+----------------------------------------------------------------------
+┌─────┬────┬───────────┬──────────┬──────────┬───────────┐
+│ BUS │ ID │     delta │    omega │      P_e │       Q_e │
+├─────┼────┼───────────┼──────────┼──────────┼───────────┤
+│   1 │  1 │  0.183142 │ 1.000000 │ 0.816978 │ -0.201692 │
+│   2 │  1 │  0.016060 │ 1.000000 │ 0.400000 │  0.352707 │
+│   3 │  1 │ -0.011976 │ 1.000000 │ 0.400000 │  0.155205 │
+│   6 │  1 │ -0.085246 │ 1.000000 │ 0.300000 │  0.390645 │
+│   8 │  1 │  0.016928 │ 1.000000 │ 0.350000 │  0.169009 │
+└─────┴────┴───────────┴──────────┴──────────┴───────────┘
+
+
+SEXS: 5 instances
+----------------------------------------------------------------------
+┌─────┬────┐
+│ BUS │ ID │
+├─────┼────┤
+│   1 │  1 │
+│   2 │  1 │
+│   3 │  1 │
+│   6 │  1 │
+│   8 │  1 │
+└─────┴────┘
+
+======================================================================</code></pre><h2 id="10.-System-Composition-After-Replacement"><a class="docs-heading-anchor" href="#10.-System-Composition-After-Replacement">10. System Composition After Replacement</a><a id="10.-System-Composition-After-Replacement-1"></a><a class="docs-heading-anchor-permalink" href="#10.-System-Composition-After-Replacement" title="Permalink"></a></h2><p>The dynamic generator models replace the static Slack and PV models, which have no instances left in the TDS system.</p><pre><code class="language-julia hljs">for (model_name, data) in pairs(prob.sys.models)
+    println(&quot;  $model_name: $(length(data))&quot;)
+end</code></pre><pre class="documenter-example-output"><code class="nohighlight hljs ansi">  PV: 0
+  Owner: 2
+  Branch: 16
+  AreaInterchange: 2
+  Transformer2W: 4
+  Bus: 14
+  PQ: 11
+  Slack: 0
+  Zone: 2
+  TGOV1: 5
+  GENCLS: 5
+  SEXS: 5</code></pre><h2 id="11.-Confirm-with-a-Short-Simulation"><a class="docs-heading-anchor" href="#11.-Confirm-with-a-Short-Simulation">11. Confirm with a Short Simulation</a><a id="11.-Confirm-with-a-Short-Simulation-1"></a><a class="docs-heading-anchor-permalink" href="#11.-Confirm-with-a-Short-Simulation" title="Permalink"></a></h2><p>With a valid initialization and no disturbance, the system stays at its operating point: the generator speeds remain at 1.0 pu.</p><pre><code class="language-julia hljs">sol_tds = solve(prob)
+
+gen_keys = collect(zip(prob.sys.models.GENCLS.BUS, prob.sys.models.GENCLS.ID))
+max_dev = maximum(maximum(abs.(get_series(sol_tds, :GENCLS, :omega, key)[2] .- 1)) for key in gen_keys)
+println(&quot;Max |ω - 1| over all generators and time steps: &quot;, max_dev)</code></pre><pre class="documenter-example-output"><code class="nohighlight hljs ansi">Max |ω - 1| over all generators and time steps: 2.5424107263916085e-14</code></pre><pre><code class="language-julia hljs">plot(xlabel=&quot;Time (s)&quot;, ylabel=&quot;Speed (pu)&quot;, ylims=(0.999, 1.001),
+     title=&quot;Generator speeds, no disturbance&quot;, legend=:outerright)
+for (bus, id) in gen_keys
+    t, ω = get_series(sol_tds, :GENCLS, :omega, (bus, id))
+    plot!(t, ω, label=&quot;Gen $bus&quot;, marker=:circle)
+end
+plot!()</code></pre><img src="355331b8.svg" alt="Example block output"/><h2 id="Summary"><a class="docs-heading-anchor" href="#Summary">Summary</a><a id="Summary-1"></a><a class="docs-heading-anchor-permalink" href="#Summary" title="Permalink"></a></h2><ol><li>Validate the TDS initialization before running simulations</li><li>Use <code>validate_tds_initialization(prob)</code> to check the residuals at t = 0</li><li>Use <code>print_validation_report</code> to find the equations that are not satisfied</li><li>Use <code>print_initialization_summary</code> to inspect the initial states</li></ol><p><strong>Next steps:</strong> see the <a href="../../guides/tds/">Time-Domain Simulation guide</a> for disturbances (faults, line trips) and result analysis.</p></article><nav class="docs-footer"><a class="docs-footer-prevpage" href="../03_multi_island_power_flow/">« Multi-Island Power Flow</a><a class="docs-footer-nextpage" href="../../developer/overview/">Overview »</a><div class="flexbox-break"></div><p class="footer-message">Powered by <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> and the <a href="https://julialang.org/">Julia Programming Language</a>.</p></nav></div><div class="modal" id="documenter-settings"><div class="modal-background"></div><div class="modal-card"><header class="modal-card-head"><p class="modal-card-title">Settings</p><button class="delete"></button></header><section class="modal-card-body"><p><label class="label">Theme</label><div class="select"><select id="documenter-themepicker"><option value="auto">Automatic (OS)</option><option value="documenter-light">documenter-light</option><option value="documenter-dark">documenter-dark</option><option value="catppuccin-latte">catppuccin-latte</option><option value="catppuccin-frappe">catppuccin-frappe</option><option value="catppuccin-macchiato">catppuccin-macchiato</option><option value="catppuccin-mocha">catppuccin-mocha</option></select></div></p><hr/><p>This document was generated with <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> version 1.19.0 on <span class="colophon-date" title="Thursday 29 October 2026 22:02">Thursday 29 October 2026</span>. Using Julia version 1.11.9.</p></section><footer class="modal-card-foot"></footer></div></div></div></body></html>
