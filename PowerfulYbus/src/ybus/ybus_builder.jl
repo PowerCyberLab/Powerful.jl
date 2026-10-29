@@ -202,7 +202,6 @@ Uses Transformer2W fields:
 
 Same admittances as the power flow kernel (`calc_transformer_currents`):
 Y_ii = y/t² + y_mag, Y_ij = -y/t·e^{jφ}, Y_ji = -y/t·e^{-jφ}, Y_jj = y.
-
 """
 function _add_transformer_contributions!(I_idx, J_idx, V_val, sys)
     jay = im
