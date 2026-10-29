@@ -163,3 +163,12 @@ GNU Affero General Public License v3.0 - see LICENSE file for details.
 ## Contributing
 
 Contributions are welcome! Please open an issue or pull request on [GitHub](https://github.com/cuihantao/Powerful.jl).
+
+## Acknowledgements
+
+This material is based upon work supported by the National Science Foundation under
+Award Nos. ECCS-2514755 and ECCS-2525884, and by the National Academies of Sciences,
+Engineering, and Medicine under Award No. SCON-10001546. Any opinions, findings, and
+conclusions or recommendations expressed in this material are those of the author(s)
+and do not necessarily reflect the views of the National Science Foundation or the
+National Academies of Sciences, Engineering, and Medicine.
