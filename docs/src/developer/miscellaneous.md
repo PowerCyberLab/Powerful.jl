@@ -1,52 +1,22 @@
 # Per-Unit Systems and Multi-Island Handling
 
-Two topics every real-world study meets: unit conversion and network topology.
+This page describes two parts of system construction: the conversion of input data to per-unit values, and the detection and splitting of electrical islands.
 
-## Per-Unit Conversion System
+## Per-Unit Conversion
 
-**Problem:** Solvers use dimensionless per-unit values. Users think in physical units (MW, kV).
+Solvers operate on dimensionless per-unit values, while users specify data in physical units such as MW and kV. Powerful.jl converts the data on input, stores the conversion coefficients, and converts back on output.
 
-**Solution:** Convert on input, store the coefficients, convert back on output.
+Per-unit values give better conditioned equations: a 500 MW load becomes 5.0 pu and is of the same order as a 1.05 pu voltage. A per-unit impedance has the same meaning at every voltage level, so transformer impedances are comparable across the network. Reports can then be produced in physical units on request.
 
-### Why Per-Unit?
+### Storage
 
-**1. Better conditioned equations**
-- Physical units: 500 MW next to a 1.05 pu voltage (orders of magnitude apart)
-- Per-unit: 5.0 pu power next to 1.05 pu voltage (similar scales)
+Three fields of a `SystemModel` hold the data of the conversion:
 
-**2. Portable parameters**
-- A per-unit impedance means the same thing at any voltage level
-- Transformer impedances are comparable across voltage levels
+- `sys.models` holds the per-unit values used by the residual calculations. The solvers operate on these values only.
+- `sys.parsed_data` holds the original physical values as read from the file. It is kept by the `SystemModel(case)` constructor for provenance and debugging.
+- `sys.pu_coeffs` holds the conversion coefficients: a `NamedTuple` of `Dict{Symbol, Vector{Float64}}` with one per-instance vector for each converted parameter. The relation is `pu = physical × coefficient`, so `physical = pu / coefficient` recovers the original value exactly.
 
-**3. User-friendly reports**
-- Compute in per-unit
-- Report in physical units when requested
-
-### Three-Part Storage
-
-**1. `sys.models` - Per-unit values (for computation)**
-```julia
-sys.models.PQ.pl[3]  # 0.478 pu (on the 100 MVA system base)
-```
-- Used by residual calculations
-- The solvers never see physical units
-
-**2. `sys.parsed_data` - Original physical values**
-```julia
-sys.parsed_data.models.PQ.pl[3]  # 47.8 MW (from the file)
-```
-- Data provenance and debugging
-- Kept by the `SystemModel(case)` constructor
-
-**3. `sys.pu_coeffs` - Conversion coefficients**
-```julia
-sys.pu_coeffs.PQ[:pl][3]  # 0.01 = 1 / (100 MVA)
-```
-- A `NamedTuple` of `Dict{Symbol, Vector{Float64}}`, one per-instance vector per converted parameter
-- Enables exact inverse conversion
-- **pu = physical × coefficient**, so **physical = pu / coefficient**
-
-On the IEEE 14-bus case:
+On the IEEE 14-bus case, load 3 has 0.478 pu in `sys.models.PQ.pl[3]`, 47.8 MW in `sys.parsed_data.models.PQ.pl[3]` and the coefficient 0.01 (= 1 / 100 MVA) in `sys.pu_coeffs.PQ[:pl][3]`:
 
 ```@example perunit
 using Powerful, PowerfulCases
@@ -57,9 +27,12 @@ sys = SystemModel(parse_network(load("ieee14").raw))
  coeff = sys.pu_coeffs.PQ[:pl][3])
 ```
 
-### Metadata-Driven Conversion
+Coefficients are stored per instance, because generators have different MVA ratings and buses have different base voltages. Structural fields (IDs, status) are not converted.
 
-**Models declare which fields need conversion:**
+### Declaring the Conversion
+
+A model declares the fields to convert in its metadata, with the `PUType` of each field:
+
 ```julia
 const PQ_PARAMS = [
     ModelParam(:pl, PowerNominal, description="Constant power P", units="MW"),
@@ -69,9 +42,7 @@ const PQ_PARAMS = [
 ]
 ```
 
-**The PUType determines the coefficient** (`calc_pu_coefficients` in
-`PowerfulCore/src/system/per_unit.jl`; Sb = system base MVA, Vb = bus base kV,
-Sn/Vn = device ratings):
+The `PUType` determines the coefficient (`calc_pu_coefficients` in `PowerfulCore/src/system/per_unit.jl`). In the table, Sb is the system base MVA, Vb the bus base kV, and Sn, Vn and Zn the rating of the device.
 
 | PUType | Input | Coefficient |
 |--------|-------|-------------|
@@ -87,17 +58,11 @@ Sn/Vn = device ratings):
 | `AdmittancePU` | pu on device base | Zb / Zn |
 | `NoPU` | already per-unit | 1 |
 
-**Example:**
-```julia
-# System base: 100 MVA
-# Physical: 47.8 MW
-# Coefficient: 1/100 = 0.01
-# Per-unit: 47.8 × 0.01 = 0.478 pu
-```
+For a 47.8 MW load on a 100 MVA system base, the coefficient is 1/100 = 0.01 and the per-unit value is 0.478 pu.
 
 ### External Base Quantities
 
-**Some conversions need data from other models:**
+Some conversions need data from other models. A bus base voltage is declared as an `ExtParam` with the reference type `BaseVoltage()`:
 
 ```julia
 const PQ_EXT_PARAMS = [
@@ -106,35 +71,30 @@ const PQ_EXT_PARAMS = [
 ]
 ```
 
-An `ExtParam` with reference type `BaseVoltage()` supplies Vb; a `ModelRating` supplies
-a device rating:
+External parameters are retrieved in one of two phases. `PrePerUnit` parameters are retrieved before the conversion (dimensionless values and bases), and `PostPerUnit` parameters after it, when the referenced values are already in per-unit. A model that converts a quantity with a bus base voltage must declare a `BaseVoltage` external parameter; otherwise the conversion raises an error. For example, with a 100 MVA system base and a 13.8 kV bus, Zb = 13.8² / 100 = 1.9044 Ω, and an impedance in ohms is multiplied by 1 / Zb.
+
+A device rating is declared with `ModelRating`:
+
 ```julia
 const PV_RATINGS = [
     ModelRating(:mbase, NominalPower, description="Generator MVA base"),
 ]
 ```
 
-A model whose parameters are per unit on the base of a device it replaces (a converter on
-the `mbase` of its generator record, which its own record does not carry) takes the rating
-from that device with `from = LinkedDevice()`. The rating is the one the replaced device
-declares in the same field:
+A model whose parameters are per unit on the base of a device it replaces takes the rating from that device with `from = LinkedDevice()`. An example is a converter on the `mbase` of its generator record, which its own record does not carry. The rating is the one that the replaced device declares in the same field:
+
 ```julia
 ModelRating(:mbase, NominalPower; from = LinkedDevice(), description="MVA base of the replaced generator")
 ```
-`derive_system(sys, keep, new_models; links)` resolves it through the replacement links
-(`get_replacement_map`, `create_model_links`), converts the model's parameters to the system
-base, and stores the coefficients in `sys.pu_coeffs`. A model with no linked device, or a
-device that declares no such rating, is refused, naming the model and instance.
 
-### Machines and converters on their own base
+`derive_system(sys, keep, new_models; links)` resolves the rating through the replacement links (`get_replacement_map`, `create_model_links`), converts the model parameters to the system base, and stores the coefficients in `sys.pu_coeffs`. A model with no linked device, or a device that declares no such rating, is refused with an error that names the model and the instance.
 
-**DYR data is per unit on the machine base.** A PSS/E dynamic record gives a machine's
-parameters (`H`, `D`, the reactances, the armature resistance, the time constants), and the
-exciter and governor data, per unit on the machine's own MVA base, `MBASE` of the generator
-record it belongs to. The network is on the system base `Sb`.
+### Machines and Converters on Their Own Base
 
-A model keeps what belongs to the device on the device base `Sn` and converts where it meets
-the network. It declares the rating and the ratio:
+The parameters of a dynamic record are per unit on the MVA base of the machine, `MBASE` of the generator record that the record belongs to. This applies to the machine parameters (`H`, `D`, the reactances, the armature resistance, the time constants) and to the exciter and governor data. The network is on the system base `Sb`.
+
+A model keeps the quantities of the device on the device base `Sn` and converts them where they meet the network. It declares the rating and the ratio in its metadata:
+
 ```julia
 ModelMetadata(
     ...,
@@ -142,63 +102,38 @@ ModelMetadata(
     derived_params = [RatingRatio(:Mratio, NominalPower)],
 )
 ```
-`Mratio` is `Sn/Sb`, for a rating from the model's own field or from the linked device alike.
-It is not a field and has no DYR entry. It is kept with the per-unit coefficients
-(`sys.pu_coeffs[model][:Mratio]`, the coefficient of a `PowerPU` parameter) and read as
-`external.Mratio[i]` in `calc_residuals!` and `calc_automaton_values!` (the external
-parameters of the model), and as `gather_init_data(ctx, M).Mratio` in
-`initialize_dynamic_states`. A derived ratio without a `NominalPower` rating is an error.
 
-A rating is read when the system is built. `check_events` therefore refuses a
-`FieldModification` of a field that a model's `ModelRating` declares, the model's own (a
-generator's `mbase`) or the linked device's (the field a machine or converter names), because
-`Mratio` and the per-unit coefficients would be stale.
+`Mratio` is `Sn/Sb`, for a rating taken from the model's own field or from the linked device. It has no DYR entry and is kept with the per-unit coefficients (`sys.pu_coeffs[model][:Mratio]`, the coefficient of a `PowerPU` parameter). It is read as `external.Mratio[i]` in `calc_residuals!` and `calc_automaton_values!`, and as `gather_init_data(ctx, M).Mratio` in `initialize_dynamic_states`. A derived ratio without a `NominalPower` rating is an error.
 
-Rule: a value multiplied by `Mratio` is on the device base (a state, or a parameter declared
-`NoPU`), never a parameter Powerful converted to the system base. Power and current into the
-network are `Mratio` times the device-base values; the system-base powers of the power flow
-are divided by it at initialization.
+A rating is read when the system is built. `check_events` therefore refuses a `FieldModification` of a field declared by a `ModelRating`, either the model's own field (the `mbase` of a generator) or the field of the linked device that a machine or converter names. A modification would leave `Mratio` and the per-unit coefficients out of date.
 
-**Machines** (GENCLS, GENROU, GENSAL, GENTPJ1, with SEXS and TGOV1):
+`Mratio` multiplies values on the device base: states and parameters declared `NoPU`. Power and current into the network are `Mratio` times the device-base values, and the system-base powers of the power flow are divided by `Mratio` at initialization. Parameters that Powerful converted to the system base by their `PUType` are used as converted.
+
+The machines GENCLS, GENROU, GENSAL and GENTPJ1, with SEXS and TGOV1, follow this table:
 
 | Quantity | Base | Who converts |
 |---|---|---|
-| parameters (`H`, `D`, reactances, `ra`, `Kis`; time constants, saturation) | machine | nothing (declared on the machine base; `ra` is `ZSORCE`, machine base; GENSAL has no `Xq2`: X''q = X''d) |
-| states, `Id`, `Iq`, `P_m`, `E_fd` | machine (`E_fd` in the machine's own field units) | nothing |
+| parameters (`H`, `D`, reactances, `ra`, `Kis`; time constants, saturation) | machine | no conversion (declared on the machine base; `ra` is `ZSORCE`, machine base; GENSAL has no `Xq2`: X''q = X''d) |
+| states, `Id`, `Iq`, `P_m`, `E_fd` | machine (`E_fd` in the machine's own field units) | no conversion |
 | initialization inputs `p_gen`, `q_gen` (power flow) | system | the model: `/ Mratio` |
 | `p_inj`, `q_inj`, and the observables `Pe`, `Qe` | system | the model: `Mratio *` the machine-base value |
-| SEXS gains and times, `vref`, `E_fd` | dimensionless; field units of the machine | nothing |
-| TGOV1 `R`, `Vmax`, `Vmin`, `Dt`, `pref`, `pout` | machine (they are power of `P_m`) | nothing |
+| SEXS gains and times, `vref`, `E_fd` | dimensionless; field units of the machine | no conversion |
+| TGOV1 `R`, `Vmax`, `Vmin`, `Dt`, `pref`, `pout` | machine (they are power of `P_m`) | no conversion |
 
-**Converters** (a model that declares a linked rating and the ratio, as REGCA1 and REGFM_A1 do):
+The converters REGCA1 and REGFM_A1 declare a linked rating and the ratio and follow this table:
 
 | Quantity | Base | Who converts |
 |---|---|---|
-| states, `Pe`, `Qe`, currents `ip`, `iq`, and parameters the model multiplies by `Mratio` | device | nothing (`Pe` stays on the device base, for a controller that reads it) |
+| states, `Pe`, `Qe`, currents `ip`, `iq`, and parameters the model multiplies by `Mratio` | device | no conversion (`Pe` stays on the device base, for a controller that reads it) |
 | `p_inj`, `q_inj`, `ip_inj`, `iq_inj` (the `bus_group` injections) | system | the model: `Mratio *` the device-base value |
 | initialization inputs from the power flow | system | the model: `/ Mratio` |
 | parameters declared with a `PUType` (`PowerPU`, `ImpedancePU`, ...) | system after conversion | Powerful (`calc_pu_coefficients`) |
 
-A parameter converted to the system base by its `PUType` is never multiplied by `Mratio`.
-
-The same physical machine on the system base has `H_s = H Sn/Sb`, `D_s = D Sn/Sb`,
-`Z_s = Z Sb/Sn`, and a governor with `R_s = R Sb/Sn`, `P_s = P Sn/Sb`
-(`Powerful/test/tds/test_machine_base.jl` shows that the two give the same trajectories).
-
-**Retrieval phases:**
-- **PrePerUnit** - Retrieved before conversion (dimensionless values, bases)
-- **PostPerUnit** - Retrieved after conversion (already in per-unit)
-
-**Example:** Impedance conversion needs the bus base voltage
-```julia
-# System base: 100 MVA, bus base: 13.8 kV
-# Zb = 13.8² / 100 = 1.9044 Ω
-# pu = Ω × (1 / Zb)
-```
+The same physical machine on the system base has `H_s = H Sn/Sb`, `D_s = D Sn/Sb` and `Z_s = Z Sb/Sn`, and a governor with `R_s = R Sb/Sn` and `P_s = P Sn/Sb`. The test `Powerful/test/tds/test_machine_base.jl` shows that the two descriptions give the same trajectories.
 
 ### Conversion Workflow
 
-`SystemModel(case)` (`PowerfulCore/src/system/system_builder.jl`) runs these steps:
+`SystemModel(case)` (`PowerfulCore/src/system/system_builder.jl`) performs the following steps:
 
 ```julia
 models = load_models(case, all_models())
@@ -221,143 +156,70 @@ sys = SystemModel(result.models, merge_external(external_pre, external_post), or
                   settings = SystemConfig(), parsed_data = parsed, pu_coeffs = result.coeffs)
 ```
 
-Structural fields (IDs, status) are not converted.
-
-**Result:**
-- `sys.models` - Per-unit (computation)
-- `sys.pu_coeffs` - Coefficients (reports)
-- `sys.parsed_data` - Original values (provenance)
-
 ### Inverse Conversion for Reports
+
+`collect_model_table` returns a Tables.jl-compatible NamedTuple of columns. The units come from the `ReportConfig` (`UnitPreferences`): by default, power is reported in MW and MVAR, voltage in pu and angles in degrees.
 
 ```julia
 bus_table = collect_model_table(sol, :Bus)                       # default ReportConfig
 bus_table = collect_model_table(sol, :Bus; config = AllPhysical)  # kV, MW, MVAR
 ```
 
-`collect_model_table` returns a Tables.jl-compatible NamedTuple of columns. The units
-come from the `ReportConfig` (`UnitPreferences`): by default power is reported in
-MW/MVAR, voltage in pu and angles in degrees.
+The conversion is implemented in `PowerfulPF/src/io/reports.jl`. Parameters use the stored coefficients, so that physical = pu / coefficient. Observations, which are computed values such as the bus voltage or the load consumption, have no stored coefficients and are converted by their `PUType`. A bus voltage of 1.03 pu on a 138 kV base, with `VoltageNominal`, is reported as 1.03 × 138 = 142.14 kV.
 
-**Process** (`_convert_to_report_units` in `PowerfulPF/src/io/reports.jl`):
-- **Parameters** use the stored coefficients: physical = pu / coefficient
-- **Observations** (computed values such as bus voltage or load consumption) have no
-  stored coefficients; they are converted by their `PUType`, e.g. `VoltageNominal`
-  with the bus base voltage:
+### Adding a Model with Per-Unit Conversion
 
-```julia
-# Per-unit: V = 1.03
-# Base: Vb = 138 kV
-# Report: 1.03 × 138 = 142.14 kV
-```
-
-**Per-instance coefficients:** Generators have different MVA ratings and buses have
-different base voltages, so coefficients are stored per instance.
+A model declares its `params` with a `PUType` for each field to convert, its `ratings` if it has a device base, and an `ExtParam` for each external base that the `PUType`s require (typically `BaseVoltage()`). The conversion can be tested by checking that `pu / coefficient` reproduces the original value in `sys.parsed_data`.
 
 ## Multi-Island Topology
 
-**Problem:** Networks can separate into islands (outages, planned separations). Each
-island is solved independently.
+A network can separate into islands through outages or planned separations. Each island is solved independently.
 
 ### Island Detection
 
-`analyze_topology(sys)` (`PowerfulCore/src/system/topology.jl`) uses breadth-first
-search on the network graph:
+`analyze_topology(sys)` (`PowerfulCore/src/system/topology.jl`) builds a graph from the Terminal API and finds its connected components with a breadth-first search. The buses are the vertices. Multi-terminal devices (Branch, Transformer) are the edges, and only in-service devices are included. Each model declares its terminals through `get_terminals`. The function then identifies the slack vertex of every island. An island with no slack bus, or with several, produces a warning.
 
-**1. Build the graph from the Terminal API**
-```julia
-# Each model declares terminals through get_terminals
-# Buses = vertices; multi-terminal devices (Branch, Transformer) = edges
-# Only in-service devices are included
-```
+The result is a `TopologyInfo` with these fields:
 
-**2. Find connected components**
+- `n_islands`: the number of islands.
+- `island_map`: the island of each bus.
+- `slack_buses`: the slack bus indices per island.
+- `adjacency`: the adjacency matrix.
+- `components`: the bus lists per island.
+- `incidence`, `is_bridge`, `branch_indices`: the branch-bus incidence and the bridge flags.
 
-**3. Identify the slack vertex per island**
-```julia
-# Each island needs a slack bus
-# A warning is issued for islands with none or several
-```
-
-**Result stored in `TopologyInfo`:**
-- `n_islands` - Number of islands
-- `island_map` - Island of each bus
-- `slack_buses` - Slack bus indices per island
-- `adjacency` - Adjacency matrix
-- `components` - Bus lists per island
-- `incidence`, `is_bridge`, `branch_indices` - Branch-bus incidence and bridge flags
-
-`analyze_topology!(sys)` caches the result in `sys.topology`; `analyze_topology(sys)`
-always recomputes it.
+`analyze_topology!(sys)` caches the result in `sys.topology`, and `analyze_topology(sys)` always recomputes it.
 
 ### Island Splitting
 
-**`split_islands(sys; auto_analyze=true)`** extracts disconnected islands
-(`PowerfulCore/src/system/multi_island.jl`). It uses `sys.topology` when cached;
-otherwise it runs `analyze_topology(sys)` (with `auto_analyze=true`).
+`split_islands(sys; auto_analyze=true)` (`PowerfulCore/src/system/multi_island.jl`) extracts the islands. It uses `sys.topology` when cached and otherwise calls `analyze_topology(sys)` (with `auto_analyze=true`). A single island returns the original `SystemModel`, and several islands return a `Vector{SystemModel}`, one per island:
 
-**Single island:**
 ```julia
 result = split_islands(sys)
-# Returns the original SystemModel unchanged
 ```
 
-**Multiple islands:**
-```julia
-result = split_islands(sys)
-# Returns Vector{SystemModel} (one per island)
-```
+Each island is an independent `SystemModel` with its own `IndexOrder`, its own model collections and its own address space (assigned when an `ACPowerFlowProblem` is created). It has the same `settings` and array type as the parent. An island is built in five steps:
 
-**Each island is an independent SystemModel:**
-- Own `IndexOrder`
-- Own address space (when an `ACPowerFlowProblem` is created)
-- Own model collections
-- Same `settings` and array type as the parent
+1. The buses of each island are taken from `island_map`.
+2. The models are filtered by their terminals. A load at bus 7 belongs to the island that contains bus 7, and branch 3-4 is kept only if both buses are in the island.
+3. The index mappings are rebuilt. If island 2 has the buses 5, 7 and 11 of the original system, the external IDs remain 5, 7 and 11, and the internal indices are 1, 2 and 3.
+4. The external parameters are retrieved again. Each island runs `ext2int`, which creates new `foreign_refs`, followed by `retrieve_external_params`. The external parameters of the parent cannot be reused, because the internal indices have changed.
+5. The per-unit coefficients and the parsed data are sliced to the devices of the island. A parent with 50 loads has 50 coefficient entries per load parameter, and an island with 12 loads has 12. Coefficient values are unchanged, so load 3 with 0.478 pu and coefficient 0.01 has the same 47.8 MW in the parent and in the island.
 
-**Splitting process:**
-
-**1. Identify the buses of each island** from `island_map`
-
-**2. Filter models** using their terminals
-```julia
-# Load at bus 7 → the island containing bus 7
-# Branch 3-4 → kept only if both buses are in the island
-```
-
-**3. Rebuild index mappings**
-```julia
-# Island 2 has buses [5, 7, 11] from the original
-# External IDs: 5, 7, 11 (unchanged)
-# Internal indices: 1, 2, 3 (new, per island)
-```
-
-**4. Re-retrieve external parameters**
-```julia
-# Each island runs ext2int (new foreign_refs), then retrieve_external_params;
-# the parent's external parameters can't be reused because internal indices changed
-```
-
-**5. Filter per-unit coefficients and parsed data**
-```julia
-# The parent has entries for all devices; the island only for its devices
-# Coefficient values are unchanged (the arrays are sliced)
-```
+Each island therefore converts its reports correctly with `collect_model_table`, which uses the `pu_coeffs` of the island.
 
 ### Solving Multi-Island Systems
 
-**Automatic detection and handling:**
-```julia
-prob = ACPowerFlowProblem(sys)     # Detects islands (auto_split=true)
-sol = solve(prob, Newton())        # Solves each island, returns a MultiIslandSolution
-```
+`ACPowerFlowProblem` detects islands automatically (`auto_split=true`), and `solve` solves each island and returns a `MultiIslandSolution`. The function `get_var` routes a request to the island that contains the device:
 
-**Unified variable access:**
 ```julia
+prob = ACPowerFlowProblem(sys)
+sol = solve(prob, Newton())
 v = get_var(sol, :Bus, :v, (4001,))
-# MultiIslandSolution routes to the correct island
 ```
 
-**Manual splitting:**
+Islands can also be solved manually:
+
 ```julia
 result = split_islands(sys)
 if result isa Vector
@@ -367,11 +229,9 @@ else
 end
 ```
 
-**The result type encodes the split:**
-- `SystemModel` - Single connected island
-- `Vector{SystemModel}` - Multiple islands
-
 ### Outages and Topology
+
+An outage is applied by setting the status of a device, after which the topology is recomputed:
 
 ```julia
 # Take a branch out of service
@@ -384,145 +244,13 @@ if topo.n_islands > 1
 end
 ```
 
-`split_islands(sys)` also sees the outage when no topology is cached in
-`sys.topology`. For systematic contingency studies use `PowerfulCA`, which applies
-outages through the solver's status dict without modifying the system.
+`split_islands(sys)` also sees the outage when no topology is cached in `sys.topology`. Systematic contingency studies use `PowerfulCA`, which applies outages through the status dict of the solver and leaves the system unchanged.
 
-### Island and Per-Unit Interaction
+### Writing Models for Island Splitting
 
-**Workflow:**
-1. Parse the data file (physical units)
-2. Create the `SystemModel` (conversion to per-unit on the system base)
-3. Split islands if needed
+A model works with topology analysis and island filtering when it follows these requirements:
 
-**Each island inherits the parent's per-unit values and coefficients:**
-```julia
-# Parent: load 3 is 0.478 pu with coefficient 0.01
-# Island: load 3 is 0.478 pu with coefficient 0.01
-# Physical: 47.8 MW (same before and after)
-```
-
-**Island-specific coefficient storage:**
-- A parent with 50 loads has 50 coefficient entries per load parameter
-- An island with 12 loads has 12
-- Indexing is local to the island
-
-Each island's `collect_model_table` uses its own `pu_coeffs`, so reports convert correctly.
-
-## Architecture Implications
-
-### 1. Separation of Data from Computation
-- `SystemModel` = data (per-unit values, coefficients, topology)
-- `ACPowerFlowProblem` = computation specification
-- Island splitting creates new SystemModels (data layer)
-
-### 2. Metadata-Driven Design
-- Per-unit conversion uses model metadata (`params`, `ratings`, `ext_params`)
-- Island splitting uses terminal declarations (connectivity)
-- No hardcoded model-specific knowledge
-
-### 3. Composition Over Special Cases
-- Multi-island = `Vector{SystemModel}` (not a special system type)
-- Each island is a regular SystemModel
-- Composes with existing problem/solver code
-
-### 4. Derived External Parameters
-- External parameters are derived from the models and index maps
-- Splitting does not copy them; each island retrieves its own
-
-## Implementation Notes
-
-### Adding Models with Per-Unit Conversion
-
-**1. Declare params metadata**
-```julia
-const MY_MODEL_PARAMS = [
-    ModelParam(:power, PowerNominal, description="...", units="MW"),
-    ModelParam(:voltage, VoltageNominal, description="...", units="kV"),
-    ModelParam(:angle, AngleDegrees, description="...", units="deg"),
-]
-```
-
-**2. Declare device ratings (if needed)**
-```julia
-const MY_MODEL_RATINGS = [
-    ModelRating(:mbase, NominalPower, description="Device MVA base"),
-]
-```
-
-**3. Declare external bases (if needed)**
-```julia
-const MY_MODEL_EXT_PARAMS = [
-    ExtParam(:basekv, MY_TERMINALS[1], :basekv, BaseVoltage(), PrePerUnit(),
-             required=true, description="Connected bus base voltage"),
-]
-```
-
-A conversion that needs a bus base voltage raises an error if the model has no
-`BaseVoltage` external parameter.
-
-**4. Test the round trip**
-```julia
-# pu / coefficient must reproduce the original value in sys.parsed_data
-```
-
-### Working with Multi-Island Systems
-
-**1. Use the Terminal API** - declare terminals through `get_terminals` so the model
-works with topology analysis and island filtering.
-
-**2. Don't store cross-model references** - store external IDs and let `IndexOrder`
-handle the mapping, so filtering does not break references.
-
-**3. Test both connected and disconnected systems** - the model should behave the same;
-only instance counts differ.
-
-**4. Handle missing slack buses** - the topology analysis warns about islands without a
-slack bus; report such cases clearly instead of letting the solver fail to converge.
-
-## Quick Reference
-
-### Per-Unit Conversion
-```julia
-using Powerful, PowerfulCases
-
-case = parse_network(load("ieee14").raw)
-sys = SystemModel(case)           # Converts to pu, stores coefficients
-
-sys.models.PQ.pl[3]               # 0.478 pu
-sys.pu_coeffs.PQ[:pl][3]          # 0.01
-sys.parsed_data.models.PQ.pl[3]   # 47.8 MW
-
-sol = solve(ACPowerFlowProblem(sys), Newton())
-bus_table = collect_model_table(sol, :Bus; config = AllPhysical)
-```
-
-### Multi-Island Handling
-```julia
-# Automatic detection
-sol = solve(ACPowerFlowProblem(sys), Newton())
-
-# Manual splitting
-result = split_islands(sys)
-if result isa Vector
-    for island in result
-        sol = solve(ACPowerFlowProblem(island), Newton())
-    end
-else
-    sol = solve(ACPowerFlowProblem(result), Newton())
-end
-
-# Connectivity after an outage
-sys.models.Branch.status[42] = false
-topo = analyze_topology(sys)
-```
-
-### Common PUTypes
-```julia
-PowerNominal        # MW, MVAR → × 1/Sb
-VoltageNominal      # kV → × 1/Vb
-ImpedanceNominal    # Ω → × Sb/Vb²
-AdmittanceNominal   # S → × Vb²/Sb
-AngleDegrees        # degrees → radians
-NoPU                # No conversion
-```
+1. It declares its terminals through `get_terminals`.
+2. It stores external IDs and leaves the mapping to `IndexOrder`, so that filtering preserves its references.
+3. It behaves the same on connected and disconnected systems, where only the instance counts differ.
+4. Cases with a missing slack bus are reported clearly. The topology analysis warns about islands without a slack bus, which avoids a solver failure with no explanation.

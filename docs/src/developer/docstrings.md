@@ -1,18 +1,19 @@
 # Docstring Guidelines
 
-A three-tier framework for consistent, maintainable docstrings.
+Docstrings in Powerful.jl follow one of three tiers. The tier is selected by the visibility of the documented symbol, and it determines the length and the sections of the docstring.
+
+| Tier | Scope | Length | Contents |
+|------|-------|--------|----------|
+| 1 | Public API | 10-30 lines | Summary, fields, constructors, example |
+| 2 | Developer API | 3-8 lines | Summary, arguments and return value where needed |
+| 3 | Internal helpers | 1-2 lines | Summary and key behavior |
+
+A symbol exported from `Powerful` receives a Tier 1 docstring. A symbol exported only from a sub-package receives a Tier 2 docstring. All remaining symbols receive a Tier 3 docstring.
 
 ## Tier 1: Public API
 
-**When:** Exported from `Powerful`, used in guides and examples.
+Tier 1 applies to symbols that are exported from `Powerful` and used in the guides and examples. The docstring contains a one-line summary, the fields of a type, the constructor variants, and a usage example.
 
-**Include:**
-- One-line summary
-- Fields (for types)
-- Constructor variants
-- Usage example
-
-**Example:**
 ````julia
 """
     ACPowerFlowProblem <: PowerFlowProblem
@@ -33,14 +34,8 @@ sol = solve(prob, Newton())
 
 ## Tier 2: Developer API
 
-**When:** Used by model and solver implementers, exported from sub-packages.
+Tier 2 applies to symbols used by model and solver implementers and exported from sub-packages. The docstring contains a one-line summary, a brief description of the arguments when they are not self-explanatory, and the return type when it is not obvious. Sections such as `# Arguments`, `# Returns` and `# Implementation Notes` are omitted for signatures that the summary already explains.
 
-**Include:**
-- One-line summary
-- Brief arguments (only if non-obvious)
-- Return type (only if non-obvious)
-
-**Example:**
 ```julia
 """
     setup_powerflow_newton(prob; use_gpu=false, ordering=:AMD, status, verbose=false) -> NewtonWorkspace
@@ -52,39 +47,10 @@ iteration buffers.
 """
 ```
 
-**Anti-pattern (too verbose):**
-```julia
-"""
-    setup_powerflow_newton(prob; use_gpu=false, ...)
-
-Set up workspace for Newton-Raphson power flow iterations.
-
-# Arguments
-- `prob::ACPowerFlowProblem`: The power flow problem to solve
-- `use_gpu::Bool=false`: Whether to use the GPU linear solver (default: false)
-
-# Returns
-- `NewtonWorkspace`: Workspace containing...
-
-# Implementation Notes
-This function performs the following steps:
-1. Creates the autodiff cache...
-2. Computes the sparsity pattern...
-...
-"""
-```
-
 ## Tier 3: Internal Helpers
 
-**When:** Private functions (`_` prefix), implementation details.
+Tier 3 applies to private functions (names with a `_` prefix) and other implementation details. The docstring is a one-line summary, followed by at most one short sentence of about 15 words for a critical side effect or assumption, in the pattern `Summary. [Behavior note.]`.
 
-**Include:**
-- One-line summary with the key behavior
-- Critical side effects or assumptions (about 15 words at most)
-
-**Pattern:** `Summary. [Behavior note.]`
-
-**Examples:**
 ```julia
 """Gather each variable from x (states) or y (algebraic) into ws.var_vals."""
 
@@ -95,35 +61,18 @@ This function performs the following steps:
 """Fault reactance (pu) below which a fault warns unless loads are constant impedance."""
 ```
 
-**Key behavior notes to include:**
-- **Allocation** - allocates, or works on pre-allocated buffers
-- **Skips inactive** - filtering behavior
-- **Handles GPU** - platform behavior
-- **Idempotent** - safe for repeated calls
-- **Throws if** - error conditions
-- **Mutates** - side effects
+The behavior notes worth stating are the following:
 
-## Quick Reference
-
-| Tier | Scope | Length | Includes |
-|------|-------|--------|----------|
-| 1 | Public API | 10-30 lines | Summary, fields, example |
-| 2 | Developer API | 3-8 lines | Summary, args/returns if needed |
-| 3 | Internal | 1-2 lines | Summary + key behavior |
-
-## Deciding the Tier
-
-```
-Is it exported from Powerful?
-  → Yes: Tier 1 (full docs)
-  → No: Is it exported from a sub-package?
-    → Yes: Tier 2 (moderate docs)
-    → No: Tier 3 (minimal docs)
-```
+- Allocation: whether the function allocates or works on pre-allocated buffers.
+- Skipped instances: which instances are filtered out, for example inactive ones.
+- Platform: whether the function handles GPU arrays.
+- Idempotence: whether repeated calls are safe.
+- Errors: the conditions under which the function throws.
+- Mutation: the arguments or workspace fields that are modified.
 
 ## DocStringExtensions
 
-Use `$TYPEDEF` and `$TYPEDFIELDS` for struct field documentation:
+Struct fields are documented with `$TYPEDEF` and `$TYPEDFIELDS`, with a string preceding each field:
 
 ```julia
 """
@@ -143,8 +92,7 @@ end
 
 ## Physics Functions
 
-Physics and math functions (like `calc_zip_load`) warrant fuller documentation
-regardless of tier, since the formulas are essential context:
+Physics and math functions (such as `calc_zip_load`) receive fuller documentation at any tier, because the formulas are essential context for the reader:
 
 ```julia
 """

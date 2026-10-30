@@ -1,52 +1,35 @@
 # The Three-Layer Addressing System
 
-Maps between three coordinate systems so that computation is efficient while users keep
-working with the IDs from their data files.
+Powerful.jl maps between three coordinate systems: the IDs of the data file, the array positions of the model collections, and the positions in the solver vectors. Users work with the first, models are stored in the second, and solvers operate on the third.
 
-## Why Three Layers?
+## Overview of the Layers
 
-**Problem 1: External IDs are sparse**
-- Bus numbers: 4001, 4502, 4211 (not 1, 2, 3)
-- Can't be used as array indices
-- Need dense indices: 1, 2, 3...
+External IDs are sparse. Bus numbers such as 4001, 4502 and 4211 cannot serve as array indices, so every model collection is addressed through dense internal indices 1, 2, 3, ... into its StructArray fields. Solvers in turn need flat vectors, for example all angles in positions 1 to 14 followed by all voltages in positions 15 to 28, or a reordered layout that reduces sparse fill-in. The DAE addresses define this layout.
 
-**Problem 2: Array access needs contiguous indices**
-- Model data is stored in StructArrays (one array per field)
-- Solution: Internal indices (1, 2, 3...) into those arrays
+Each layer has one mapper:
 
-**Problem 3: Solvers need flat vectors**
-- All angles in positions 1-14
-- All voltages in positions 15-28
-- Or a reordered layout for better sparse factorization
-- Solution: DAE addresses specify the solver memory layout
+| Layer | Mapper | Created | Maps |
+|-------|--------|---------|------|
+| 1 | `IndexOrder` (built by `ext2int`) | `SystemModel` construction | External key to internal index |
+| 2 | `AddressManager` | Problem construction, per formulation | Internal index to DAE address |
+| 3 | Foreign references (`foreign_refs`) | `SystemModel` construction | Referencing instance to the internal index of the referenced instance |
 
-**Each layer solves exactly one problem.**
+## Layer 1: External Keys to Internal Indices
 
-## Layer 1: External Keys → Internal Indices
+`IndexOrder` is built by `ext2int` (`PowerfulCore/src/dae/ext2int.jl`) once, when the `SystemModel` is constructed. Keys are tuples built from the fields named by the `get_key_name()` trait of each model:
 
-**Mapper:** `IndexOrder`, built by `ext2int` (`PowerfulCore/src/dae/ext2int.jl`)
+- `Bus`: `(i,)`, for example `(101,)`
+- `PQ`: `(i, id)`, for example `(101, "1")`
+- `Branch`: `(i, j, ckt)`, for example `(101, 205, "1")`
 
-**Keys are tuples** built from the fields named by each model's `get_key_name()` trait:
-- `Bus`: `(i,)` - e.g. `(101,)`
-- `PQ`: `(i, id)` - e.g. `(101, "1")`
-- `Branch`: `(i, j, ckt)` - e.g. `(101, 205, "1")`
+For bus numbers `[101, 205, 103]` in the file, the internal indices are `[1, 2, 3]`, and `order.key_indices[:Bus][(101,)]` returns `1`. The mapping of every model type is stored in `sys.order`:
 
-**Example:**
-- Bus numbers [101, 205, 103] from file
-- Map to internal [1, 2, 3]
-- Lookup: `order.key_indices[:Bus][(101,)] → 1`
-
-**When created:** SystemModel construction (once)
-
-**Storage:**
 ```julia
 sys.order.key_indices[:Bus]   # Dict: key tuple → internal index
 sys.order.key_indices[:PQ]    # Same for each model type
 ```
 
-The stored keys use the field types of the model (`Int32` bus numbers, `String3` IDs).
-To look up a key given as plain Julia values, use `get_index_by_key`, which converts it
-with `normalize_key` and errors if the instance does not exist:
+The stored keys use the field types of the model (`Int32` bus numbers, `String3` IDs). The function `get_index_by_key` converts a key given as plain Julia values with `normalize_key` and raises an error if the instance does not exist:
 
 ```julia
 using PowerfulCore: get_index_by_key, get_field_by_key
@@ -55,28 +38,18 @@ idx = get_index_by_key(sys, :PQ, (101, "1"))      # internal index of load (101,
 pl = get_field_by_key(sys, :PQ, (101, "1"), :pl)  # its pl field (per-unit)
 ```
 
-Models store external IDs; only the index maps know internal positions:
+Models store external IDs in their fields, and the index maps provide the internal positions:
+
 ```julia
 sys.models.PQ.i[3]                          # external bus number of load 3
 bus_idx = get_index_by_key(sys, :Bus, sys.models.PQ.i[3])
 sys.models.Bus.basekv[bus_idx]              # base kV of that bus
 ```
 
-**Handles:** Sparse, non-contiguous external IDs → dense, contiguous internal indices
+## Layer 2: Internal Indices to DAE Addresses
 
-## Layer 2: Internal Indices → DAE Addresses
+The `AddressManager` is created with the problem (`ACPowerFlowProblem`, `TDSProblem`) and assigns a DAE address to every variable and residual of every instance. For the 14-bus system with the `PowerInjection` formulation, there are 28 algebraic variables (14 θ and 14 V). Natural addressing places θ at addresses 1 to 14 and V at 15 to 28, so bus 1 (internal index 1) has θ at address 1 and V at address 15, and bus 2 has θ at address 2 and V at address 16.
 
-**Mapper:** `AddressManager`
-
-**Example (14-bus system with PowerInjection formulation):**
-- 28 algebraic variables total (14 θ + 14 V)
-- Natural addressing: θ at 1-14, V at 15-28
-- Bus 1 (internal index 1): θ at address 1, V at address 15
-- Bus 2 (internal index 2): θ at address 2, V at address 16
-
-**When created:** Problem construction (`ACPowerFlowProblem`, `TDSProblem`), per formulation
-
-**Storage:**
 ```julia
 using PowerfulCore: AlgebVar, get_addresses
 
@@ -86,39 +59,34 @@ get_addresses(am, :Bus, :v)                     # same, via the accessor
 get_addresses(am, AlgebVar(), :Bus, :v)         # typed lookup
 ```
 
-Element i of the address vector is the DAE address of instance i's variable.
+Element `i` of an address vector is the DAE address of the variable of instance `i`.
 
-**Why formulation-specific:**
-- PowerInjection: θ, V variables
-- CurrentInjection: V_r, V_i variables
-- Same system, different variable sets → different addresses
+The `AddressManager` belongs to the problem, because each formulation has its own variables: `PowerInjection` uses θ and V, and `CurrentInjection` uses V_r and V_i. The same `SystemModel` therefore yields different addresses for different problems.
 
-**Addressing strategies** (the `addressing=` keyword of `ACPowerFlowProblem` and `TDSProblem`):
-- `NaturalAddressing()` - Group by variable (all θ, then all V); the default
-- `AMDAddressing()` - Approximate minimum degree reordering to reduce sparse fill-in
-- `CustomPermutation(perm)` - User-provided ordering
+The `addressing=` keyword of `ACPowerFlowProblem` and `TDSProblem` selects the layout:
 
-## Layer 3: Foreign References (Precomputed Links)
+- `NaturalAddressing()` groups addresses by variable (all θ, then all V) and is the default.
+- `AMDAddressing()` applies an approximate minimum degree reordering to reduce sparse fill-in.
+- `CustomPermutation(perm)` applies a user-provided ordering, where `perm[i]` is the new address of old address `i`. An example is θ and V of bus 1, followed by θ and V of bus 2.
 
-**Problem:** Models reference other models repeatedly
+```julia
+prob1 = ACPowerFlowProblem(sys, PowerInjection(); addressing = NaturalAddressing())
+prob2 = ACPowerFlowProblem(sys, PowerInjection(); addressing = AMDAddressing())
+```
 
-**Example:**
-- PV generator at bus 4001
-- Needs the bus's data and variables during setup and evaluation
-- Full path: External 4001 → Internal index → Addresses
+Both problems share the system and the external IDs and differ only in the DAE address layout. Model code is unchanged, because models access DAE addresses through `ResidualBuffers`, which gather and scatter by address.
 
-**Solution:** Precompute the external → internal hop for every reference field.
+## Layer 3: Foreign References
 
-**Storage:** `sys.order.foreign_refs[model][ref_key]` is a `GroupLinkRef` with two vectors:
+A model that refers to another model, such as a PV generator at bus 4001, needs the data and variables of the referenced instance during setup and evaluation. The path from the external ID 4001 to the internal index to the DAE addresses is resolved once at construction. The result is stored in `sys.order.foreign_refs[model][ref_key]`, a `GroupLinkRef` with two vectors, which avoids dictionary lookups in hot paths:
+
 ```julia
 ref = sys.order.foreign_refs[:PQ][:i]
 ref.target_type   # [:Bus, :Bus, ...]  model referenced by each PQ instance
 ref.target_idx    # internal index in that model, one entry per PQ instance
 ```
 
-A `GroupLinkRef` can be heterogeneous: a governor that controls "the generator at
-(BUS, ID)" may point to a `GENCLS` for one instance and a `GENROU` for another.
-`is_heterogeneous(ref)` tells the two cases apart. Convenience accessors:
+The references are built from the `Terminal` declarations of the models by `build_terminal_refs`, which `ext2int` calls. A `GroupLinkRef` may refer to several model types: a governor that controls "the generator at (BUS, ID)" may point to a `GENCLS` for one instance and a `GENROU` for another. The function `is_heterogeneous(ref)` distinguishes the two cases. Convenience accessors return the indices directly:
 
 ```julia
 using PowerfulCore: get_foreign_indices, get_foreign_link_ref
@@ -129,78 +97,32 @@ to_bus = get_foreign_indices(sys, :Branch, :j)
 ref = get_foreign_link_ref(sys, :TGOV1, (:BUS, :ID))  # full GroupLinkRef
 ```
 
-**Created:** SystemModel construction, from the models' `Terminal` declarations
-(`build_terminal_refs`, called by `ext2int`)
+### Controller links
 
-**Benefit:** Eliminates dictionary lookups in hot paths
+Controllers (TGOV1, SEXS) use the same `foreign_refs` map through a terminal that references the controlled group, for example `Terminal(:generators, [:BUS, :ID])`. The `GroupLinkRef` stored under the composite key `(:BUS, :ID)` can point to different generator models. Group interfaces declare `key_fields` (for example `[:BUS, :ID]` for `:generators`). If a model implementing the group uses different key field names, a warning is emitted and the keys are matched by position. New models should use the declared names.
 
-### Controller Links (TDS Only)
+### Where the references are used
 
-Controllers (TGOV1, SEXS) use the same `foreign_refs` map through a terminal that
-references the controlled group, e.g. `Terminal(:generators, [:BUS, :ID])`. The
-`GroupLinkRef` stored under the composite key `(:BUS, :ID)` can point to different
-generator models.
+- `ext2int` builds `foreign_refs` from the terminal declarations. Each entry is a `GroupLinkRef` keyed by the reference field of the terminal.
+- The builders of derived systems rebuild the index, so that dynamic model terminals and controller terminals receive their own entries.
+- `retrieve_external_params` loads the data of `ExtParam` declarations through `get_group_ref(order, model, key)`.
+- `setup_with_formulation!` passes `foreign_refs` to `retrieve_addresses`, which resolves foreign variables and residuals.
+- `InitInput`s of kind `:from_group_init` (for example the `tm0` of TGOV1, taken from the `P_m` of the generator) are resolved through the group link of the controller.
 
-**Group key names vs. arity:** Group interfaces declare `key_fields` (e.g. `[:BUS, :ID]`
-for `:generators`). If a model implementing the group uses different key field names,
-a warning is emitted and keys are matched by position. Prefer matching names when
-adding new models.
+### Linking of dynamic models
 
-### Pipeline: Where `foreign_refs` Are Built and Used
+Dynamic generators and controllers are linked by two mechanisms:
 
-- **ext2int:** Builds `foreign_refs` from terminal declarations; entries are `GroupLinkRef` keyed by the terminal's reference field.
-- **Derived-system builders:** Rebuild the index for the derived system, so dynamic model terminals and controller terminals get their own entries.
-- **External parameter retrieval:** `retrieve_external_params` uses `get_group_ref(order, model, key)` to load `ExtParam` data.
-- **Address retrieval:** `setup_with_formulation!` passes `foreign_refs` to `retrieve_addresses` to resolve foreign variables and residuals.
-- **Initialization:** `InitInput`s of kind `:from_group_init` (e.g. TGOV1's `tm0` from the generator's `P_m`) are resolved through the controller's group link.
-
-### Dynamic Model Linking Flow
-
-Dynamic models use different linking mechanisms:
-
-| Phase | Models | Traits Used | Output |
+| Phase | Models | Traits used | Output |
 |-------|--------|-------------|--------|
 | TDS system preparation | GENCLS, GENROU, ... | `get_replacement_map`, `get_data_inheritance` | `ModelLinks` |
-| Index rebuild (ext2int) | TGOV1, SEXS | `get_controlled_group`, `get_terminals` | `GroupLinkRef` |
+| Index rebuild (`ext2int`) | TGOV1, SEXS | `get_controlled_group`, `get_terminals` | `GroupLinkRef` |
 
-**Replacement models** (generators) replace static PV/Slack devices. `ModelLinks`
-records which static instance each one replaces, and `get_data_inheritance` declares
-which data to copy (e.g. GENCLS takes `xd_p` from `PV.zx`).
+Generator models replace static PV and Slack devices. `ModelLinks` records which static instance each generator replaces, and `get_data_inheritance` declares the data to copy (for example, GENCLS takes `xd_p` from `PV.zx`). Controllers are linked by the composite-key match of their terminal on the controlled group, performed in `build_terminal_refs`.
 
-**Controllers** are not linked by replacement. Their terminal on the controlled group
-is resolved by composite key matching in `build_terminal_refs`.
+## Example: Variable Access
 
-## API Boundaries
-
-### Layer 1 API (IndexOrder)
-
-**Input:** Model collections with external IDs in struct fields
-
-**Output:** `order.key_indices[model][key_tuple] → internal_index`
-
-**Used by:** System for array access, users for specifying devices
-
-### Layer 2 API (AddressManager)
-
-**Input:** SystemModel + formulation trait
-
-**Output:** `am.assignments[model].by_type[addr_type][var_name] → Vector{UInt}`
-- Element i = DAE address for instance i's variable
-
-**Used by:** Gather/scatter operations during residual evaluation
-
-### Layer 3 API (Foreign References)
-
-**Input:** Model `Terminal` declarations
-
-**Output:** `order.foreign_refs[model][ref_key] → GroupLinkRef`
-- Target model and internal index for each referencing instance
-
-**Used by:** External parameter retrieval, address retrieval and initialization
-
-## Concrete Example: Variable Access
-
-`get_var(sol, :Bus, :v, (14,))` performs these steps on the IEEE 14-bus case:
+The call `get_var(sol, :Bus, :v, (14,))` performs the following steps on the IEEE 14-bus case:
 
 ```@example indexing
 using Powerful, PowerfulCases
@@ -221,52 +143,18 @@ value = sol.dae.y[addr]
 (idx, Int(addr), value, get_var(sol, :Bus, :v, (14,)))
 ```
 
-**Step 4 (optional): Convert to physical units.** Bus voltage is a variable, so its
-physical value uses the bus base voltage: `value * sys.models.Bus.basekv[idx]` kV.
-Reports do this conversion through the `ReportConfig` passed to
-`collect_model_table`. Stored per-unit coefficients (`sys.pu_coeffs`) apply to model
-parameters and satisfy `pu = physical × coefficient`; see
-[Per-Unit & Multi-Island](miscellaneous.md).
-
-## Changing Address Layout
-
-**Flexibility:** Only the AddressManager changes; the external API stays the same
-
-**Example strategies:**
-- **Natural:** All θ, then all V
-- **AMD:** Reduce sparse fill-in
-- **Custom:** Any permutation, e.g. θ,V for bus 1, then θ,V for bus 2
-
-**Implementation:**
-```julia
-prob1 = ACPowerFlowProblem(sys, PowerInjection(); addressing = NaturalAddressing())
-prob2 = ACPowerFlowProblem(sys, PowerInjection(); addressing = AMDAddressing())
-
-# Same system, same external IDs
-# Different DAE address layouts
-# No model code changes
-```
-
-**Why it works:**
-- The external ID mapping is unchanged
-- Models don't see DAE addresses directly
-- `ResidualBuffers` handle gather/scatter
-
-**This is why the AddressManager lives in the problem, not in SystemModel.**
+A fourth, optional step converts the value to physical units. Bus voltage is a variable, so its physical value is `value * sys.models.Bus.basekv[idx]` kV. Reports apply this conversion through the `ReportConfig` passed to `collect_model_table`. The stored per-unit coefficients (`sys.pu_coeffs`) apply to model parameters and satisfy `pu = physical × coefficient`; see [Per-Unit & Multi-Island](miscellaneous.md).
 
 ## Extension Points
 
-### Custom Addressing Strategies
+### Custom addressing strategies
 
-`CustomPermutation(perm)` accepts any permutation, where `perm[i]` is the new address
-for old address `i`. Strategies are applied in `apply_addressing_strategy!`
-(`PowerfulPF/src/solvers/power_flow_api.jl`), which computes the permutation and calls
-`remap_addresses!`; a strategy that computes its own ordering needs an
-`AddressingStrategy` subtype and a branch there.
+`CustomPermutation(perm)` accepts any permutation. Strategies are applied in `apply_addressing_strategy!` (`PowerfulPF/src/solvers/power_flow_api.jl`), which computes the permutation and calls `remap_addresses!`. A strategy that computes its own ordering requires an `AddressingStrategy` subtype and a branch in that function.
 
-### New Models with Cross-References
+### New models with cross-references
 
-Declare references through terminals and use them in external parameters:
+A model declares references through terminals and uses them in external parameters:
+
 ```julia
 const MY_MODEL_TERMINALS = (Terminal(:Bus, :i),)
 get_terminals(::Type{<:MyModel}) = MY_MODEL_TERMINALS
@@ -279,19 +167,6 @@ const MY_MODEL_EXT_PARAMS = [
 
 The system creates `foreign_refs[:MyModel][:i]` during construction.
 
-### Alternative Index Mapping
+### Alternative index mappings
 
-`ext2int` assigns internal indices in the order instances appear in the model arrays.
-Another mapping (sorted by bus number, grouped by area) must still produce an
-`IndexOrder` with:
-- `key_indices`: key tuple → internal index for every model
-- `foreign_refs`: `GroupLinkRef`s for every terminal
-
-## Key Principle
-
-**Maintain clear separation:**
-- **External IDs** - User-facing, stable across solutions
-- **Internal indices** - Implementation-efficient array positions
-- **DAE addresses** - Solver-specific equation vector positions
-
-Each layer has one job and provides a stable interface to the layer above.
+`ext2int` assigns internal indices in the order in which instances appear in the model arrays. An alternative mapping, such as one sorted by bus number or grouped by area, must produce an `IndexOrder` that contains `key_indices` (key tuple to internal index for every model) and `foreign_refs` (a `GroupLinkRef` for every terminal).

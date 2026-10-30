@@ -1,11 +1,10 @@
 # Computation Architecture
 
-How residual evaluation is organized so that Newton and time-domain iterations work on
-pre-allocated buffers.
+Residual evaluation in Newton and time-domain iterations runs on pre-allocated buffers. This page describes how those buffers are organized, created and reused.
 
 ## The Workspace Hierarchy
 
-**Three nested layers with clear responsibilities:**
+Residual evaluation is organized in three nested layers.
 
 ```
 SystemBuffers                    # Coordinates all models
@@ -17,9 +16,9 @@ SystemBuffers                    # Coordinates all models
     └── Residual kernels         # Pure math
 ```
 
-### SystemBuffers (Coordination Layer)
+### SystemBuffers
 
-Defined in `PowerfulCore/src/system/system_buffers.jl`:
+`SystemBuffers` is defined in `PowerfulCore/src/system/system_buffers.jl`. It loops over the models in evaluation order (`evaluation_pass` from the metadata) and calls the evaluation of each. It has no knowledge of model-specific calculations.
 
 ```julia
 struct SystemBuffers{T<:Number, F<:FormulationTrait}
@@ -38,74 +37,44 @@ struct SystemBuffers{T<:Number, F<:FormulationTrait}
 end
 ```
 
-**Design:** `SystemBuffers` stores one closure per model in a `Vector{Function}` instead of
-a NamedTuple of typed workspaces. With a typed NamedTuple, every model type would be a
-type parameter of the system workspace, and compilation time grows quickly with the
-number of models. Each closure captures its model's concrete types internally, so the
-code inside it is fully specialized; calling it through the `Vector{Function}` costs one
-dynamic dispatch per model per evaluation.
+`SystemBuffers` stores one closure per model in a `Vector{Function}`. A NamedTuple of typed workspaces would make every model type a type parameter of the system workspace, and compilation time would grow quickly with the number of models. Each closure captures the concrete types of its model, so the code inside it is fully specialized. Calling a closure through the `Vector{Function}` costs one dynamic dispatch per model per evaluation.
 
-**Job:** Loop through models in evaluation order and call each model's evaluation
+### ResidualBuffers
 
-**Knows:** System structure, evaluation order (`evaluation_pass` from metadata)
+`ResidualBuffers` is defined in `PowerfulCore/src/dae/residual_workspace.jl`. It gathers the variables of one model, passes them to the kernel and scatters the results; it contains no model mathematics. For each model it holds:
 
-**Doesn't know:** Model-specific calculations
+- `var_addrs`, `var_vals`: NamedTuples of DAE addresses and gathered values per variable (e.g. `theta`, `v`)
+- `res_addrs`, `res_vals`: NamedTuples of DAE addresses and computed values per residual (e.g. `p`, `q`)
+- `var_gather_tuple`, `res_scatter_tuple`: precomputed tuples used by gather and scatter
+- `n_instances`: the instance count
+- `setpoints`: initialization setpoints of dynamic models (an empty NamedTuple for other models)
+- `system`: the `SystemConfig` of the system (`sys.settings`: frequency, MVA base, constant-power breakpoint)
 
-### ResidualBuffers (Data Movement Layer)
+The in-service mask is passed to `calc_residuals!` and `scatter_residuals!` as `active_mask`. It is taken from a status dict (`Dict{Symbol, Vector{Bool}}`, built by `build_status_dict(sys)`). Parallel contingency analysis relies on this arrangement, since each thread can evaluate the same workspace structure with its own status.
 
-Defined in `PowerfulCore/src/dae/residual_workspace.jl`. For each model it holds:
+#### Out-of-service instances
 
-- `var_addrs`, `var_vals` - NamedTuples of DAE addresses and gathered values per variable (e.g. `theta`, `v`)
-- `res_addrs`, `res_vals` - NamedTuples of DAE addresses and computed values per residual (e.g. `p`, `q`)
-- `var_gather_tuple`, `res_scatter_tuple` - Precomputed tuples used by gather/scatter
-- `n_instances` - Instance count
-- `setpoints` - Initialization setpoints of dynamic models (empty NamedTuple otherwise)
-- `system` - The `SystemConfig` of the system (`sys.settings`: frequency, MVA base, constant-power breakpoint)
+An out-of-service instance contributes nothing to the residuals. Its own algebraic variables remain entries of `y`; these are the variables without a source model, such as the `theta` and `v` of a bus or the `P_m` of a machine. No other model writes their residual rows, so the following mechanism keeps the Jacobian nonsingular:
 
-The in-service mask is **not** stored in the workspace. It is passed to
-`calc_residuals!` and `scatter_residuals!` as `active_mask`, taken from a status dict
-(`Dict{Symbol, Vector{Bool}}`, built by `build_status_dict(sys)`). Parallel contingency
-analysis relies on this: each thread can evaluate the same workspace structure with its
-own status.
+1. The own algebraic residuals of a model share addresses with its own algebraic variables. This is checked the first time an instance of the model is out of service.
+2. After all models are evaluated, `hold_out_of_service!` sets each such row `a` to `y[a] - hold[a]`. The row is an identity row of the Jacobian that keeps the variable at its held value.
+3. The solver sets `hold` with `set_hold!` from its starting point: the initial guess of a power flow or the initialized values of a time-domain simulation.
 
-**Out-of-service instances.** An out-of-service instance contributes nothing, but its
-own algebraic variables (variables without a source model, such as a bus's `theta`
-and `v` or a machine's `P_m`) are still entries of `y`, and nothing else writes their
-residual rows. Each model's own algebraic residuals share addresses with its own
-algebraic variables (checked the first time an instance of the model is out of
-service), so after all models are
-evaluated `hold_out_of_service!` sets each such row `a` to `y[a] - hold[a]`: an identity
-Jacobian row that keeps the variable at its held value. The solver sets `hold` with
-`set_hold!` from its starting point (the initial guess of a power flow, the initialized
-values of a TDS). This is what keeps a bus de-energized by a contingency, or a machine
-tripped during a simulation, from making the Jacobian singular. Own states whose mass
-is zero for a particular instance (a state whose mass coefficient reduces to zero there) are algebraic too:
-their rows `f[a]` are held the same way, at `hold_x`; states with mass keep
-`M·ẋ = 0`, their values. Models therefore just mask their equations with the in-service
-mask. Each model's evaluator
-records whether it has out-of-service instances, so the pass costs nothing when every
-instance is in service.
+This mechanism keeps a bus de-energized by a contingency, or a machine tripped during a simulation, from making the Jacobian singular. Own states whose mass coefficient reduces to zero for a particular instance are algebraic for that instance, and their rows `f[a]` are held in the same way at `hold_x`. States with mass keep `M·ẋ = 0`, which holds their values.
 
-**Job:** Gather variables, compute residuals, scatter results
+Models therefore only mask their equations with the in-service mask. Each evaluator records whether it has out-of-service instances, so the pass costs nothing when every instance is in service.
 
-**Doesn't know:** Mathematical details
+### Residual Kernels
 
-### Residual Kernels (Computation Layer)
+A residual kernel is a pure function that loops over arrays and computes residuals from parameters and variables. It contains the physics equations of one model and has no access to workspaces, addresses or the system structure.
 
-**Pure functions:**
 ```julia
 kernel!(outputs::NamedTuple, params::NamedTuple, vars::NamedTuple, active, AT)
 ```
 
-**Job:** Loop over arrays, compute residuals from parameters and variables
-
-**Knows:** Physics equations only
-
-**Doesn't know:** Workspaces, addresses, system structure
-
 ## The Gather-Compute-Scatter Pattern
 
-Each model's evaluator closure runs:
+The evaluator closure of each model runs four calls in sequence:
 
 ```julia
 gather_variables!(ws, x, y)              # y (and x for states) → ws.var_vals
@@ -114,24 +83,17 @@ calc_residuals!(ws, model, external, formulation, t; active_mask)
 scatter_residuals!(ws, f, g, active_mask)
 ```
 
-`x`/`f` are the differential states and residuals (empty in power flow), `y`/`g` the
-algebraic variables and residuals.
+Here `x` and `f` are the differential states and residuals (empty in power flow), and `y` and `g` are the algebraic variables and residuals. The calls form three phases.
 
-### Phase 1: Gather
+**Gather.** Each variable of the model is copied from the global DAE vectors to the workspace, which yields contiguous arrays for SIMD loops or GPU kernels. State variables are gathered from `x` and algebraic variables from `y`.
 
-**Copy from the global DAE vectors to the workspace:**
 ```julia
 # For each variable of the model, e.g. the bus voltage seen by a PQ load:
 ws.var_vals.v[i] = y[ws.var_addrs.v[i]]
 ```
 
-State variables are gathered from `x`, algebraic variables from `y`.
+**Compute.** The kernel operates on the workspace arrays and fills the residual values. The PQ load kernel from `PowerfulPF/src/models/pq.jl` is:
 
-**Result:** Contiguous arrays ready for SIMD loops or GPU kernels
-
-### Phase 2: Compute
-
-**The kernel operates on workspace arrays** (the PQ load kernel from `PowerfulPF/src/models/pq.jl`):
 ```julia
 @inbounds @simd for i in eachindex(outputs.p)
     mask = active[i]
@@ -143,57 +105,31 @@ State variables are gathered from `x`, algebraic variables from `y`.
 end
 ```
 
-**Result:** Residual values in workspace arrays
+**Scatter.** The residual values are copied from the workspace to the global residual vectors, for active instances only. `SharedRes(:add)` and `PrivateRes` residuals are accumulated or written first. `SharedRes(:set)` residuals overwrite in a second pass, after all `:add` contributions of the model.
 
-### Phase 3: Scatter
-
-**Copy from the workspace to the global residual vectors:**
 ```julia
-# SharedRes(:add) and PrivateRes - accumulate / write
+# SharedRes(:add) and PrivateRes: accumulate / write
 g[ws.res_addrs.p[i]] += ws.res_vals.p[i]
 
-# SharedRes(:set) - overwrite (second pass, after all :add contributions of this model)
+# SharedRes(:set): overwrite
 g[ws.res_addrs.v_ctrl[i]] = ws.res_vals.v_ctrl[i]
 ```
 
-Only active instances are scattered.
+## NamedTuples in the Workspace
 
-**Result:** Global residual vector updated
+The variable and residual arrays of a workspace are stored in NamedTuples. This gives type stability (`ws.var_vals.v` has a known array type), compiles field access to a direct load as for a struct field, and lets the compiler generate a specialized code path for each model:
 
-## Why NamedTuples?
-
-**Problem with `Dict{Symbol, Any}`:**
-- Runtime type checks on every access
-- Dictionary lookups on the hot path
-- Boxed values
-
-**Benefits of NamedTuples:**
-
-### 1. Type Stability
 ```julia
-ws.var_vals.v  # The compiler knows the array type
-```
-
-### 2. Direct Field Access
-Field access on a NamedTuple compiles to a direct load, like struct field access.
-
-### 3. Compile-Time Specialization
-```julia
-# Each model gets a specialized code path
 calc_residuals!(ws::ResidualBuffers{Float64, Vector{Float64}, ...}, pq::StructArray{PQ{Float64}}, ...)
 ```
 
-**Trade-off:** Fields can't be added at runtime. Workspaces are created once at setup
-with field names known from the formulation-specific metadata.
+The field names are fixed when the workspace is created, at setup, from the formulation-specific metadata.
 
 ## CPU and GPU Dispatch
 
-**Same kernel interface, different implementations.** The last argument `AT` is the
-workspace array type.
+CPU and GPU implementations of a kernel share one interface. The last argument `AT` is the workspace array type.
 
-### CPU Kernel
-
-In the model file (e.g. `PowerfulPF/src/models/pq.jl`):
+The CPU kernel is a method on `::Type{<:Vector}`. In the model file (e.g. `PowerfulPF/src/models/pq.jl`):
 
 ```julia
 @inline function pq_residual_kernel!(
@@ -208,12 +144,7 @@ In the model file (e.g. `PowerfulPF/src/models/pq.jl`):
 end
 ```
 
-**Key:** `::Type{<:Vector}` matches CPU arrays
-
-### GPU Kernel
-
-A device function and a launcher method of the same kernel, for the GPU extension's
-array type:
+The GPU version consists of a device function and a launcher method of the same kernel, defined for the array type of the GPU extension (`::Type{<:CUDA.CuArray}`):
 
 ```julia
 # Device function: one thread per load
@@ -252,34 +183,33 @@ end
 end
 ```
 
-**Key:** `::Type{<:CuArray}` matches GPU arrays. The physics function `calc_zip_load` is
-shared by both versions.
+The physics function `calc_zip_load` is shared by both versions.
 
-### Automatic Dispatch
+The array type comes from the system (`sys.array_type`). Moving the system or problem to another array type selects the matching kernels through ordinary method dispatch, and the workspace needs no option for it. A GPU power flow is set up with `use_gpu` selecting the GPU linear solver:
 
-The array type comes from the system (`sys.array_type`). Moving the system or problem
-to a different array type selects the matching kernels; no workspace option is needed,
-and no manual branching: the type system routes to the right hardware.
+```julia
+ws_gpu = setup_powerflow_newton(to_gpu(prob); use_gpu = true)
+```
 
 ## How Workspaces Are Created
 
-**During solver setup** (`setup_powerflow_newton`, TDS `solve`), the autodiff cache
-(`create_adcache`) builds the `SystemBuffers`.
+During solver setup (`setup_powerflow_newton`, or `solve` for a time-domain problem), the autodiff cache (`create_adcache`) builds the `SystemBuffers`. Construction proceeds in two levels.
 
-### 1. SystemBuffers Construction
+`SystemBuffers` is constructed from the address manager, the system and the formulation:
+
 ```julia
 using PowerfulCore: SystemBuffers
 
 sys_ws = SystemBuffers(Float64, am, sys, formulation)
 ```
 
-**Steps:**
-- Order the models by `evaluation_pass`, skipping models without instances, variables or residuals
-- Get the formulation-specific metadata of each model
-- Create a `ResidualBuffers` for each model
-- Build the evaluator closures (hot path, recorder path, accumulate path)
+1. The models are ordered by `evaluation_pass`; models without instances, variables or residuals are skipped.
+2. The formulation-specific metadata of each model is retrieved.
+3. A `ResidualBuffers` is created for each model.
+4. The evaluator closures are built for the hot path, the recorder path and the accumulate path.
 
-### 2. ResidualBuffers Construction
+`ResidualBuffers` is constructed for each model:
+
 ```julia
 using PowerfulCore: ResidualBuffers
 
@@ -287,40 +217,43 @@ ws = ResidualBuffers(Float64, metadata, am, model_vec, sys.array_type;
                      system = sys.settings, setpoints = NamedTuple(), config = SimConfig())
 ```
 
-**Steps:**
-- Allocate arrays for each variable and residual
-- Extract address vectors from the AddressManager
-- Allocate arrays for observable variables and setpoints (or reference the given setpoints)
-- Precompute the gather and scatter tuples
+1. Arrays are allocated for each variable and residual.
+2. The address vectors are extracted from the `AddressManager`.
+3. Arrays are allocated for observable variables and setpoints, or the given setpoints are referenced.
+4. The gather and scatter tuples are precomputed.
 
-### 3. Type Parameter Propagation
+The array type flows through the hierarchy as a type parameter:
+
 ```julia
 ResidualBuffers{Float64, Vector{Float64}, ...}    # CPU
 ResidualBuffers{Float64, CuVector{Float64}, ...}  # GPU
 ```
 
-**The array type flows through the hierarchy via type parameters.**
+The workspaces and metadata of a model can be reached by name on the cold path:
 
-### 4. Cold-Path Access
 ```julia
 sys_ws.metadata_by_name[:PQ]    # ModelMetadata for PQ (formulation-specific)
 sys_ws.workspaces_by_name[:PQ]  # ResidualBuffers for PQ
 ```
 
-### 5. One-Time Allocation
+After setup the array storage is allocated once. Iterations fill the existing buffers, and all indexing uses fixed address vectors. A residual evaluation outside a solver, for example in a test, is made with `evaluate_system_residuals!`:
 
-**After setup:**
-- Array storage is not reallocated
-- Iterations fill existing buffers
-- All indexing uses fixed address vectors
+```julia
+using PowerfulCore: SystemBuffers, build_status_dict, evaluate_system_residuals!
+
+sys_ws = SystemBuffers(Float64, prob.address_manager, prob.sys, prob.formulation)
+status = build_status_dict(prob.sys)
+evaluate_system_residuals!(sys_ws, dae, status, 0.0)      # power flow (DAE container), at t = 0
+evaluate_system_residuals!(sys_ws, f, g, x, y, status, t)  # differential-algebraic
+```
 
 ## How Model References Flow Through Workspaces
 
-**Reference chain:**
+The problem holds a reference to the system and the address manager. The `SystemBuffers` holds the evaluator closures and, for cold-path access, the workspaces by name.
 
 ```
 ACPowerFlowProblem
-  ├── sys::SystemModel         # Reference (not copy)
+  ├── sys::SystemModel         # Reference to the system
   └── address_manager
 
 SystemBuffers
@@ -329,15 +262,12 @@ SystemBuffers
 
 Each evaluator closure captures:
   ├── ws::ResidualBuffers           # Pre-allocated workspace
-  ├── model_vec::StructArray        # Reference to e.g. sys.models.PQ (not a copy)
+  ├── model_vec::StructArray        # Reference to e.g. sys.models.PQ
   └── external::NamedTuple          # sys.external for that model
 ```
 
-**Design:** Each evaluator closure captures a reference to the model's StructArray.
-Changing a model field in place (`sys.models.PQ.pl[3] = 0.5`) is visible at the next
-residual evaluation.
+Because each closure captures a reference to the StructArray of its model, a model field changed in place (`sys.models.PQ.pl[3] = 0.5`) is visible at the next residual evaluation. A parameter sweep therefore reuses one workspace:
 
-### Modify Parameters Without Rebuilding the Workspace
 ```julia
 using PowerfulPF: setup_powerflow_newton, solve_powerflow_newton!
 
@@ -351,113 +281,18 @@ for scale in [0.9, 1.0, 1.1]
 end
 ```
 
-Only in-place changes to the arrays the closures hold are seen. Replacing a model
-collection, adding instances or changing topology requires a new problem and workspace.
-External parameters (`sys.external`) are retrieved at system construction and are not
-recomputed when model fields change.
+Only in-place changes to the arrays held by the closures are seen. Replacing a model collection, adding instances or changing the topology requires a new problem and workspace. External parameters (`sys.external`) are retrieved at system construction and are not recomputed when model fields change.
 
 ## Performance Characteristics
 
-### Pre-allocated Evaluation
+Gather, compute and scatter use buffers that are allocated at setup, and no array storage is allocated per iteration. Tests in `Powerful/test/performance/` and `Powerful/test/perf/` guard against allocation regressions.
 
-- Gather-compute-scatter uses pre-allocated buffers
-- Array storage is allocated at setup, not per iteration
-- Allocation regressions are guarded by tests in `Powerful/test/performance/` and
-  `Powerful/test/perf/`
+Gather copies the scattered entries of the DAE vectors into contiguous arrays, so kernels access memory sequentially and SIMD processes several elements per instruction. The same property motivates the storage of models as StructArrays.
 
-### Cache-Friendly Access Patterns
+Inside each evaluator closure every call is type-stable, and the code is specialized for the concrete model, workspace and formulation types. The call to the closure itself is the only dynamic dispatch.
 
-**Gather creates contiguous arrays from scattered DAE vectors:**
-- Kernels then access memory sequentially
-- SIMD processes several elements per instruction
-- This is also why models are stored as StructArrays (struct of arrays)
+With GPU arrays, gather, compute and scatter run as device kernels with one thread per element. The scatter of `SharedRes(:add)` residuals uses atomic adds, since several devices contribute to the same bus equation.
 
-### Type-Stable Kernels
+## Custom Gather and Scatter
 
-**Inside each evaluator closure:**
-- Every call is type-stable
-- Code is specialized for the concrete model, workspace and formulation types
-- The only dynamic dispatch is the call to the closure itself
-
-### GPU Parallelism
-
-**When using GPU arrays:**
-- Gather, compute and scatter run as device kernels, one thread per element
-- Scatter of `SharedRes(:add)` residuals uses atomic adds, since several devices
-  contribute to the same bus equation
-
-## Extension Points
-
-### Custom Gather/Scatter
-
-The default gather/scatter loops over address arrays. Specialized versions for other
-array types can be added by dispatching on the array type in the same way.
-
-### Alternative Dispatch Strategies
-
-**Current:** Dispatch on the array type (`Vector` vs `CuArray`)
-
-**Possible:** Dispatch on element type or memory layout:
-```julia
-kernel!(outputs, params, vars, active, ::Type{Vector{Float32}})
-kernel!(outputs, params, vars, active, ::Type{Vector{Float64}})
-```
-
-### Workspace Reuse Across Solves
-
-```julia
-ws = setup_powerflow_newton(prob)
-
-# Solve several times with different initial guesses
-sol1 = solve_powerflow_newton!(ws, y0_flat)
-sol2 = solve_powerflow_newton!(ws, y0_warm)
-```
-
-**Amortizes setup cost for repeated similar problems.**
-
-### Parallel Model Evaluation
-
-**Current:** Models are evaluated sequentially, in the order given by `evaluation_pass`.
-
-**Possible:** Parallelize within a pass; `SharedRes(:add)` scatter then needs atomic
-operations, as on the GPU.
-
-## Architecture Summary
-
-**Key principles:**
-
-1. **Three-layer separation** - Coordination, data movement, computation
-2. **NamedTuples inside each model workspace** - Type stability and specialization
-3. **Type-erased closures across models** - Bounded compilation time
-4. **Gather-compute-scatter pattern** - Enables SIMD and GPU parallelism
-5. **Reference-based system access** - Change parameters without recreating workspaces
-6. **Type parameters for dispatch** - Automatic CPU/GPU selection
-
-## Quick Reference
-
-### Workspace Creation
-```julia
-using PowerfulPF: setup_powerflow_newton
-
-prob = ACPowerFlowProblem(sys, PowerInjection())
-ws = setup_powerflow_newton(prob)
-
-# GPU arrays; use_gpu selects the GPU linear solver
-ws_gpu = setup_powerflow_newton(to_gpu(prob); use_gpu = true)
-```
-
-### Residual Evaluation
-```julia
-using PowerfulCore: SystemBuffers, build_status_dict, evaluate_system_residuals!
-
-sys_ws = SystemBuffers(Float64, prob.address_manager, prob.sys, prob.formulation)
-status = build_status_dict(prob.sys)
-evaluate_system_residuals!(sys_ws, dae, status, 0.0)      # power flow (DAE container), at t = 0
-evaluate_system_residuals!(sys_ws, f, g, x, y, status, t)  # differential-algebraic
-```
-
-### Parameter Modification
-```julia
-sys.models.PQ.pl[3] = 0.5   # Visible at the next evaluation
-sol = solve_powerflow_newton!(ws, y0)
-```
+The default gather and scatter loop over address arrays. Specialized versions for other array types are added by dispatching on the array type in the same way.
