@@ -204,6 +204,42 @@ Initialization sets `E_fd` to the generator's initial field voltage and
 """ SEXS
 
 @doc """
+    IEEEX1{T} <: AbstractModel
+
+IEEE Type 1 excitation system (IEEEX1) with a transient gain reduction. Controls the
+field voltage `E_fd` of the generator with the same bus number and ID (any model of the
+`:generators` group).
+
+The terminal voltage passes through the transducer `1/(1 + s TR)`; the error `vref - vm - vf`
+(`vf` the rate feedback) passes through the lead-lag `(1 + s TC)/(1 + s TB)` and the
+regulator `KA/(1 + s TA)`, whose state is held within `[VRMIN, VRMAX]`. The exciter
+`TE dE_fd/dt = VR - (KE E_fd + E_fd SE(E_fd))` has no limit, `SE` being the quadratic
+saturation through `(E1, SE1)` and `(E2, SE2)`, and the rate feedback is
+`vf = KF s/(1 + s TF) E_fd`. `TR = 0` is the direct measurement, `TA = 0` the clamped gain,
+and `TB = TC = 0` no lead-lag.
+
+# Parameters
+- `BUS`, `ID`: bus number and ID of the controlled generator
+- `TR`, `TA`, `TB`, `TC`, `TE`, `TF`: time constants (s)
+- `KA`, `KE`: regulator gain and exciter self-excitation constant (pu); `KF`: feedback gain (s)
+- `VRMAX`, `VRMIN`: regulator output limits (pu)
+- `Switch`: PSS/E record field the diagram does not draw; only 0 is accepted
+- `E1`, `SE1`, `E2`, `SE2`: the two points of the saturation curve
+- `status`: `true` when in service
+
+# Variables
+- States: `LG_x` (transducer), `LL_x` (lead-lag), `VR_x` (regulator), `EFD_y` (exciter output),
+  `WF_x` (rate feedback washout)
+- Algebraic: `vref` (voltage reference, held at its initial value), `yfb` (rate feedback),
+  `E_fd` (field voltage)
+- External: `v` (terminal bus voltage magnitude)
+
+Initialization sets `E_fd` to the generator's initial field voltage and
+`vref = v + VR0/KA`, with `VR0 = KE E_fd + E_fd SE(E_fd)` the regulator output the exciter
+needs at rest.
+""" IEEEX1
+
+@doc """
     REGCA1{T} <: AbstractREGCA1
 
 Renewable energy generator/converter model A (REGC_A, WECC 2014, section 3.2 and

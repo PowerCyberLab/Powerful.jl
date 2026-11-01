@@ -80,6 +80,7 @@ include("models/governors/tgov1.jl")
 # Exciter Models
 # ============================================================================
 include("models/exciters/sexs.jl")
+include("models/exciters/ieeex1.jl")
 
 
 # ============================================================================

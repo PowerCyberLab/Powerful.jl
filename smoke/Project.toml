@@ -1,7 +1,7 @@
 [deps]
 Powerful = "542e4350-023d-42c7-b19f-8cb561780c9e"
 PowerfulCA = "0e0f8f2f-52dd-43db-a14b-50d8879ea210"
-PowerfulCases = "a1b2c3d4-5678-4abc-9def-0123456789ab"
+PowerfulCases = "7f2f6647-2b42-449d-b5aa-0fbac58d05d7"
 PowerfulYbus = "e6577a40-6fef-4f41-bb80-b0fb95e1b109"
 Test = "8dfed614-e22c-5e08-85e1-65c5234f0b40"
 

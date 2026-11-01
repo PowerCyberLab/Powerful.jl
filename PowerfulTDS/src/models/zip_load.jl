@@ -6,6 +6,7 @@ PowerfulCore.is_zip_load(::Type{<:GENSAL}) = false
 PowerfulCore.is_zip_load(::Type{<:GENTPJ1}) = false
 PowerfulCore.is_zip_load(::Type{<:TGOV1}) = false
 PowerfulCore.is_zip_load(::Type{<:SEXS}) = false
+PowerfulCore.is_zip_load(::Type{<:IEEEX1}) = false
 PowerfulCore.is_zip_load(::Type{<:AbstractREGCA1}) = false
 PowerfulCore.is_zip_load(::Type{<:REGFM_A1}) = false
 PowerfulCore.is_zip_load(::Type{<:REECA1}) = false

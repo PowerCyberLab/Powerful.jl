@@ -14,7 +14,7 @@ PowerDynData = "8af9307f-baed-4afb-b455-e9e9cc62a748"
 PowerFlowData = "dd99e9e3-7471-40fc-b48d-a10501125371"
 Powerful = "542e4350-023d-42c7-b19f-8cb561780c9e"
 PowerfulCA = "0e0f8f2f-52dd-43db-a14b-50d8879ea210"
-PowerfulCases = "a1b2c3d4-5678-4abc-9def-0123456789ab"
+PowerfulCases = "7f2f6647-2b42-449d-b5aa-0fbac58d05d7"
 PowerfulCore = "7ec54247-6ba0-49ff-bb80-8518a6c4e144"
 PowerfulPF = "0cb6c863-8ddf-4b1a-8eaf-6d2c52fed4c2"
 PowerfulTDS = "49b22d1c-5cff-4ee2-8f80-576505bd3255"
@@ -29,10 +29,11 @@ StructArrays = "09ab397b-f2b6-538f-b94a-2f83cf4a842a"
 
 [sources]
 OrdinaryDiffEqBDF = {url = "https://github.com/cuihantao/OrdinaryDiffEq.jl", rev = "ecfef223d90594037acb58a3d25a237eaba19695", subdir = "lib/OrdinaryDiffEqBDF"}
+PowerDynData = {url = "https://github.com/cuihantao/PowerDynData.jl", rev = "1ad94fffc79d116b6f56b99b16b110c71b6915d6"}
 PowerFlowData = {url = "https://github.com/cuihantao/PowerFlowData.jl", rev = "3086c2c75530c595c191f37b8e1c29e4f0711520"}
 Powerful = {path = "Powerful"}
 PowerfulCA = {path = "PowerfulCA"}
-PowerfulCases = {url = "https://github.com/cuihantao/PowerfulCases", rev = "96dcc6dfce205e42b4473bc3f8ef407ab09b3ce8"}
+PowerfulCases = {url = "https://github.com/cuihantao/PowerfulCases", rev = "072c17c8f237ee7331f29fafb3559967fecb7ac2"}
 PowerfulCore = {path = "PowerfulCore"}
 PowerfulPF = {path = "PowerfulPF"}
 PowerfulTDS = {path = "PowerfulTDS"}

@@ -326,6 +326,7 @@ network_partition_role(::Type{<:Slack}) = StaticGenerator()
 # Controllers: their outputs are inputs of other models
 network_partition_role(::Type{<:TGOV1}) = NotInYBusFormulation()
 network_partition_role(::Type{<:SEXS}) = NotInYBusFormulation()
+network_partition_role(::Type{<:IEEEX1}) = NotInYBusFormulation()
 network_partition_role(::Type{<:REECA1}) = NotInYBusFormulation()
 
 # Area, zone and owner data: no equations
