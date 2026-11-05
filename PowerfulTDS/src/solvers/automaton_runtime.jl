@@ -40,8 +40,8 @@
 # consistency) is in automata.jl.
 # ============================================================================
 
-using PowerfulCore: Atom, AllOf, AnyOf, Negation, Condition, Transition, Automaton, ValueRef,
-    MemoryQuantity, atoms, discrete_quantities, is_condition, has_automata, AutomatonState,
+using PowerfulCore: Atom, AllOf, AnyOf, Negation, Condition, Transition, Automaton,
+    MemoryQuantity, atoms, is_condition, AutomatonState,
     evaluate_automaton_values!, sync_automaton_memory!, automaton_memory_synced, calc_automaton_values!, ResidualBuffers,
     variable_gather, with_float_columns, gather_variables!, is_algeb_res, is_state_res, is_shared_res, UNROUTED,
     enforce_governed!
@@ -798,65 +798,6 @@ function trace_algebraic_switches(ws::ResidualBuffers, model, external, metadata
     # input q of instance i at (q - 1) n + i
     inputs = BitMatrix(any(view(pattern, :, (q - 1) * n + i)) for q in 1:n_inputs, i in 1:n)
     return (switches = [any(view(pattern, :, i:n:(n_inputs * n))) for i in 1:n], inputs, setpoints)
-end
-
-"""
-    rows_without_their_variable(ws::ResidualBuffers, model, external, metadata, formulation,
-                                pairs, x, y) -> Vector{NamedTuple}
-
-The algebraic rows of a model with automata that do not read the variable they are paired
-with, in some combination of the modes of its automata: `pairs` holds `(residual,
-variable)` names (an algebraic residual and the algebraic variable an update that solves
-each row through its own variable pairs it with). For each combination of one mode per
-automaton, every instance's discrete quantities at what the modes hold, the residuals of
-`model` (its `calc_residuals!` in `formulation`, on a copy of its Float64 workspace `ws` of
-the tracer's element type, every instance in service) are traced at the variables gathered
-from `x` and `y` with SparseConnectivityTracer's local detector, which drops a product
-with an exact zero (a mode's discrete quantity that is zero) and the branch of a piecewise
-function not taken there: the pattern each mode gives its rows. Returns, for each row and
-instance whose pattern lacks its own variable, `(instance, residual, variable, modes)`, the
-modes as `automaton => mode` names. The discrete quantities of `ws` are restored.
-"""
-function rows_without_their_variable(ws::ResidualBuffers, model, external, metadata, formulation, pairs, x, y)
-    found = NamedTuple{(:instance, :residual, :variable, :modes), Tuple{Int, Symbol, Symbol, Vector{Pair{Symbol, Symbol}}}}[]
-    isempty(pairs) && return found
-    n = ws.n_instances
-    names = collect(keys(ws.var_vals))
-    gather_variables!(ws, x, y)
-    point = reduce(vcat, (copy(c) for c in values(ws.var_vals)); init = Float64[])
-    in_service = fill(true, n)
-    rows! = function (out, v)
-        traced = ResidualBuffers(ws, eltype(v))
-        for (j, column) in enumerate(values(traced.var_vals))
-            copyto!(column, 1, v, (j - 1) * n + 1, n)
-        end
-        calc_residuals!(traced, model, external, formulation, zero(eltype(v)); active_mask = in_service)
-        for (p, (residual, _)) in enumerate(pairs), i in 1:n
-            out[(p - 1) * n + i] = getfield(traced.res_vals, residual)[i]
-        end
-        return nothing
-    end
-    automata = metadata.automata
-    discrete = ws.automata.discrete
-    saved = map(copy, values(discrete))
-    try
-        for combo in Iterators.product((eachindex(a.modes) for a in automata)...)
-            for (a, k) in zip(automata, combo), (q, v) in a.modes[k].holds
-                fill!(getfield(discrete, q), v)
-            end
-            pattern = jacobian_sparsity(rows!, zeros(length(pairs) * n), point, TracerLocalSparsityDetector())
-            modes = Pair{Symbol, Symbol}[a.name => a.modes[k].name for (a, k) in zip(automata, combo)]
-            for (p, (residual, variable)) in enumerate(pairs), i in 1:n
-                j = findfirst(==(variable), names)
-                j === nothing && throw(ArgumentError(
-                    "$(metadata.name): $variable, paired with the row $residual, is not a variable of its workspace"))
-                pattern[(p - 1) * n + i, (j - 1) * n + i] || push!(found, (instance = i, residual, variable, modes))
-            end
-        end
-    finally
-        foreach(copyto!, values(discrete), saved)
-    end
-    return found
 end
 
 """
@@ -1618,8 +1559,7 @@ function _wire_foreign_governed!(sys_ws, sys, models::Vector{AutomatonModel})
             "value (round 19a, Phase D). Cross-model governed-state reads are not implemented for Y-bus."))
     end
     for (reader_name, entries) in by_reader
-        ref = get(sys_ws.foreign_refresh, reader_name, nothing)
-        ref === nothing && continue   # the reader has no workspace of this kind (should not happen)
+        ref = sys_ws.foreign_refresh[reader_name]
         ws_reader = sys_ws.workspaces_by_name[reader_name]
         reader_columns = values(ws_reader.var_vals)
         ref[] = let models = models, sys_ws = sys_ws, sys = sys, entries = entries, reader_columns = reader_columns

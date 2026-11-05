@@ -29,7 +29,7 @@ using ADTypes: AutoForwardDiff
 using ControlSystemsBase: ss
 using PowerfulCore: create_adcache, get_float_ws
 using PowerfulCore: AddressManager, StateVar, get_addresses, get_var_address_type
-using PowerfulCore: SystemBuffers, ForwardDiffCache, get_typed_workspace!
+using PowerfulCore: get_typed_workspace!
 using PowerfulCore: ParameterSlice, gather_parameters, scatter_parameters!
 
 # ============================================================================

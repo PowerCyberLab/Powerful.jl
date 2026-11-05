@@ -5,9 +5,7 @@ This module provides the solve() method for TDSProblem and helper functions
 for creating ODE problems from TDS adapters.
 """
 
-using DifferentiationInterface: AutoSparse
 using ADTypes: AutoForwardDiff
-using SparseMatrixColorings: GreedyColoringAlgorithm
 using PowerfulCore: @vprint, get_float_ws, get_system, get_formulation, get_address_manager
 using PowerfulCore: TDSSolution, max_address_in_space, StateVar, AlgebVar
 using Printf: @printf

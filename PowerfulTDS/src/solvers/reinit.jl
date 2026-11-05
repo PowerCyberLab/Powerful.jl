@@ -18,8 +18,8 @@ using KLU: KLU
 using LinearAlgebra: SingularException
 using DifferentiationInterface
 using DiffEqBase: DAEInitializationAlgorithm
-using PowerfulCore: PrecomputedSparsityDetector, @vprint, AlgebVar, AlgebRes, StateRes, get_addresses,
-    build_reverse_map!, lookup_address,
+using PowerfulCore: @vprint, AlgebVar, AlgebRes, StateRes, get_addresses,
+    lookup_address,
     get_float_ws, get_address_manager, get_backend, prepare_sparse_jacobian,
     ForwardDiffBackend, EnzymeBackend, get_tds_dual_buffers,
     NewtonPolicy, NewtonBuffers, BUS_VOLTAGE_STEP_LIMIT, KLULinearSolver, newton_solve!, reset_factorization!, jacobian_sparsity_pattern,
@@ -414,7 +414,6 @@ end
 # message of a singular one
 function _start_singular_rows(J, adapter::TDSAdapter, cache::ReinitCache)
     am = get_address_manager(adapter.adcache)
-    isnothing(am.reverse_map) && build_reverse_map!(am)
     n_z = length(cache.massless)
     empty = [c for c in 1:size(J, 2) if all(iszero, view(nonzeros(J), nzrange(J, c)))]
     isempty(empty) && return ""
@@ -498,7 +497,6 @@ end
 # (model, variable, instance) through the reverse maps
 function _worst_reinit_rows(r::AbstractVector, adapter::TDSAdapter, cache::ReinitCache)
     am = get_address_manager(adapter.adcache)
-    isnothing(am.reverse_map) && build_reverse_map!(am)
     n_massless = length(cache.massless)
     row_name(k) = k <= n_massless ? lookup_address(am, StateRes(), UInt(cache.massless[k])) :
                                     lookup_address(am, AlgebRes(), UInt(k - n_massless))

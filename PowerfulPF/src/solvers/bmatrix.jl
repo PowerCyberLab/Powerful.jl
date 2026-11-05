@@ -13,7 +13,7 @@ This file provides:
 - `build_B_from_incidence`: Build N×N B-matrix from incidence and susceptances
 """
 
-using SparseArrays: SparseMatrixCSC, sparse, nnz, nzrange, rowvals, nonzeros
+using SparseArrays: SparseMatrixCSC, sparse, nnz
 using PowerfulCore: build_incidence_matrix, extract_from_to_idx, get_foreign_indices, in_service
 
 """

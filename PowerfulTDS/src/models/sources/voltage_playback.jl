@@ -6,7 +6,6 @@ compiler does not describe.
 
 using InlineStrings
 using OrderedCollections: OrderedDict
-using ForwardDiff: ForwardDiff
 
 export VoltagePlayback, PlaybackRecording, playback_voltage
 
@@ -149,10 +148,6 @@ The piece of `rec` in which the playback is at time `t`: after every break at or
 `t` (at a break, the value after it).
 """
 playback_piece(rec::PlaybackRecording, t::Real) = 1 + count(<=(t), rec.breaks)
-
-# The float value of a time that may carry derivatives (nested Duals)
-_primal(t::Real) = t
-_primal(t::ForwardDiff.Dual) = _primal(ForwardDiff.value(t))
 
 """
     playback_segment(rec::PlaybackRecording, piece::Integer, s::Float64) -> Int

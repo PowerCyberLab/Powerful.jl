@@ -233,8 +233,8 @@ sol = solve(ACPowerFlowProblem(sys), RobustNR())
 voltages = get_all_vars(sol, :Bus, :v)  # All bus voltages from all islands
 ```
 """
-function get_all_vars(sol::MultiIslandSolution, model::Symbol, var::Symbol)
-    result = []
+function get_all_vars(sol::MultiIslandSolution{T}, model::Symbol, var::Symbol) where T
+    result = T[]
     for (i, island) in enumerate(sol.islands)
         if haskey(island.models, model)
             island_vars = get_all_vars(sol.solutions[i], model, var)
@@ -256,8 +256,8 @@ voltages = get_vars_dict(sol, :Bus, :v)
 # Dict(1 => 1.06, 2 => 1.045, 4001 => 1.02, ...)  # Includes all islands
 ```
 """
-function get_vars_dict(sol::MultiIslandSolution, model::Symbol, var::Symbol)
-    result = Dict()
+function get_vars_dict(sol::MultiIslandSolution{T}, model::Symbol, var::Symbol) where T
+    result = Dict{Tuple, T}()
     for (i, island) in enumerate(sol.islands)
         if haskey(island.order.key_indices, model)
             island_dict = get_vars_dict(sol.solutions[i], model, var)

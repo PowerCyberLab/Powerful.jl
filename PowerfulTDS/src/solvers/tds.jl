@@ -674,15 +674,14 @@ function Base.show(io::IO, prob::TDSProblem{T, F, B}) where {T, F, B}
         formulation_name = nameof(F)
         am = prob.address_manager
 
-        # Count variables from next_idx
-        n_state = get(am.next_idx, StateVar(), 1) - 1
-        n_algebs = get(am.next_idx, AlgebVar(), 1) - 1
+        # Count variables from AddressManager
+        n_state = max_address_in_space(am, StateVar())
+        n_algebs = max_address_in_space(am, AlgebVar())
 
         # Count dynamic models (those with state variables)
         dyn_models = Symbol[]
         for (model_name, assignment) in am.assignments
-            state_vars = get(assignment.by_type, StateVar(), Dict{Symbol, Vector{UInt}}())
-            if !isempty(state_vars)
+            if haskey(assignment.by_type, StateVar()) && !isempty(assignment.by_type[StateVar()])
                 push!(dyn_models, model_name)
             end
         end

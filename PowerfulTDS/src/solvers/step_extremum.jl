@@ -59,8 +59,6 @@
 # turn costs a comparison of its sampled values.
 # ============================================================================
 
-using ForwardDiff: ForwardDiff
-
 # ----------------------------------------------------------------------------
 # The extremum of a function along a step (shared with the grazing of guards)
 # ----------------------------------------------------------------------------

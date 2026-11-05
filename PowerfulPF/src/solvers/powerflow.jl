@@ -39,9 +39,6 @@ using LinearAlgebra
 using KLU
 using SparseArrays
 using DifferentiationInterface
-using DifferentiationInterface: AutoSparse
-using ADTypes: AutoForwardDiff
-using SparseMatrixColorings: GreedyColoringAlgorithm
 import PowerfulCore: compute_observations
 using PowerfulCore: @vprint, build_status_dict, set_hold!
 

@@ -29,8 +29,6 @@
 # value into a Float64 buffer).
 # ============================================================================
 
-using ForwardDiff: ForwardDiff
-
 """
     RoundingBound(v, e)
 

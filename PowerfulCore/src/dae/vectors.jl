@@ -120,12 +120,5 @@ n = max_address_in_space(am, StateVar())   # Size of differential space
 ```
 """
 function max_address_in_space(am::AddressManager, addr_type)
-    max_addr = 0
-    for (key, addrs) in am.addresses
-        key_type, _, _ = key
-        if key_type == addr_type && !isempty(addrs)
-            max_addr = max(max_addr, maximum(addrs))
-        end
-    end
-    return max_addr
+    return Int(get(am.next_idx, addr_type, 1) - 1)
 end

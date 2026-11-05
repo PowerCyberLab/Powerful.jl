@@ -26,11 +26,8 @@ using StructArrays: StructArrays, StructArray
 
 # External dependencies
 using InlineStrings: InlineStrings, String3, String15
-using ForwardDiff: ForwardDiff
 using DifferentiationInterface: DifferentiationInterface
-using SparseMatrixColorings: SparseMatrixColorings
-using KLU: KLU, klu, klu!
-using ADTypes: ADTypes
+using KLU: KLU, klu
 using OrderedCollections: OrderedCollections, OrderedDict
 using PrecompileTools: PrecompileTools, @compile_workload, @setup_workload
 using PrettyTables: PrettyTables
@@ -48,9 +45,7 @@ using PowerfulCore: is_gpu_array_type, gpu_linear_solver  # GPU hooks (a GPU pac
 
 # Import traits to extend
 import PowerfulCore: model_metadata, calc_residuals!, compute_observations, get_terminals
-import PowerfulCore: supports_format, format_records, parse_model, get_key_name, to_callback, set_algebraic_guess!
-import PowerfulCore: get_replacement_map, get_data_inheritance
-import PowerfulCore: parse_dynamic_model, get_dyr_model_name
+import PowerfulCore: supports_format, format_records, parse_model, get_key_name, set_algebraic_guess!
 import PowerfulCore: base_quantity_role, supports_formulation
 import PowerfulCore: check_parameter_domains
 

@@ -162,14 +162,8 @@ function get_vars_dict(prob::ACPowerFlowProblem, y::AbstractVector, model::Symbo
     sys = prob.sys
     isnothing(sys.order) && error("SystemModel has no IndexOrder")
 
-    result = Dict()
     addrs = variable_addresses(prob.address_manager, model, var)
-
-    for (ext_key, internal_idx) in sys.order.key_indices[model]
-        result[ext_key] = y[addrs[internal_idx]]
-    end
-
-    return result
+    return Dict(ext_key => y[addrs[internal_idx]] for (ext_key, internal_idx) in sys.order.key_indices[model])
 end
 
 # String convenience methods for Python interop (strings don't auto-convert to

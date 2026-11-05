@@ -538,28 +538,26 @@ Return the address type (`StateVar()` or `AlgebVar()`) for a variable.
 Example: `get_var_address_type(am, :GENROU, :delta)` → `StateVar()`.
 Throws if variable not found.
 """
+_has_var_address(by_type, addr_type, var_name::Symbol) =
+    haskey(by_type, addr_type) && haskey(by_type[addr_type], var_name)
+
 function get_var_address_type(
     am::AddressManager,
     model_name::Symbol,
     var_name::Symbol
 )::AddressableType
-    # Check assigned addresses (internal variables)
-    if haskey(am.assignments, model_name)
-        by_type = am.assignments[model_name].by_type
-        haskey(get(by_type, StateVar(), Dict{Symbol,Vector{UInt}}()), var_name) && return StateVar()
-        haskey(get(by_type, AlgebVar(), Dict{Symbol,Vector{UInt}}()), var_name) && return AlgebVar()
-    end
-    # Check retrieved addresses (external variables)
-    if haskey(am.retrieved, model_name)
-        by_type = am.retrieved[model_name].by_type
-        haskey(get(by_type, StateVar(), Dict{Symbol,Vector{UInt}}()), var_name) && return StateVar()
-        haskey(get(by_type, AlgebVar(), Dict{Symbol,Vector{UInt}}()), var_name) && return AlgebVar()
+    for table in (am.assignments, am.retrieved)
+        haskey(table, model_name) || continue
+        by_type = table[model_name].by_type
+        _has_var_address(by_type, StateVar(), var_name) && return StateVar()
+        _has_var_address(by_type, AlgebVar(), var_name) && return AlgebVar()
     end
     available = Symbol[]
     for table in (am.assignments, am.retrieved)
         haskey(table, model_name) || continue
+        by_type = table[model_name].by_type
         for addr_type in (StateVar(), AlgebVar())
-            append!(available, keys(get(table[model_name].by_type, addr_type, Dict{Symbol,Vector{UInt}}())))
+            haskey(by_type, addr_type) && append!(available, keys(by_type[addr_type]))
         end
     end
     error("Variable '$var_name' not found for model $model_name. Variables: $(join(sort!(unique!(available)), ", "))")
@@ -608,9 +606,7 @@ function remap_addresses!(am::AddressManager, perm::Vector{Int})
     end
 
     # A permutation keeps the size of the algebraic space, so next_idx is unchanged.
-    # Invalidate reverse map since addresses have changed
-    # User must call build_reverse_map! again if needed
-    Base.setfield!(am, :reverse_map, nothing)
+    build_reverse_map!(am)
 
     return nothing
 end

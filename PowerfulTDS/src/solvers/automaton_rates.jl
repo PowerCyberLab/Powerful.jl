@@ -22,7 +22,6 @@
 # (`SingularRatesError`) rather than let a decision read garbage.
 # ============================================================================
 
-using ForwardDiff: ForwardDiff
 using KLU: KLU, klu
 using LinearAlgebra: SingularException, svd
 using PowerfulCore: get_typed_workspace!

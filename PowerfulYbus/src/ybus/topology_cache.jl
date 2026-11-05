@@ -141,26 +141,18 @@ struct TopologyCache{T, SYS}
 end
 
 """
-    TopologyCache(sys; events=nothing)
+    TopologyCache(sys)
 
-Build a topology cache holding the pre-fault topology, plus the `topology_key` of
-each of `events` if given.
+Build a topology cache holding the pre-fault topology.
 
 # Arguments
 - `sys`: SystemModel containing network data
-- `events`: Optional switching schedule defining topologies to pre-compute
 """
-function TopologyCache(sys; events=nothing)
+function TopologyCache(sys)
     base = build_full_ybus(sys)
     prefault_key = TopologyKey(:prefault)
     topologies = Dict{TopologyKey, typeof(base)}(prefault_key => apply_topology(base, sys, prefault_key))
-    cache = TopologyCache(base, topologies, Ref(prefault_key), sys)
-    if !isnothing(events)
-        for event in events
-            add_topology!(cache, event.topology_key)
-        end
-    end
-    return cache
+    return TopologyCache(base, topologies, Ref(prefault_key), sys)
 end
 
 """

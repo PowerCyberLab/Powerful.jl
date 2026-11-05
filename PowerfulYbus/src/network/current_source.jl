@@ -117,13 +117,12 @@ voltage angle, not a stale value from the previous timestep.
 function gather_source_currents!(buf::CurrentSourceBuffer{T},
                                  sys_ws, dae) where T
     # Extract vectors (supports both full DAE and algebraic-only)
-    x = hasfield(typeof(dae), :x) ? dae.x : T[]
+    x = hasproperty(dae, :x) ? dae.x : T[]
     y = dae.y
 
     for (model_name, idx_range) in buf.src_model_map
-        # Get workspace, metadata, and model from sys_ws
+        # Get workspace and model from sys_ws
         ws = sys_ws.workspaces_by_name[model_name]
-        meta = sys_ws.metadata_by_name[model_name]
         model = sys_ws.models_by_name[model_name]
         external = sys_ws.externals_by_name[model_name]
 

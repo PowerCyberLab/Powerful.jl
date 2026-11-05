@@ -262,13 +262,6 @@ function solve_accc_parallel(
                 results[i] = _solve_contingency!(worker_ws, contingencies[i], ctx; abstol, maxiters, damping)
             catch e
                 errors[i] = e
-                results[i] = (
-                    name = contingencies[i].name,
-                    converged = false,
-                    iterations = 0,
-                    residual_norm = Inf,
-                    y = Float64[],
-                )
             end
         end
     end

@@ -43,7 +43,6 @@ using PowerfulTDS
 using PowerfulTDS: fault_admittance, pf_snapshot_positions, working_copy, init_tds_buffers!
 # The automaton runtime of the phasor simulation, run on the Y-bus DAE (`dae_residuals!`)
 using PowerfulTDS: AutomatonRuntime, automaton_runtime, start!, build_automaton_callback, settle_instant!,
-    rows_without_their_variable,
     erased, HostReinit, FixedStepAutomata, step_automata!, settle_fixed!, retrace_automata!, _event_models,
     FixedInstant, StartResolve
 import PowerfulTDS: dae_residuals!, dual_workspace, algebraic_equations_changed!, rate_dual_type, _start_state_rates,

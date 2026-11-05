@@ -13,7 +13,6 @@ setpoints that move with the parameters, which are written as Dual values into t
 workspaces that evaluate the residuals.
 """
 
-using ForwardDiff: ForwardDiff
 using StructArrays: StructArray, components
 using PowerfulCore: ParameterSlice, get_float_ws
 

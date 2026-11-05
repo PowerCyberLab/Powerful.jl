@@ -24,14 +24,12 @@ Buffer for storing gathered internal voltages from generators.
 - `gen_bus_indices::Vector{Int}`: Internal bus indices for each generator
 - `gen_model_map::Vector{Tuple{Symbol,Int}}`: Per-instance mapping (model_name, model_idx) for each E_internal index
 - `Z_gen::Vector{Complex{T}}`: Stator impedances (r_a + j*xd_p) for each generator
-- `gathered_models::Set{Symbol}`: Pre-allocated set for tracking gathered models (reused each call)
 """
 struct InternalVoltageBuffer{T}
     E_internal::Vector{Complex{T}}
     gen_bus_indices::Vector{Int}
     gen_model_map::Vector{Tuple{Symbol,Int}}
     Z_gen::Vector{Complex{T}}
-    gathered_models::Set{Symbol}
 end
 
 """
@@ -44,8 +42,7 @@ function InternalVoltageBuffer(::Type{T}, n_gen::Int) where T
         zeros(Complex{T}, n_gen),
         zeros(Int, n_gen),
         Tuple{Symbol,Int}[],
-        zeros(Complex{T}, n_gen),
-        Set{Symbol}()
+        zeros(Complex{T}, n_gen)
     )
 end
 
@@ -132,7 +129,7 @@ in-service instances, in network generator order).
 function gather_internal_voltages!(buf::InternalVoltageBuffer{T},
                                    sys_ws, dae) where T
     # Extract vectors (supports both full DAE and algebraic-only)
-    x = hasfield(typeof(dae), :x) ? dae.x : T[]
+    x = hasproperty(dae, :x) ? dae.x : T[]
     y = dae.y
     for gather! in sys_ws.internal_voltage_gatherers
         gather!(buf.E_internal, x, y)
@@ -227,57 +224,6 @@ function get_internal_voltage(ws, model::StructArray{<:SubtransientMachine}, idx
     return E_internal
 end
 
-# ============================================================================
-# Terminal Voltage Gathering (from TDS algebraic variables)
-# ============================================================================
-
-"""
-    gather_terminal_voltages!(V_terminal, E_buf, sys_ws, dae)
-
-Gather generator terminal voltages from TDS algebraic variables (v, theta).
-
-This is called BEFORE the network solve to get V_terminal from the current
-TDS state. The V_terminal values are used in the NC load solver and to compute
-E_internal using the Y-bus network equations.
-
-# Algorithm
-For each generator model, gather (v, theta) from algebraic variables and compute:
-    V_terminal = v * cis(theta)
-
-# Arguments
-- `V_terminal`: Output vector for terminal voltages (modified in place)
-- `E_buf`: InternalVoltageBuffer with generator model map
-- `sys_ws`: YBusSystemBuffers with workspaces
-- `dae`: DAE with x, y vectors
-"""
-function gather_terminal_voltages!(V_terminal::AbstractVector{Complex{T}},
-                                   E_buf::InternalVoltageBuffer{T},
-                                   sys_ws, dae) where T
-    x = hasfield(typeof(dae), :x) ? dae.x : T[]
-    y = dae.y
-
-    # Track which models have been gathered (call gather_variables! once per model)
-    # Reuse pre-allocated Set to avoid allocation
-    empty!(E_buf.gathered_models)
-
-    for (E_idx, (model_name, model_idx)) in enumerate(E_buf.gen_model_map)
-        # Gather variables once per model type
-        if !(model_name in E_buf.gathered_models)
-            ws = sys_ws.workspaces_by_name[model_name]
-            meta = sys_ws.metadata_by_name[model_name]
-            gather_variables!(ws, x, y)
-            push!(E_buf.gathered_models, model_name)
-        end
-
-        # Get terminal voltage for this generator
-        ws = sys_ws.workspaces_by_name[model_name]
-        v = ws.var_vals.v[model_idx]
-        theta = ws.var_vals.theta[model_idx]
-        V_terminal[E_idx] = v * cis(theta)
-    end
-end
-
 export InternalVoltageBuffer, setup_internal_voltage_buffer!
 export gather_internal_voltages!, gather_internal_voltages_from_pf!
-export gather_terminal_voltages!
 export get_machine_impedance, populate_generator_impedances!

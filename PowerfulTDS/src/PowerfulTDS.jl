@@ -29,9 +29,13 @@ using SparseArrays
 using LinearAlgebra
 
 # External dependencies
+using ForwardDiff: ForwardDiff
 using InlineStrings
 using OrderedCollections
 using PowerDynData
+
+_primal(x::Real) = x
+_primal(d::ForwardDiff.Dual) = ForwardDiff.value(d)
 
 # Import CommonSolve to extend solve
 import CommonSolve: solve
@@ -50,7 +54,7 @@ import PowerfulCore: to_callback, register_solver_config!, create_adcache
 import PowerfulCore: get_replacement_map, get_data_inheritance
 import PowerfulCore: get_controlled_group, parse_dynamic_model, get_dyr_model_name
 import PowerfulCore: requires_initialization, find_control_terminal, check_parameter_domains
-using PowerfulCore: is_zip_load, declares_zip_load, declares_requires_initialization, declares_check_parameter_domains
+using PowerfulCore: is_zip_load, declares_zip_load, declares_requires_initialization
 import PowerfulCore: base_quantity_role, supports_formulation, supports_format
 
 # Initialize model registration (must be before model includes)

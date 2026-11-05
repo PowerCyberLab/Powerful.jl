@@ -18,6 +18,9 @@ CRITICAL: Never compute B^(-1) explicitly. Use sparse factorization and solves.
 
 using PowerfulPF: get_slack_bus
 
+# Map a non-slack bus internal index `bus_idx` to its 1-based position in `non_slack`
+_reduced_bus_idx(bus_idx::Int, slack_idx::Int) = bus_idx < slack_idx ? bus_idx : bus_idx - 1
+
 # Scatter a slack-reduced vector into full bus coordinates (slack entry = 0)
 function _expand_reduced!(full::AbstractVector, reduced::AbstractVector, non_slack::Vector{Int})
     fill!(full, zero(eltype(full)))
@@ -121,7 +124,7 @@ function compute_ptdf(sys::SystemModel; slack_bus::Union{Int, Nothing}=nothing)
         end
 
         # Map k to reduced index
-        k_reduced = k < slack_idx ? k : k - 1
+        k_reduced = _reduced_bus_idx(k, slack_idx)
 
         # Set up unit injection at bus k
         fill!(e_k, 0.0)
@@ -197,13 +200,7 @@ function LazyPTDF(sys::SystemModel; slack_bus::Union{Int, Nothing}=nothing, max_
 
     (; A, branch_indices, b, from_indices, to_indices, non_slack, F) = dc_network(sys, slack_idx)
 
-    return LazyPTDF(
-        F, A, b, slack_idx, non_slack, branch_indices,
-        from_indices, to_indices,
-        Dict{Int, Vector{Float64}}(),
-        Dict{Int, Vector{Float64}}(),
-        max_cache_size
-    )
+    return LazyPTDF(F, A, b, branch_indices, from_indices, to_indices, slack_idx, non_slack; max_cache_size)
 end
 
 """
@@ -257,14 +254,8 @@ function get_ptdf_row(lptdf::LazyPTDF{T}, branch_idx::Int) where T
     # Build RHS: b[l] * (e_from - e_to) for reduced system
     rhs = zeros(T, length(lptdf.non_slack))
     bl = lptdf.b[branch_idx]
-
-    for (i, orig_idx) in enumerate(lptdf.non_slack)
-        if orig_idx == from_idx
-            rhs[i] = bl
-        elseif orig_idx == to_idx
-            rhs[i] = -bl
-        end
-    end
+    from_idx != lptdf.slack_bus && (rhs[_reduced_bus_idx(from_idx, lptdf.slack_bus)] = bl)
+    to_idx != lptdf.slack_bus && (rhs[_reduced_bus_idx(to_idx, lptdf.slack_bus)] = -bl)
 
     # Solve B_reduced * x = rhs; slack column is zero
     _expand_reduced!(row, lptdf.F \ rhs, lptdf.non_slack)
@@ -290,7 +281,7 @@ function get_ptdf_column(lptdf::LazyPTDF{T}, bus_idx::Int) where T
         return lptdf.col_cache[bus_idx]
     end
 
-    L = size(lptdf.A, 1)
+    L, N = size(lptdf.A)
     col = zeros(T, L)
 
     # Slack bus: all sensitivities are zero
@@ -299,15 +290,13 @@ function get_ptdf_column(lptdf::LazyPTDF{T}, bus_idx::Int) where T
     end
 
     # Solve B * theta = e_k
-    bus_reduced_idx = findfirst(==(bus_idx), lptdf.non_slack)
-    if isnothing(bus_reduced_idx)
-        error("Bus $bus_idx not found in non-slack buses")
-    end
+    1 <= bus_idx <= N || error("Bus $bus_idx not found in non-slack buses")
+    bus_reduced_idx = _reduced_bus_idx(bus_idx, lptdf.slack_bus)
 
     e_k = zeros(T, length(lptdf.non_slack))
     e_k[bus_reduced_idx] = one(T)
 
-    theta_full = _expand_reduced!(zeros(T, size(lptdf.A, 2)), lptdf.F \ e_k, lptdf.non_slack)
+    theta_full = _expand_reduced!(zeros(T, N), lptdf.F \ e_k, lptdf.non_slack)
 
     # Compute column: PTDF[l, k] = b[l] * (theta[from] - theta[to])
     _dc_branch_flows!(col, lptdf.b, lptdf.from_indices, lptdf.to_indices, theta_full)
@@ -340,7 +329,7 @@ function get_ptdf_element(lptdf::LazyPTDF{T}, branch_idx::Int, bus_idx::Int) whe
     end
 
     # Solve for theta at bus_idx only
-    bus_reduced_idx = findfirst(==(bus_idx), lptdf.non_slack)
+    bus_reduced_idx = _reduced_bus_idx(bus_idx, lptdf.slack_bus)
     e_k = zeros(T, length(lptdf.non_slack))
     e_k[bus_reduced_idx] = one(T)
 
@@ -350,19 +339,8 @@ function get_ptdf_element(lptdf::LazyPTDF{T}, branch_idx::Int, bus_idx::Int) whe
     from_idx = lptdf.from_indices[branch_idx]
     to_idx = lptdf.to_indices[branch_idx]
 
-    theta_from = if from_idx == lptdf.slack_bus
-        zero(T)
-    else
-        from_reduced = findfirst(==(from_idx), lptdf.non_slack)
-        theta_reduced[from_reduced]
-    end
-
-    theta_to = if to_idx == lptdf.slack_bus
-        zero(T)
-    else
-        to_reduced = findfirst(==(to_idx), lptdf.non_slack)
-        theta_reduced[to_reduced]
-    end
+    theta_from = from_idx == lptdf.slack_bus ? zero(T) : theta_reduced[_reduced_bus_idx(from_idx, lptdf.slack_bus)]
+    theta_to = to_idx == lptdf.slack_bus ? zero(T) : theta_reduced[_reduced_bus_idx(to_idx, lptdf.slack_bus)]
 
     return lptdf.b[branch_idx] * (theta_from - theta_to)
 end

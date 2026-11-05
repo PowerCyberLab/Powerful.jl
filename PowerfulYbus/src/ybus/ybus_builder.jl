@@ -72,13 +72,12 @@ function generators_by_bus(sys)
 end
 
 """
-    build_full_ybus(sys::SystemModel{T}; topology_key=nothing) where T
+    build_full_ybus(sys::SystemModel{T}) where T
 
 Build the full n×n admittance matrix from system models.
 
 # Arguments
 - `sys`: SystemModel containing all network elements
-- `topology_key`: Optional key specifying which topology (for fault/line-out scenarios)
 
 # Returns
 `FullYMatrix{T}` containing the admittance matrix and the generator buses.
@@ -101,7 +100,7 @@ split as shunts `jb/2` at each end contributes the standard two-port stamp:
 asymmetrically). Generator and constant-impedance load admittances are added to their
 own bus's diagonal only.
 """
-function build_full_ybus(sys; topology_key=nothing)
+function build_full_ybus(sys)
     T = Float64  # Default precision
     check_stamped_network_elements(sys)
 

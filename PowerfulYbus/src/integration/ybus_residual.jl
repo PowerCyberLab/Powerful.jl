@@ -305,10 +305,7 @@ function consistent_algebraics!(u::Vector{Float64}, r::YBusResidual, t)
             return false
         end
     end
-    am = r.prob.base_prob.address_manager
-    isnothing(am.reverse_map) && build_reverse_map!(am)
-    worst = sortperm(abs.(g); rev = true)[1:min(5, length(g))]
-    rows = join(("$(lookup_address(am, AlgebRes(), UInt(k))): $(abs(g[k]))" for k in worst), "; ")
+    rows = _worst_rows(r.prob, g)
     @warn "Y-bus algebraic variables not consistent at t = $t after $(r.maxiters) passes: " *
           "max algebraic residual $residual against $(r.abstol), worst rows (model, variable, instance) $rows; " *
           "stopping the simulation"

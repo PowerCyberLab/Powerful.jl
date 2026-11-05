@@ -260,7 +260,7 @@ function similar_network_cache(cache::NetworkCache, ::Type{T}) where T
     E, cs = cache.E_buf, cache.cs_buf
     n_bus, n_gen = length(cache.V_bus), length(cache.I_gen)
     E_buf = InternalVoltageBuffer{T}(zeros(Complex{T}, n_gen), E.gen_bus_indices, E.gen_model_map,
-                                     Complex{T}.(E.Z_gen), Set{Symbol}())
+                                     Complex{T}.(E.Z_gen))
     cs_buf = CurrentSourceBuffer{T}(zeros(T, length(cs.Ip)), zeros(T, length(cs.Iq)),
                                     cs.src_bus, cs.src_model_map)
     return NetworkCache(cache.topology_cache, E_buf, cs_buf, cache.loads,

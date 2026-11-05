@@ -67,7 +67,6 @@ function apply_addressing_strategy!(am::AddressManager, sys::SystemModel, formul
 
     remap_addresses!(am, perm)
     am.applied_permutation = perm
-    build_reverse_map!(am)  # addresses changed
     return am
 end
 
@@ -222,10 +221,8 @@ function Base.show(io::IO, prob::ACPowerFlowProblem{F, S, B}) where {F, S, B}
         if is_multi
             println(io, "  Islands: $(length(prob.sys))")
         else
-            n_alg_vars = haskey(prob.address_manager.next_idx, AlgebVar()) ?
-                         prob.address_manager.next_idx[AlgebVar()] - 1 : 0
-            n_diff_vars = haskey(prob.address_manager.next_idx, StateVar()) ?
-                         prob.address_manager.next_idx[StateVar()] - 1 : 0
+            n_alg_vars = max_address_in_space(prob.address_manager, AlgebVar())
+            n_diff_vars = max_address_in_space(prob.address_manager, StateVar())
 
             println(io, "  Variables: $n_alg_vars algebraic, $n_diff_vars differential")
         end

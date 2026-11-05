@@ -229,7 +229,6 @@ end
 # The model, the instance and the variable at algebraic variable address `a`
 function _variable_at(prob, a::Integer)
     am = prob.base_prob.address_manager
-    isnothing(am.reverse_map) && build_reverse_map!(am)
     return lookup_address(am, AlgebVar(), UInt(a))
 end
 
@@ -268,7 +267,6 @@ end
 # key, variable the row is paired with and its value)
 function _worst_rows(prob, g::AbstractVector, n::Int = 5)
     am = prob.base_prob.address_manager
-    isnothing(am.reverse_map) && build_reverse_map!(am)
     worst = sortperm(abs.(g); rev = true)[1:min(n, length(g))]
     lines = String[]
     for k in worst

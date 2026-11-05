@@ -27,8 +27,12 @@ function print_accc_report(result; vmin::Float64=0.95, vmax::Float64=1.05, ratin
     am = base_sol.prob.address_manager
     sbase = sys.parsed_data.system_base
 
-    # Get addresses for voltage extraction
+    # Get addresses for voltage and branch flow extraction
     v_addrs = get_addresses(am, :Bus, :v)
+    theta_i_addrs = get_addresses(am, :Branch, :theta_i)
+    theta_j_addrs = get_addresses(am, :Branch, :theta_j)
+    vi_addrs = get_addresses(am, :Branch, :v_i)
+    vj_addrs = get_addresses(am, :Branch, :v_j)
     buses = sys.models.Bus
     branches = sys.models.Branch
     n_bus = length(buses)
@@ -100,11 +104,6 @@ function print_accc_report(result; vmin::Float64=0.95, vmax::Float64=1.05, ratin
         end
 
         # Compute branch flows for this contingency using reusable physics kernel
-        theta_i_addrs = get_addresses(am, :Branch, :theta_i)
-        theta_j_addrs = get_addresses(am, :Branch, :theta_j)
-        vi_addrs = get_addresses(am, :Branch, :v_i)
-        vj_addrs = get_addresses(am, :Branch, :v_j)
-
         theta_i = r.y[theta_i_addrs]
         theta_j = r.y[theta_j_addrs]
         v_i = r.y[vi_addrs]

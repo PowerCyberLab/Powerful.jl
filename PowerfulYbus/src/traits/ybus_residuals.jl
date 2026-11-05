@@ -38,7 +38,7 @@ function calc_ybus_residuals!(
     return nothing
 end
 
-export calc_ybus_residuals!
+export calc_ybus_residuals!, gather_terminal_voltages!
 
 """
     gather_terminal_voltages!(ws, network_sol, model_to_gen_idx, active_mask)

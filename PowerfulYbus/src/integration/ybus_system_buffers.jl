@@ -419,9 +419,9 @@ function evaluate_ybus_residuals!(
     t::Real=0.0
 ) where T
     # Extract vectors (supports both full DAE and algebraic-only)
-    f = hasfield(typeof(dae), :f) ? dae.f : T[]
+    f = hasproperty(dae, :f) ? dae.f : T[]
     g = dae.g
-    x = hasfield(typeof(dae), :x) ? dae.x : T[]
+    x = hasproperty(dae, :x) ? dae.x : T[]
     y = dae.y
 
     # Zero residuals
