@@ -20,7 +20,7 @@ StructArrays = "09ab397b-f2b6-538f-b94a-2f83cf4a842a"
 PowerFlowData = {url = "https://github.com/cuihantao/PowerFlowData.jl", rev = "3086c2c75530c595c191f37b8e1c29e4f0711520"}
 Powerful = {path = "../Powerful"}
 PowerfulCA = {path = "../PowerfulCA"}
-PowerfulCases = {url = "https://github.com/cuihantao/PowerfulCases", rev = "96dcc6dfce205e42b4473bc3f8ef407ab09b3ce8"}
+PowerfulCases = {url = "https://github.com/cuihantao/PowerfulCases", rev = "072c17c8f237ee7331f29fafb3559967fecb7ac2"}
 PowerfulCore = {path = "../PowerfulCore"}
 PowerfulPF = {path = "../PowerfulPF"}
 PowerfulTDS = {path = "../PowerfulTDS"}

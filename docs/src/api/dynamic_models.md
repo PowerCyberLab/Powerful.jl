@@ -22,7 +22,7 @@ Modules = [PowerfulTDS]
 Order = [:module, :constant, :type, :function, :macro]
 Pages = ["models/docstrings.jl"]
 Private = false
-Filter = t -> t === SEXS
+Filter = t -> t in (SEXS, IEEEX1)
 ```
 
 ## Governors

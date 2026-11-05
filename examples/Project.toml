@@ -17,7 +17,7 @@ SparseArrays = "2f01184e-e22b-5df5-ae63-d93ebab69eaf"
 [sources]
 Powerful = {path = "../Powerful"}
 PowerfulCA = {path = "../PowerfulCA"}
-PowerfulCases = {url = "https://github.com/cuihantao/PowerfulCases", rev = "96dcc6dfce205e42b4473bc3f8ef407ab09b3ce8"}
+PowerfulCases = {url = "https://github.com/cuihantao/PowerfulCases", rev = "072c17c8f237ee7331f29fafb3559967fecb7ac2"}
 PowerfulCore = {path = "../PowerfulCore"}
 PowerfulPF = {path = "../PowerfulPF"}
 PowerfulTDS = {path = "../PowerfulTDS"}
