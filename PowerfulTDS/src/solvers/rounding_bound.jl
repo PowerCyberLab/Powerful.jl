@@ -4,7 +4,7 @@
 #
 # A value of an automaton is computed in floating point from terms its kernel adds and subtracts (an atom `a - b`, a
 # guard `x - limit`, a gain times a difference), and where those terms cancel, the value is the rounding of them: a
-# start computed onto a surface (`Qmax` set from a sum that `Qinv` reaches by another, `c - x` with x within an ulp of
+# start computed onto a surface (`Qmax` set from a sum that `control_Q_f_y` (REGFM_A1's filtered Q) reaches by another, `c - x` with x within an ulp of
 # c) is off zero by an ulp of the largest term, with the sign of that rounding. `RoundingBound` carries, through the
 # model's own `calc_automaton_values!`, a first-order bound on that rounding, the running error bound of Wilkinson
 # (Higham, *Accuracy and Stability of Numerical Algorithms*, 2nd ed., §3.3): each number `v` is carried with `e` such

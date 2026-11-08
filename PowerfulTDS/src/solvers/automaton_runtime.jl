@@ -1902,7 +1902,7 @@ and anchors of the values, the crossings) and the switches counted for Zeno. `ju
 A value zero at the start to its rounding (exactly, or by a few ulps of the terms it subtracts,
 `within_rounding`) is on a surface of its automata (an anti-windup state at its limit, the
 argument of a piece at its breakpoint: a start on a kink, e.g. where the start moved a limit to
-the state, `Qmax = Qinv`, or computed one onto it), and the start is no crossing of it: the
+the state, `Qmax = control_Q_f_y`, or computed one onto it), and the start is no crossing of it: the
 integration's start (`host`, the DAE it integrates) decides it before the initial clauses
 (`_start_on_surfaces!`), as a transition decides a value it holds at zero by continuity
 (`_held_at_zero!`). From an equilibrium every rate is zero and it is decided as the exact zero

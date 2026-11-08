@@ -92,7 +92,9 @@ function check_parameter_domains(x::REECA1, from::AbstractString)
     (x.PFLAG in (0.0, 1.0,)) || throw(ArgumentError("REECA1 ($from): PFLAG = $(x.PFLAG) is not {0, 1}"))
     (x.PQFLAG in (0.0, 1.0,)) || throw(ArgumentError("REECA1 ($from): PQFLAG = $(x.PQFLAG) is not {0, 1}"))
     (x.Thld2 >= 0.0) || throw(ArgumentError("REECA1 ($from): Thld2 = $(x.Thld2) is not >= 0"))
-    x.VMIN <= x.VMAX || throw(ArgumentError("REECA1 ($from) does not satisfy its constraint PIQ_limits_ordered: PIQ: the lower limit of its output is at most its upper limit"))
+    x.Trv >= 0.0 || throw(ArgumentError("REECA1 ($from) does not satisfy its constraint s0.T_min: Lag admits T >= 0"))
+    x.Tp >= 0.0 || throw(ArgumentError("REECA1 ($from) does not satisfy its constraint S1.T_min: Lag admits T >= 0"))
+    x.VMIN <= x.VMAX || throw(ArgumentError("REECA1 ($from) does not satisfy its constraint PIQ.xi_limits_ordered: PIQ.xi: the lower limit of its output is at most its upper limit"))
     x.PMIN <= x.PMAX || throw(ArgumentError("REECA1 ($from) does not satisfy its constraint s5_y_limits_ordered: s5_y: the lower limit of s5_y is at most its upper limit"))
     ifelse(x.Vq1 < x.Vq2, ifelse(x.Vq2 < x.Vq3, x.Vq3 < x.Vq4, false), false) || throw(ArgumentError("REECA1 ($from) does not satisfy its constraint vdl1_increasing: VDL1: the voltages Vq1 < Vq2 < Vq3 < Vq4 increase"))
     ifelse(x.Vp1 < x.Vp2, ifelse(x.Vp2 < x.Vp3, x.Vp3 < x.Vp4, false), false) || throw(ArgumentError("REECA1 ($from) does not satisfy its constraint vdl2_increasing: VDL2: the voltages Vp1 < Vp2 < Vp3 < Vp4 increase"))
@@ -103,11 +105,11 @@ function check_parameter_domains(x::REECA1, from::AbstractString)
     x.QMin < x.QMax || @warn "REECA1 ($from) does not satisfy its constraint reactive_power_limits: the reactive power limits: QMin is below QMax ([E18] Appendix F, qmax > qmin)"
     x.dPmin < x.dPmax || @warn "REECA1 ($from) does not satisfy its constraint ramp_limits: the ramp rates: dPmin is below dPmax ([E18] Appendix F, dpmax > dpmin)"
     x.Imax > 0 || throw(ArgumentError("REECA1 ($from) does not satisfy its constraint current_limit: the converter current limit Imax is positive ([E18] Appendix F, imax > 0)"))
-    ifelse(x.Kqi >= 0, ifelse(x.Kqp >= 0, ifelse(x.Kqv >= 0, ifelse(x.Kvi >= 0, x.Kvp >= 0, false), false), false), false) || @warn "REECA1 ($from) does not satisfy its constraint gains: the gains Kqv, Kqp, Kqi, Kvp and Kvi are not negative ([E18] Appendix F)"
+    ifelse(x.Kqv >= 0, ifelse(x.Kqp >= 0, ifelse(x.Kqi >= 0, ifelse(x.Kvp >= 0, x.Kvi >= 0, false), false), false), false) || @warn "REECA1 ($from) does not satisfy its constraint gains: the gains Kqv, Kqp, Kqi, Kvp and Kvi are not negative ([E18] Appendix F)"
     (x.Tpord != 0) || throw(ArgumentError("REECA1 ($from): Tpord is zero, and the model divides by it (states.s5_y.derivative)"))
     (x.Tiq != 0) || throw(ArgumentError("REECA1 ($from): Tiq is zero, and the model divides by it (states.s4_y.derivative)"))
-    (x.Trv != 0) || throw(ArgumentError("REECA1 ($from): Trv is zero, and the model divides by it (graph[0].s0)"))
-    (x.Tp != 0) || throw(ArgumentError("REECA1 ($from): Tp is zero, and the model divides by it (graph[1].S1)"))
+    (x.Trv != 0) || throw(ArgumentError("REECA1 ($from): Trv is zero, and the model divides by it (parts.s0.states.y.derivative)"))
+    (x.Tp != 0) || throw(ArgumentError("REECA1 ($from): Tp is zero, and the model divides by it (parts.S1.states.y.derivative)"))
     return x
 end
 
@@ -132,10 +134,14 @@ function group_var_mapping(::Type{<:REECA1})
     Dict(
         :Ipcmd_out => :Ipcmd_out, # Same name
         :Iqcmd_out => :Iqcmd_out, # Same name
+        :PIQ_xi => :PIQ_xi, # Same name
+        :PIV_xi => :PIV_xi, # Same name
         :Pref => :Pref, # Same name
         :Qref => :Qref, # Same name
+        :S1_y => :S1_y, # Same name
         :pfaref => :pfaref, # Same name
         :pfilt_y => :pfilt_y, # Same name
+        :s0_y => :s0_y, # Same name
         :s4_y => :s4_y, # Same name
         :s5_y => :s5_y, # Same name
     )
@@ -191,9 +197,9 @@ function model_metadata(::Type{REECA1})
             ModelVar(:S1_y, StateVar();
                 description="Electrical power filter (s1)"),
             ModelVar(:PIV_xi, StateVar();
-                description="Voltage PI controller (s3), non-windup within [-Iqmax, Iqmax], frozen in a dip"),
+                description="Voltage PI controller (s3), non-windup within [-Iqmax, Iqmax], frozen in a dip: Integral state"),
             ModelVar(:PIQ_xi, StateVar();
-                description="Reactive power PI controller (s2), non-windup within [Vmin, Vmax], frozen in a dip"),
+                description="Reactive power PI controller (s2), non-windup within [Vmin, Vmax], frozen in a dip: Integral state"),
             ModelVar(:Pref, AlgebVar();
                 description="Active power reference (receives a plant controller's contribution)"),
             ModelVar(:pfaref, AlgebVar();
@@ -233,9 +239,9 @@ function model_metadata(::Type{REECA1})
         ModelResidual(:dS1_y, StateRes(), PrivateRes();
             description="Electrical power filter (s1)"),
         ModelResidual(:dPIV_xi, StateRes(), PrivateRes();
-            description="Voltage PI controller (s3), non-windup within [-Iqmax, Iqmax], frozen in a dip"),
+            description="Voltage PI controller (s3), non-windup within [-Iqmax, Iqmax], frozen in a dip: Integral state"),
         ModelResidual(:dPIQ_xi, StateRes(), PrivateRes();
-            description="Reactive power PI controller (s2), non-windup within [Vmin, Vmax], frozen in a dip"),
+            description="Reactive power PI controller (s2), non-windup within [Vmin, Vmax], frozen in a dip: Integral state"),
         ModelResidual(:g_Pref, AlgebRes(), SharedRes(:add);
             description="Active power reference (receives a plant controller's contribution)"),
         ModelResidual(:g_pfaref, AlgebRes(), SharedRes(:add);
@@ -285,30 +291,30 @@ function model_metadata(::Type{REECA1})
     ],
         variable_limits = [VariableLimit(:PIV_xi, (m, x) -> -x.Iqmax, (m, x) -> x.Iqmax), VariableLimit(:PIQ_xi, :VMIN, :VMAX), VariableLimit(:s5_y, :PMIN, :PMAX), VariableLimit(:Qref, :QMin, :QMax; when = (m, x) -> ((m.VFLAG .== 1) .& (x.s0_y .>= m.Vdip) .& (x.s0_y .<= m.Vup)))],
         automata = (
-            Automaton(:PIV;
-                modes = [Mode(:free; holds = [:PIV_gate => 1.0, :PIV_side => 0.0]),
-                    Mode(:upper; holds = [:PIV_gate => 0.0, :PIV_side => 1.0]),
-                    Mode(:lower; holds = [:PIV_gate => 0.0, :PIV_side => -1.0])],
-                transitions = [Transition(:free, :upper; when = AllOf(Condition[Atom(:PIV_unlimited_minus_Iqmax, :>=), Atom(:PIV_rate, :>)])),
-                    Transition(:free, :lower; when = AllOf(Condition[Atom(:PIV_rate, :<), Atom(:PIV_value, :<=)])),
-                    Transition(:upper, :free; when = AnyOf(Condition[Atom(:PIV_rate, :<=), Atom(:PIV_unlimited_minus_Iqmax, :<)])),
-                    Transition(:lower, :free; when = AnyOf(Condition[Atom(:PIV_rate, :>=), Atom(:PIV_value, :>)]))],
-                initial = [InitialMode(:upper; when = AllOf(Condition[Atom(:PIV_unlimited_minus_Iqmax, :>=), Atom(:PIV_rate, :>)])),
-                    InitialMode(:lower; when = AllOf(Condition[Atom(:PIV_rate, :<), Atom(:PIV_value, :<=)])),
+            Automaton(:PIV_xi;
+                modes = [Mode(:free; holds = [:PIV_xi_gate => 1.0, :PIV_xi_side => 0.0]),
+                    Mode(:upper; holds = [:PIV_xi_gate => 0.0, :PIV_xi_side => 1.0]),
+                    Mode(:lower; holds = [:PIV_xi_gate => 0.0, :PIV_xi_side => -1.0])],
+                transitions = [Transition(:free, :upper; when = AllOf(Condition[Atom(:PIV_xi_unlimited_minus_Iqmax, :>=), Atom(:PIV_xi_rate, :>)])),
+                    Transition(:free, :lower; when = AllOf(Condition[Atom(:PIV_xi_value, :<=), Atom(:PIV_xi_rate, :<)])),
+                    Transition(:upper, :free; when = AnyOf(Condition[Atom(:PIV_xi_unlimited_minus_Iqmax, :<), Atom(:PIV_xi_rate, :<=)])),
+                    Transition(:lower, :free; when = AnyOf(Condition[Atom(:PIV_xi_value, :>), Atom(:PIV_xi_rate, :>=)]))],
+                initial = [InitialMode(:upper; when = AllOf(Condition[Atom(:PIV_xi_unlimited_minus_Iqmax, :>=), Atom(:PIV_xi_rate, :>)])),
+                    InitialMode(:lower; when = AllOf(Condition[Atom(:PIV_xi_value, :<=), Atom(:PIV_xi_rate, :<)])),
                     InitialMode(:free)],
-                at_rest = [:PIV_rate]),
-            Automaton(:PIQ;
-                modes = [Mode(:free; holds = [:PIQ_gate => 1.0, :PIQ_side => 0.0]),
-                    Mode(:upper; holds = [:PIQ_gate => 0.0, :PIQ_side => 1.0]),
-                    Mode(:lower; holds = [:PIQ_gate => 0.0, :PIQ_side => -1.0])],
-                transitions = [Transition(:free, :upper; when = AllOf(Condition[Atom(:PIQ_rate, :>), AnyOf(Condition[Atom(:PIQ_unlimited_minus_VMAX, :>=), Atom(:PIV_side, :>)])])),
-                    Transition(:free, :lower; when = AllOf(Condition[Atom(:PIQ_rate, :<), AnyOf(Condition[Atom(:PIQ_unlimited_minus_VMIN, :<=), Atom(:PIV_side, :<)])])),
-                    Transition(:upper, :free; when = AnyOf(Condition[Atom(:PIQ_rate, :<=), AllOf(Condition[Atom(:PIV_side, :<=), Atom(:PIQ_unlimited_minus_VMAX, :<)])])),
-                    Transition(:lower, :free; when = AnyOf(Condition[Atom(:PIQ_rate, :>=), AllOf(Condition[Atom(:PIV_side, :>=), Atom(:PIQ_unlimited_minus_VMIN, :>)])]))],
-                initial = [InitialMode(:upper; when = AllOf(Condition[Atom(:PIQ_rate, :>), AnyOf(Condition[Atom(:PIQ_unlimited_minus_VMAX, :>=), Atom(:PIV_side, :>)])])),
-                    InitialMode(:lower; when = AllOf(Condition[Atom(:PIQ_rate, :<), AnyOf(Condition[Atom(:PIQ_unlimited_minus_VMIN, :<=), Atom(:PIV_side, :<)])])),
+                at_rest = [:PIV_xi_rate]),
+            Automaton(:PIQ_xi;
+                modes = [Mode(:free; holds = [:PIQ_xi_gate => 1.0, :PIQ_xi_side => 0.0]),
+                    Mode(:upper; holds = [:PIQ_xi_gate => 0.0, :PIQ_xi_side => 1.0]),
+                    Mode(:lower; holds = [:PIQ_xi_gate => 0.0, :PIQ_xi_side => -1.0])],
+                transitions = [Transition(:free, :upper; when = AllOf(Condition[AnyOf(Condition[Atom(:PIQ_xi_unlimited_minus_VMAX, :>=), Atom(:PIV_xi_side, :>)]), Atom(:PIQ_xi_rate, :>)])),
+                    Transition(:free, :lower; when = AllOf(Condition[AnyOf(Condition[Atom(:PIQ_xi_unlimited_minus_VMIN, :<=), Atom(:PIQ_xi_value, :>)]), Atom(:PIQ_xi_rate, :<)])),
+                    Transition(:upper, :free; when = AnyOf(Condition[AllOf(Condition[Atom(:PIQ_xi_unlimited_minus_VMAX, :<), Atom(:PIV_xi_side, :<=)]), Atom(:PIQ_xi_rate, :<=)])),
+                    Transition(:lower, :free; when = AnyOf(Condition[AllOf(Condition[Atom(:PIQ_xi_unlimited_minus_VMIN, :>), Atom(:PIQ_xi_value, :<=)]), Atom(:PIQ_xi_rate, :>=)]))],
+                initial = [InitialMode(:upper; when = AllOf(Condition[AnyOf(Condition[Atom(:PIQ_xi_unlimited_minus_VMAX, :>=), Atom(:PIV_xi_side, :>)]), Atom(:PIQ_xi_rate, :>)])),
+                    InitialMode(:lower; when = AllOf(Condition[AnyOf(Condition[Atom(:PIQ_xi_unlimited_minus_VMIN, :<=), Atom(:PIQ_xi_value, :>)]), Atom(:PIQ_xi_rate, :<)])),
                     InitialMode(:free)],
-                at_rest = [:PIQ_rate]),
+                at_rest = [:PIQ_xi_rate]),
             Automaton(:s5_y;
                 modes = [Mode(:free; holds = [:s5_y_gate => 1.0]),
                     Mode(:upper; holds = [:s5_y_gate => 0.0]),
@@ -326,25 +332,25 @@ function model_metadata(::Type{REECA1})
                     Mode(:state1; holds = [:Voltage_dip => 1.0, :in_state1 => 1.0, :in_state2 => 0.0]),
                     Mode(:state1_extended; holds = [:Voltage_dip => 0.0, :in_state1 => 1.0, :in_state2 => 0.0]),
                     Mode(:state2; holds = [:Voltage_dip => 0.0, :in_state1 => 0.0, :in_state2 => 1.0])],
-                transitions = [Transition(:state0, :state1; when = AnyOf(Condition[Atom(:v_minus_Vup, :>), Atom(:v_minus_Vdip, :<)])),
-                    Transition(:state1, :state0; when = AllOf(Condition[Atom(:Thld, :>=), Atom(:v_minus_Vdip, :>=), Atom(:Thld, :<=), Atom(:v_minus_Vup, :<=)])),
+                transitions = [Transition(:state0, :state1; when = AnyOf(Condition[Atom(:v_minus_Vdip, :<), Atom(:v_minus_Vup, :>)])),
+                    Transition(:state1, :state0; when = AllOf(Condition[Atom(:v_minus_Vdip, :>=), Atom(:v_minus_Vup, :<=), Atom(:Thld, :>=), Atom(:Thld, :<=)])),
                     Transition(:state1, :state2; when = AllOf(Condition[Atom(:v_minus_Vdip, :>=), Atom(:v_minus_Vup, :<=), Atom(:Thld, :>)]), sets = [:t_release => :t]),
                     Transition(:state1, :state1_extended; when = AllOf(Condition[Atom(:v_minus_Vdip, :>=), Atom(:v_minus_Vup, :<=), Atom(:Thld, :<)]), sets = [:t_release => :t]),
-                    Transition(:state2, :state0; when = AllOf(Condition[Atom(:v_minus_Vdip, :>=), Atom(:v_minus_Vup, :<=), Atom(:injection_value, :>=)])),
-                    Transition(:state1_extended, :state0; when = AllOf(Condition[Atom(:v_minus_Vdip, :>=), Atom(:v_minus_Vup, :<=), Atom(:injection_value_2, :>=)])),
-                    Transition(:state2, :state1; when = AnyOf(Condition[Atom(:v_minus_Vup, :>), Atom(:v_minus_Vdip, :<)])),
-                    Transition(:state1_extended, :state1; when = AnyOf(Condition[Atom(:v_minus_Vup, :>), Atom(:v_minus_Vdip, :<)]))],
-                initial = [InitialMode(:state1; when = AnyOf(Condition[Atom(:v_minus_Vup, :>), Atom(:v_minus_Vdip, :<)])),
+                    Transition(:state2, :state0; when = AllOf(Condition[Atom(:injection_value, :>=), Atom(:v_minus_Vdip, :>=), Atom(:v_minus_Vup, :<=)])),
+                    Transition(:state1_extended, :state0; when = AllOf(Condition[Atom(:injection_value_2, :>=), Atom(:v_minus_Vdip, :>=), Atom(:v_minus_Vup, :<=)])),
+                    Transition(:state2, :state1; when = AnyOf(Condition[Atom(:v_minus_Vdip, :<), Atom(:v_minus_Vup, :>)])),
+                    Transition(:state1_extended, :state1; when = AnyOf(Condition[Atom(:v_minus_Vdip, :<), Atom(:v_minus_Vup, :>)]))],
+                initial = [InitialMode(:state1; when = AnyOf(Condition[Atom(:v_minus_Vdip, :<), Atom(:v_minus_Vup, :>)])),
                     InitialMode(:state0)]),
             Automaton(:ipmax_hold;
                 modes = [Mode(:normal; holds = [:Ipmax_hold => 0.0]),
                     Mode(:dip; holds = [:Ipmax_hold => 0.0]),
                     Mode(:held; holds = [:Ipmax_hold => 1.0])],
-                transitions = [Transition(:normal, :dip; when = AnyOf(Condition[Atom(:v_minus_Vup, :>), Atom(:v_minus_Vdip, :<)])),
+                transitions = [Transition(:normal, :dip; when = AnyOf(Condition[Atom(:v_minus_Vdip, :<), Atom(:v_minus_Vup, :>)])),
                     Transition(:dip, :held; when = AllOf(Condition[Atom(:v_minus_Vdip, :>=), Atom(:v_minus_Vup, :<=)]), sets = [:t_release2 => :t, :Ipmax_held => :Ipmax]),
-                    Transition(:held, :normal; when = AllOf(Condition[Atom(:v_minus_Vdip, :>=), Atom(:v_minus_Vup, :<=), Atom(:ipmax_hold_value, :>=)])),
-                    Transition(:held, :dip; when = AnyOf(Condition[Atom(:v_minus_Vup, :>), Atom(:v_minus_Vdip, :<)]))],
-                initial = [InitialMode(:dip; when = AnyOf(Condition[Atom(:v_minus_Vup, :>), Atom(:v_minus_Vdip, :<)])),
+                    Transition(:held, :normal; when = AllOf(Condition[Atom(:ipmax_hold_value, :>=), Atom(:v_minus_Vdip, :>=), Atom(:v_minus_Vup, :<=)])),
+                    Transition(:held, :dip; when = AnyOf(Condition[Atom(:v_minus_Vdip, :<), Atom(:v_minus_Vup, :>)]))],
+                initial = [InitialMode(:dip; when = AnyOf(Condition[Atom(:v_minus_Vdip, :<), Atom(:v_minus_Vup, :>)])),
                     InitialMode(:normal)]),
             Automaton(:vfloor_max;
                 modes = [Mode(:second; holds = [:vfloor_max_second => 1.0, :vfloor_max_first => 0.0]),
@@ -353,45 +359,6 @@ function model_metadata(::Type{REECA1})
                     Transition(:first, :second; when = Atom(:vfloor_max_value, :>))],
                 initial = [InitialMode(:second; when = Atom(:vfloor_max_value, :>)),
                     InitialMode(:first)]),
-            Automaton(:PIV_y_clamp;
-                modes = [Mode(:high; holds = [:PIV_y_clamp_high => 1.0, :PIV_y_clamp_low => 0.0, :PIV_y_clamp_mid => 0.0]),
-                    Mode(:low; holds = [:PIV_y_clamp_high => 0.0, :PIV_y_clamp_low => 1.0, :PIV_y_clamp_mid => 0.0]),
-                    Mode(:mid; holds = [:PIV_y_clamp_high => 0.0, :PIV_y_clamp_low => 0.0, :PIV_y_clamp_mid => 1.0])],
-                transitions = [Transition(:high, :low; when = AllOf(Condition[Atom(:PIV_y_clamp_value, :<), Atom(:PIV_y_clamp_value_2, :<=)]), continuity = [:PIV_y_clamp_value_2 => [:PIV_unlimited_minus_Iqmax], :PIV_y_clamp_value => [:PIV_value]], continuity_writers = [:PIV_unlimited_minus_Iqmax => [:injection, :ipmax_hold], :PIV_value => [:injection, :ipmax_hold]]),
-                    Transition(:high, :mid; when = AllOf(Condition[Atom(:PIV_y_clamp_value, :>=), Atom(:PIV_y_clamp_value_2, :<=)]), continuity = [:PIV_y_clamp_value_2 => [:PIV_unlimited_minus_Iqmax], :PIV_y_clamp_value => [:PIV_value]], continuity_writers = [:PIV_unlimited_minus_Iqmax => [:injection, :ipmax_hold], :PIV_value => [:injection, :ipmax_hold]]),
-                    Transition(:low, :high; when = Atom(:PIV_y_clamp_value_2, :>), continuity = [:PIV_y_clamp_value_2 => [:PIV_unlimited_minus_Iqmax]], continuity_writers = [:PIV_unlimited_minus_Iqmax => [:injection, :ipmax_hold]]),
-                    Transition(:low, :mid; when = AllOf(Condition[Atom(:PIV_y_clamp_value, :>=), Atom(:PIV_y_clamp_value_2, :<=)]), continuity = [:PIV_y_clamp_value_2 => [:PIV_unlimited_minus_Iqmax], :PIV_y_clamp_value => [:PIV_value]], continuity_writers = [:PIV_unlimited_minus_Iqmax => [:injection, :ipmax_hold], :PIV_value => [:injection, :ipmax_hold]]),
-                    Transition(:mid, :high; when = Atom(:PIV_y_clamp_value_2, :>), continuity = [:PIV_y_clamp_value_2 => [:PIV_unlimited_minus_Iqmax]], continuity_writers = [:PIV_unlimited_minus_Iqmax => [:injection, :ipmax_hold]]),
-                    Transition(:mid, :low; when = AllOf(Condition[Atom(:PIV_y_clamp_value, :<), Atom(:PIV_y_clamp_value_2, :<=)]), continuity = [:PIV_y_clamp_value_2 => [:PIV_unlimited_minus_Iqmax], :PIV_y_clamp_value => [:PIV_value]], continuity_writers = [:PIV_unlimited_minus_Iqmax => [:injection, :ipmax_hold], :PIV_value => [:injection, :ipmax_hold]])],
-                initial = [InitialMode(:high; when = Atom(:PIV_y_clamp_value_2, :>)),
-                    InitialMode(:low; when = AllOf(Condition[Atom(:PIV_y_clamp_value, :<), Atom(:PIV_y_clamp_value_2, :<=)])),
-                    InitialMode(:mid)]),
-            Automaton(:PIQ_y_clamp;
-                modes = [Mode(:high; holds = [:PIQ_y_clamp_high => 1.0, :PIQ_y_clamp_low => 0.0, :PIQ_y_clamp_mid => 0.0]),
-                    Mode(:low; holds = [:PIQ_y_clamp_high => 0.0, :PIQ_y_clamp_low => 1.0, :PIQ_y_clamp_mid => 0.0]),
-                    Mode(:mid; holds = [:PIQ_y_clamp_high => 0.0, :PIQ_y_clamp_low => 0.0, :PIQ_y_clamp_mid => 1.0])],
-                transitions = [Transition(:high, :low; when = AllOf(Condition[Atom(:PIQ_y_clamp_value, :<=), Atom(:PIQ_y_clamp_value_2, :<)]), continuity = [:PIQ_y_clamp_value => [:PIQ_unlimited_minus_VMAX], :PIQ_y_clamp_value_2 => [:PIQ_unlimited_minus_VMIN]]),
-                    Transition(:high, :mid; when = AllOf(Condition[Atom(:PIQ_y_clamp_value_2, :>=), Atom(:PIQ_y_clamp_value, :<=)]), continuity = [:PIQ_y_clamp_value => [:PIQ_unlimited_minus_VMAX], :PIQ_y_clamp_value_2 => [:PIQ_unlimited_minus_VMIN]]),
-                    Transition(:low, :high; when = Atom(:PIQ_y_clamp_value, :>), continuity = [:PIQ_y_clamp_value => [:PIQ_unlimited_minus_VMAX]]),
-                    Transition(:low, :mid; when = AllOf(Condition[Atom(:PIQ_y_clamp_value_2, :>=), Atom(:PIQ_y_clamp_value, :<=)]), continuity = [:PIQ_y_clamp_value => [:PIQ_unlimited_minus_VMAX], :PIQ_y_clamp_value_2 => [:PIQ_unlimited_minus_VMIN]]),
-                    Transition(:mid, :high; when = Atom(:PIQ_y_clamp_value, :>), continuity = [:PIQ_y_clamp_value => [:PIQ_unlimited_minus_VMAX]]),
-                    Transition(:mid, :low; when = AllOf(Condition[Atom(:PIQ_y_clamp_value, :<=), Atom(:PIQ_y_clamp_value_2, :<)]), continuity = [:PIQ_y_clamp_value => [:PIQ_unlimited_minus_VMAX], :PIQ_y_clamp_value_2 => [:PIQ_unlimited_minus_VMIN]])],
-                initial = [InitialMode(:high; when = Atom(:PIQ_y_clamp_value, :>)),
-                    InitialMode(:low; when = AllOf(Condition[Atom(:PIQ_y_clamp_value, :<=), Atom(:PIQ_y_clamp_value_2, :<)])),
-                    InitialMode(:mid)]),
-            Automaton(:Iqv_clamp;
-                modes = [Mode(:high; holds = [:Iqv_clamp_high => 1.0, :Iqv_clamp_low => 0.0, :Iqv_clamp_mid => 0.0]),
-                    Mode(:low; holds = [:Iqv_clamp_high => 0.0, :Iqv_clamp_low => 1.0, :Iqv_clamp_mid => 0.0]),
-                    Mode(:mid; holds = [:Iqv_clamp_high => 0.0, :Iqv_clamp_low => 0.0, :Iqv_clamp_mid => 1.0])],
-                transitions = [Transition(:high, :low; when = AllOf(Condition[Atom(:Iqv_clamp_value, :<=), Atom(:Iqv_clamp_value_2, :<)])),
-                    Transition(:high, :mid; when = AllOf(Condition[Atom(:Iqv_clamp_value_2, :>=), Atom(:Iqv_clamp_value, :<=)])),
-                    Transition(:low, :high; when = Atom(:Iqv_clamp_value, :>)),
-                    Transition(:low, :mid; when = AllOf(Condition[Atom(:Iqv_clamp_value_2, :>=), Atom(:Iqv_clamp_value, :<=)])),
-                    Transition(:mid, :high; when = Atom(:Iqv_clamp_value, :>)),
-                    Transition(:mid, :low; when = AllOf(Condition[Atom(:Iqv_clamp_value, :<=), Atom(:Iqv_clamp_value_2, :<)]))],
-                initial = [InitialMode(:high; when = Atom(:Iqv_clamp_value, :>)),
-                    InitialMode(:low; when = AllOf(Condition[Atom(:Iqv_clamp_value, :<=), Atom(:Iqv_clamp_value_2, :<)])),
-                    InitialMode(:mid)]),
             Automaton(:VDL1_vdl1;
                 modes = [Mode(:below; holds = [:VDL1_vdl1_below => 1.0, :VDL1_vdl1_segment1 => 0.0, :VDL1_vdl1_segment2 => 0.0, :VDL1_vdl1_segment3 => 0.0, :VDL1_vdl1_above => 0.0]),
                     Mode(:segment1; holds = [:VDL1_vdl1_below => 0.0, :VDL1_vdl1_segment1 => 1.0, :VDL1_vdl1_segment2 => 0.0, :VDL1_vdl1_segment3 => 0.0, :VDL1_vdl1_above => 0.0]),
@@ -454,40 +421,79 @@ function model_metadata(::Type{REECA1})
                     InitialMode(:segment2; when = AllOf(Condition[Atom(:VDL2_vdl2_value, :>=), Atom(:VDL2_vdl2_value_2, :>=), Atom(:VDL2_vdl2_value_3, :<)])),
                     InitialMode(:segment3; when = AllOf(Condition[Atom(:VDL2_vdl2_value, :>=), Atom(:VDL2_vdl2_value_2, :>=), Atom(:VDL2_vdl2_value_3, :>=), Atom(:VDL2_vdl2_value_4, :<=)])),
                     InitialMode(:above)]),
+            Automaton(:PIV_y_clamp;
+                modes = [Mode(:high; holds = [:PIV_y_clamp_high => 1.0, :PIV_y_clamp_low => 0.0, :PIV_y_clamp_mid => 0.0]),
+                    Mode(:low; holds = [:PIV_y_clamp_high => 0.0, :PIV_y_clamp_low => 1.0, :PIV_y_clamp_mid => 0.0]),
+                    Mode(:mid; holds = [:PIV_y_clamp_high => 0.0, :PIV_y_clamp_low => 0.0, :PIV_y_clamp_mid => 1.0])],
+                transitions = [Transition(:high, :low; when = AllOf(Condition[Atom(:PIV_y_clamp_value, :<=), Atom(:PIV_y_clamp_value_2, :<)]), continuity = [:PIV_y_clamp_value => [:PIV_xi_unlimited_minus_Iqmax], :PIV_y_clamp_value_2 => [:PIV_xi_value]], continuity_writers = [:PIV_xi_unlimited_minus_Iqmax => [:injection, :ipmax_hold], :PIV_xi_value => [:injection, :ipmax_hold]]),
+                    Transition(:high, :mid; when = AllOf(Condition[Atom(:PIV_y_clamp_value, :<=), Atom(:PIV_y_clamp_value_2, :>=)]), continuity = [:PIV_y_clamp_value => [:PIV_xi_unlimited_minus_Iqmax], :PIV_y_clamp_value_2 => [:PIV_xi_value]], continuity_writers = [:PIV_xi_unlimited_minus_Iqmax => [:injection, :ipmax_hold], :PIV_xi_value => [:injection, :ipmax_hold]]),
+                    Transition(:low, :high; when = Atom(:PIV_y_clamp_value, :>), continuity = [:PIV_y_clamp_value => [:PIV_xi_unlimited_minus_Iqmax]], continuity_writers = [:PIV_xi_unlimited_minus_Iqmax => [:injection, :ipmax_hold]]),
+                    Transition(:low, :mid; when = AllOf(Condition[Atom(:PIV_y_clamp_value, :<=), Atom(:PIV_y_clamp_value_2, :>=)]), continuity = [:PIV_y_clamp_value => [:PIV_xi_unlimited_minus_Iqmax], :PIV_y_clamp_value_2 => [:PIV_xi_value]], continuity_writers = [:PIV_xi_unlimited_minus_Iqmax => [:injection, :ipmax_hold], :PIV_xi_value => [:injection, :ipmax_hold]]),
+                    Transition(:mid, :high; when = Atom(:PIV_y_clamp_value, :>), continuity = [:PIV_y_clamp_value => [:PIV_xi_unlimited_minus_Iqmax]], continuity_writers = [:PIV_xi_unlimited_minus_Iqmax => [:injection, :ipmax_hold]]),
+                    Transition(:mid, :low; when = AllOf(Condition[Atom(:PIV_y_clamp_value, :<=), Atom(:PIV_y_clamp_value_2, :<)]), continuity = [:PIV_y_clamp_value => [:PIV_xi_unlimited_minus_Iqmax], :PIV_y_clamp_value_2 => [:PIV_xi_value]], continuity_writers = [:PIV_xi_unlimited_minus_Iqmax => [:injection, :ipmax_hold], :PIV_xi_value => [:injection, :ipmax_hold]])],
+                initial = [InitialMode(:high; when = Atom(:PIV_y_clamp_value, :>)),
+                    InitialMode(:low; when = AllOf(Condition[Atom(:PIV_y_clamp_value, :<=), Atom(:PIV_y_clamp_value_2, :<)])),
+                    InitialMode(:mid)]),
+            Automaton(:PIQ_y_clamp;
+                modes = [Mode(:high; holds = [:PIQ_y_clamp_high => 1.0, :PIQ_y_clamp_low => 0.0, :PIQ_y_clamp_mid => 0.0]),
+                    Mode(:low; holds = [:PIQ_y_clamp_high => 0.0, :PIQ_y_clamp_low => 1.0, :PIQ_y_clamp_mid => 0.0]),
+                    Mode(:mid; holds = [:PIQ_y_clamp_high => 0.0, :PIQ_y_clamp_low => 0.0, :PIQ_y_clamp_mid => 1.0])],
+                transitions = [Transition(:high, :low; when = AllOf(Condition[Atom(:PIQ_y_clamp_value, :<=), Atom(:PIQ_y_clamp_value_2, :<)]), continuity = [:PIQ_y_clamp_value => [:PIQ_xi_unlimited_minus_VMAX], :PIQ_y_clamp_value_2 => [:PIQ_xi_unlimited_minus_VMIN]]),
+                    Transition(:high, :mid; when = AllOf(Condition[Atom(:PIQ_y_clamp_value, :<=), Atom(:PIQ_y_clamp_value_2, :>=)]), continuity = [:PIQ_y_clamp_value => [:PIQ_xi_unlimited_minus_VMAX], :PIQ_y_clamp_value_2 => [:PIQ_xi_unlimited_minus_VMIN]]),
+                    Transition(:low, :high; when = Atom(:PIQ_y_clamp_value, :>), continuity = [:PIQ_y_clamp_value => [:PIQ_xi_unlimited_minus_VMAX]]),
+                    Transition(:low, :mid; when = AllOf(Condition[Atom(:PIQ_y_clamp_value, :<=), Atom(:PIQ_y_clamp_value_2, :>=)]), continuity = [:PIQ_y_clamp_value => [:PIQ_xi_unlimited_minus_VMAX], :PIQ_y_clamp_value_2 => [:PIQ_xi_unlimited_minus_VMIN]]),
+                    Transition(:mid, :high; when = Atom(:PIQ_y_clamp_value, :>), continuity = [:PIQ_y_clamp_value => [:PIQ_xi_unlimited_minus_VMAX]]),
+                    Transition(:mid, :low; when = AllOf(Condition[Atom(:PIQ_y_clamp_value, :<=), Atom(:PIQ_y_clamp_value_2, :<)]), continuity = [:PIQ_y_clamp_value => [:PIQ_xi_unlimited_minus_VMAX], :PIQ_y_clamp_value_2 => [:PIQ_xi_unlimited_minus_VMIN]])],
+                initial = [InitialMode(:high; when = Atom(:PIQ_y_clamp_value, :>)),
+                    InitialMode(:low; when = AllOf(Condition[Atom(:PIQ_y_clamp_value, :<=), Atom(:PIQ_y_clamp_value_2, :<)])),
+                    InitialMode(:mid)]),
+            Automaton(:Iqv_clamp;
+                modes = [Mode(:high; holds = [:Iqv_clamp_high => 1.0, :Iqv_clamp_low => 0.0, :Iqv_clamp_mid => 0.0]),
+                    Mode(:low; holds = [:Iqv_clamp_high => 0.0, :Iqv_clamp_low => 1.0, :Iqv_clamp_mid => 0.0]),
+                    Mode(:mid; holds = [:Iqv_clamp_high => 0.0, :Iqv_clamp_low => 0.0, :Iqv_clamp_mid => 1.0])],
+                transitions = [Transition(:high, :low; when = AllOf(Condition[Atom(:Iqv_clamp_value, :<=), Atom(:Iqv_clamp_value_2, :<)])),
+                    Transition(:high, :mid; when = AllOf(Condition[Atom(:Iqv_clamp_value, :<=), Atom(:Iqv_clamp_value_2, :>=)])),
+                    Transition(:low, :high; when = Atom(:Iqv_clamp_value, :>)),
+                    Transition(:low, :mid; when = AllOf(Condition[Atom(:Iqv_clamp_value, :<=), Atom(:Iqv_clamp_value_2, :>=)])),
+                    Transition(:mid, :high; when = Atom(:Iqv_clamp_value, :>)),
+                    Transition(:mid, :low; when = AllOf(Condition[Atom(:Iqv_clamp_value, :<=), Atom(:Iqv_clamp_value_2, :<)]))],
+                initial = [InitialMode(:high; when = Atom(:Iqv_clamp_value, :>)),
+                    InitialMode(:low; when = AllOf(Condition[Atom(:Iqv_clamp_value, :<=), Atom(:Iqv_clamp_value_2, :<)])),
+                    InitialMode(:mid)]),
             Automaton(:Ipcmd_out_clamp;
                 modes = [Mode(:high; holds = [:Ipcmd_out_clamp_high => 1.0, :Ipcmd_out_clamp_low => 0.0, :Ipcmd_out_clamp_mid => 0.0]),
                     Mode(:low; holds = [:Ipcmd_out_clamp_high => 0.0, :Ipcmd_out_clamp_low => 1.0, :Ipcmd_out_clamp_mid => 0.0]),
                     Mode(:mid; holds = [:Ipcmd_out_clamp_high => 0.0, :Ipcmd_out_clamp_low => 0.0, :Ipcmd_out_clamp_mid => 1.0])],
-                transitions = [Transition(:high, :low; when = AllOf(Condition[Atom(:Ipcmd_out_clamp_value, :<), Atom(:Ipcmd_out_clamp_value_2, :<=)])),
-                    Transition(:high, :mid; when = AllOf(Condition[Atom(:Ipcmd_out_clamp_value, :>=), Atom(:Ipcmd_out_clamp_value_2, :<=)])),
-                    Transition(:low, :high; when = Atom(:Ipcmd_out_clamp_value_2, :>)),
-                    Transition(:low, :mid; when = AllOf(Condition[Atom(:Ipcmd_out_clamp_value, :>=), Atom(:Ipcmd_out_clamp_value_2, :<=)])),
-                    Transition(:mid, :high; when = Atom(:Ipcmd_out_clamp_value_2, :>)),
-                    Transition(:mid, :low; when = AllOf(Condition[Atom(:Ipcmd_out_clamp_value, :<), Atom(:Ipcmd_out_clamp_value_2, :<=)]))],
-                initial = [InitialMode(:high; when = Atom(:Ipcmd_out_clamp_value_2, :>)),
-                    InitialMode(:low; when = AllOf(Condition[Atom(:Ipcmd_out_clamp_value, :<), Atom(:Ipcmd_out_clamp_value_2, :<=)])),
+                transitions = [Transition(:high, :low; when = AllOf(Condition[Atom(:Ipcmd_out_clamp_value, :<=), Atom(:Ipcmd_out_clamp_value_2, :<)])),
+                    Transition(:high, :mid; when = AllOf(Condition[Atom(:Ipcmd_out_clamp_value, :<=), Atom(:Ipcmd_out_clamp_value_2, :>=)])),
+                    Transition(:low, :high; when = Atom(:Ipcmd_out_clamp_value, :>)),
+                    Transition(:low, :mid; when = AllOf(Condition[Atom(:Ipcmd_out_clamp_value, :<=), Atom(:Ipcmd_out_clamp_value_2, :>=)])),
+                    Transition(:mid, :high; when = Atom(:Ipcmd_out_clamp_value, :>)),
+                    Transition(:mid, :low; when = AllOf(Condition[Atom(:Ipcmd_out_clamp_value, :<=), Atom(:Ipcmd_out_clamp_value_2, :<)]))],
+                initial = [InitialMode(:high; when = Atom(:Ipcmd_out_clamp_value, :>)),
+                    InitialMode(:low; when = AllOf(Condition[Atom(:Ipcmd_out_clamp_value, :<=), Atom(:Ipcmd_out_clamp_value_2, :<)])),
                     InitialMode(:mid)]),
             Automaton(:Iqcmd_out_clamp;
                 modes = [Mode(:high; holds = [:Iqcmd_out_clamp_high => 1.0, :Iqcmd_out_clamp_low => 0.0, :Iqcmd_out_clamp_mid => 0.0]),
                     Mode(:low; holds = [:Iqcmd_out_clamp_high => 0.0, :Iqcmd_out_clamp_low => 1.0, :Iqcmd_out_clamp_mid => 0.0]),
                     Mode(:mid; holds = [:Iqcmd_out_clamp_high => 0.0, :Iqcmd_out_clamp_low => 0.0, :Iqcmd_out_clamp_mid => 1.0])],
-                transitions = [Transition(:high, :low; when = AllOf(Condition[Atom(:Iqcmd_out_clamp_value, :<), Atom(:Iqcmd_out_clamp_value_2, :<=)])),
-                    Transition(:high, :mid; when = AllOf(Condition[Atom(:Iqcmd_out_clamp_value, :>=), Atom(:Iqcmd_out_clamp_value_2, :<=)])),
-                    Transition(:low, :high; when = Atom(:Iqcmd_out_clamp_value_2, :>)),
-                    Transition(:low, :mid; when = AllOf(Condition[Atom(:Iqcmd_out_clamp_value, :>=), Atom(:Iqcmd_out_clamp_value_2, :<=)])),
-                    Transition(:mid, :high; when = Atom(:Iqcmd_out_clamp_value_2, :>)),
-                    Transition(:mid, :low; when = AllOf(Condition[Atom(:Iqcmd_out_clamp_value, :<), Atom(:Iqcmd_out_clamp_value_2, :<=)]))],
-                initial = [InitialMode(:high; when = Atom(:Iqcmd_out_clamp_value_2, :>)),
-                    InitialMode(:low; when = AllOf(Condition[Atom(:Iqcmd_out_clamp_value, :<), Atom(:Iqcmd_out_clamp_value_2, :<=)])),
+                transitions = [Transition(:high, :low; when = AllOf(Condition[Atom(:Iqcmd_out_clamp_value, :<=), Atom(:Iqcmd_out_clamp_value_2, :<)])),
+                    Transition(:high, :mid; when = AllOf(Condition[Atom(:Iqcmd_out_clamp_value, :<=), Atom(:Iqcmd_out_clamp_value_2, :>=)])),
+                    Transition(:low, :high; when = Atom(:Iqcmd_out_clamp_value, :>)),
+                    Transition(:low, :mid; when = AllOf(Condition[Atom(:Iqcmd_out_clamp_value, :<=), Atom(:Iqcmd_out_clamp_value_2, :>=)])),
+                    Transition(:mid, :high; when = Atom(:Iqcmd_out_clamp_value, :>)),
+                    Transition(:mid, :low; when = AllOf(Condition[Atom(:Iqcmd_out_clamp_value, :<=), Atom(:Iqcmd_out_clamp_value_2, :<)]))],
+                initial = [InitialMode(:high; when = Atom(:Iqcmd_out_clamp_value, :>)),
+                    InitialMode(:low; when = AllOf(Condition[Atom(:Iqcmd_out_clamp_value, :<=), Atom(:Iqcmd_out_clamp_value_2, :<)])),
                     InitialMode(:mid)]),
             Automaton(:Qerr_clamp;
                 modes = [Mode(:high; holds = [:Qerr_clamp_high => 1.0, :Qerr_clamp_low => 0.0, :Qerr_clamp_mid => 0.0]),
                     Mode(:low; holds = [:Qerr_clamp_high => 0.0, :Qerr_clamp_low => 1.0, :Qerr_clamp_mid => 0.0]),
                     Mode(:mid; holds = [:Qerr_clamp_high => 0.0, :Qerr_clamp_low => 0.0, :Qerr_clamp_mid => 1.0])],
                 transitions = [Transition(:high, :low; when = AllOf(Condition[Atom(:Qerr_clamp_value, :<=), Atom(:Qerr_clamp_value_2, :<)])),
-                    Transition(:high, :mid; when = AllOf(Condition[Atom(:Qerr_clamp_value_2, :>=), Atom(:Qerr_clamp_value, :<=)])),
+                    Transition(:high, :mid; when = AllOf(Condition[Atom(:Qerr_clamp_value, :<=), Atom(:Qerr_clamp_value_2, :>=)])),
                     Transition(:low, :high; when = Atom(:Qerr_clamp_value, :>)),
-                    Transition(:low, :mid; when = AllOf(Condition[Atom(:Qerr_clamp_value_2, :>=), Atom(:Qerr_clamp_value, :<=)])),
+                    Transition(:low, :mid; when = AllOf(Condition[Atom(:Qerr_clamp_value, :<=), Atom(:Qerr_clamp_value_2, :>=)])),
                     Transition(:mid, :high; when = Atom(:Qerr_clamp_value, :>)),
                     Transition(:mid, :low; when = AllOf(Condition[Atom(:Qerr_clamp_value, :<=), Atom(:Qerr_clamp_value_2, :<)]))],
                 initial = [InitialMode(:high; when = Atom(:Qerr_clamp_value, :>)),
@@ -498,9 +504,9 @@ function model_metadata(::Type{REECA1})
                     Mode(:low; holds = [:Vsel_clamp_high => 0.0, :Vsel_clamp_low => 1.0, :Vsel_clamp_mid => 0.0]),
                     Mode(:mid; holds = [:Vsel_clamp_high => 0.0, :Vsel_clamp_low => 0.0, :Vsel_clamp_mid => 1.0])],
                 transitions = [Transition(:high, :low; when = AllOf(Condition[Atom(:Vsel_clamp_value, :<=), Atom(:Vsel_clamp_value_2, :<)])),
-                    Transition(:high, :mid; when = AllOf(Condition[Atom(:Vsel_clamp_value_2, :>=), Atom(:Vsel_clamp_value, :<=)])),
+                    Transition(:high, :mid; when = AllOf(Condition[Atom(:Vsel_clamp_value, :<=), Atom(:Vsel_clamp_value_2, :>=)])),
                     Transition(:low, :high; when = Atom(:Vsel_clamp_value, :>)),
-                    Transition(:low, :mid; when = AllOf(Condition[Atom(:Vsel_clamp_value_2, :>=), Atom(:Vsel_clamp_value, :<=)])),
+                    Transition(:low, :mid; when = AllOf(Condition[Atom(:Vsel_clamp_value, :<=), Atom(:Vsel_clamp_value_2, :>=)])),
                     Transition(:mid, :high; when = Atom(:Vsel_clamp_value, :>)),
                     Transition(:mid, :low; when = AllOf(Condition[Atom(:Vsel_clamp_value, :<=), Atom(:Vsel_clamp_value_2, :<)]))],
                 initial = [InitialMode(:high; when = Atom(:Vsel_clamp_value, :>)),
@@ -511,9 +517,9 @@ function model_metadata(::Type{REECA1})
                     Mode(:low; holds = [:Iqinj_clamp_high => 0.0, :Iqinj_clamp_low => 1.0, :Iqinj_clamp_mid => 0.0]),
                     Mode(:mid; holds = [:Iqinj_clamp_high => 0.0, :Iqinj_clamp_low => 0.0, :Iqinj_clamp_mid => 1.0])],
                 transitions = [Transition(:high, :low; when = AllOf(Condition[Atom(:Iqinj_clamp_value, :<=), Atom(:Iqinj_clamp_value_2, :<)])),
-                    Transition(:high, :mid; when = AllOf(Condition[Atom(:Iqinj_clamp_value_2, :>=), Atom(:Iqinj_clamp_value, :<=)])),
+                    Transition(:high, :mid; when = AllOf(Condition[Atom(:Iqinj_clamp_value, :<=), Atom(:Iqinj_clamp_value_2, :>=)])),
                     Transition(:low, :high; when = Atom(:Iqinj_clamp_value, :>)),
-                    Transition(:low, :mid; when = AllOf(Condition[Atom(:Iqinj_clamp_value_2, :>=), Atom(:Iqinj_clamp_value, :<=)])),
+                    Transition(:low, :mid; when = AllOf(Condition[Atom(:Iqinj_clamp_value, :<=), Atom(:Iqinj_clamp_value_2, :>=)])),
                     Transition(:mid, :high; when = Atom(:Iqinj_clamp_value, :>)),
                     Transition(:mid, :low; when = AllOf(Condition[Atom(:Iqinj_clamp_value, :<=), Atom(:Iqinj_clamp_value_2, :<)]))],
                 initial = [InitialMode(:high; when = Atom(:Iqinj_clamp_value, :>)),
@@ -566,9 +572,9 @@ function model_metadata(::Type{REECA1})
                     Mode(:low; holds = [:pfilt_y_rate_clamp_high => 0.0, :pfilt_y_rate_clamp_low => 1.0, :pfilt_y_rate_clamp_mid => 0.0]),
                     Mode(:mid; holds = [:pfilt_y_rate_clamp_high => 0.0, :pfilt_y_rate_clamp_low => 0.0, :pfilt_y_rate_clamp_mid => 1.0])],
                 transitions = [Transition(:high, :low; when = AllOf(Condition[Atom(:pfilt_y_rate_clamp_value, :<=), Atom(:pfilt_y_rate_clamp_value_2, :<)])),
-                    Transition(:high, :mid; when = AllOf(Condition[Atom(:pfilt_y_rate_clamp_value_2, :>=), Atom(:pfilt_y_rate_clamp_value, :<=)])),
+                    Transition(:high, :mid; when = AllOf(Condition[Atom(:pfilt_y_rate_clamp_value, :<=), Atom(:pfilt_y_rate_clamp_value_2, :>=)])),
                     Transition(:low, :high; when = Atom(:pfilt_y_rate_clamp_value, :>)),
-                    Transition(:low, :mid; when = AllOf(Condition[Atom(:pfilt_y_rate_clamp_value_2, :>=), Atom(:pfilt_y_rate_clamp_value, :<=)])),
+                    Transition(:low, :mid; when = AllOf(Condition[Atom(:pfilt_y_rate_clamp_value, :<=), Atom(:pfilt_y_rate_clamp_value_2, :>=)])),
                     Transition(:mid, :high; when = Atom(:pfilt_y_rate_clamp_value, :>)),
                     Transition(:mid, :low; when = AllOf(Condition[Atom(:pfilt_y_rate_clamp_value, :<=), Atom(:pfilt_y_rate_clamp_value_2, :<)]))],
                 initial = [InitialMode(:high; when = Atom(:pfilt_y_rate_clamp_value, :>)),
@@ -595,47 +601,41 @@ end
         tpfilt = 0.02
         wg = 1.0
 
-        # --- s0: Lag ---
-        s0_dy = ((1.0) * (vars.v[i]) - vars.s0_y[i]) / (params.Trv[i])
-
-        # --- S1: Lag ---
-        S1_dy = ((1.0) * (vars.Pe[i]) - vars.S1_y[i]) / (params.Tp[i])
-
-        vfloor = 0.01 * params.vfloor_max_first[i] + vars.s0_y[i] * params.vfloor_max_second[i]
-        Qcpf = vars.S1_y[i] * tan(vars.pfaref[i])
-        PFsel = params.PFFLAG[i] * Qcpf + vars.Qref[i] * (1 - params.PFFLAG[i])
         moving = 1 - params.Voltage_dip[i]
-        PIV_rate = params.Kvi[i] * params.QFLAG[i] * moving * (vars.Vsel[i] - vars.s0_y[i])
-        PIV_unlimited = vars.PIV_xi[i] + params.Kvp[i] * params.QFLAG[i] * (vars.Vsel[i] - vars.s0_y[i])
-        PIV_y = vars.Iqmax[i] * params.PIV_y_clamp_high[i] + params.PIV_y_clamp_mid[i] * (vars.PIV_xi[i] + params.Kvp[i] * params.QFLAG[i] * (vars.Vsel[i] - vars.s0_y[i])) - vars.Iqmax[i] * params.PIV_y_clamp_low[i]
-        PIQ_rate = params.Kqi[i] * vars.Qerr[i] * params.VFLAG[i] * moving
-        PIQ_unlimited = vars.PIQ_xi[i] + params.Kqp[i] * vars.Qerr[i] * params.VFLAG[i]
-        PIQ_y = params.PIQ_y_clamp_high[i] * params.VMAX[i] + params.PIQ_y_clamp_low[i] * params.VMIN[i] + params.PIQ_y_clamp_mid[i] * (vars.PIQ_xi[i] + params.Kqp[i] * vars.Qerr[i] * params.VFLAG[i])
+        Psel = params.PFLAG[i] * wg * vars.pfilt_y[i] + (1 - params.PFLAG[i]) * vars.pfilt_y[i]
+        vfloor = 0.01 * params.vfloor_max_second[i] + vars.s0_y[i] * params.vfloor_max_first[i]
+        Qcpf = vars.S1_y[i] * tan(vars.pfaref[i])
         Vref0_eff = ifelse(params.Vref0[i] == 0, params.v0[i], params.Vref0[i])
+        VDL1 = params.Iq1[i] * params.VDL1_vdl1_below[i] + (params.Iq1[i] + (params.Iq2[i] - params.Iq1[i]) / (params.Vq2[i] - params.Vq1[i]) * (vars.s0_y[i] - params.Vq1[i])) * params.VDL1_vdl1_segment1[i] + (params.Iq2[i] + (params.Iq3[i] - params.Iq2[i]) / (params.Vq3[i] - params.Vq2[i]) * (vars.s0_y[i] - params.Vq2[i])) * params.VDL1_vdl1_segment2[i] + (params.Iq3[i] + (params.Iq4[i] - params.Iq3[i]) / (params.Vq4[i] - params.Vq3[i]) * (vars.s0_y[i] - params.Vq3[i])) * params.VDL1_vdl1_segment3[i] + params.Iq4[i] * params.VDL1_vdl1_above[i]
+        VDL2 = params.Ip1[i] * params.VDL2_vdl2_below[i] + (params.Ip1[i] + (params.Ip2[i] - params.Ip1[i]) / (params.Vp2[i] - params.Vp1[i]) * (vars.s0_y[i] - params.Vp1[i])) * params.VDL2_vdl2_segment1[i] + (params.Ip2[i] + (params.Ip3[i] - params.Ip2[i]) / (params.Vp3[i] - params.Vp2[i]) * (vars.s0_y[i] - params.Vp2[i])) * params.VDL2_vdl2_segment2[i] + (params.Ip3[i] + (params.Ip4[i] - params.Ip3[i]) / (params.Vp4[i] - params.Vp3[i]) * (vars.s0_y[i] - params.Vp3[i])) * params.VDL2_vdl2_segment3[i] + params.Ip4[i] * params.VDL2_vdl2_above[i]
+        PIV_xi_rate = moving * params.Kvi[i] * (params.QFLAG[i] * (vars.Vsel[i] - vars.s0_y[i]))
+        PIV_xi_unlimited = params.Kvp[i] * (params.QFLAG[i] * (vars.Vsel[i] - vars.s0_y[i])) + vars.PIV_xi[i]
+        PIV_y = vars.Iqmax[i] * params.PIV_y_clamp_high[i] + -vars.Iqmax[i] * params.PIV_y_clamp_low[i] + (params.Kvp[i] * (params.QFLAG[i] * (vars.Vsel[i] - vars.s0_y[i])) + vars.PIV_xi[i]) * params.PIV_y_clamp_mid[i]
+        PFsel = params.PFFLAG[i] * Qcpf + (1 - params.PFFLAG[i]) * vars.Qref[i]
         Verr = Vref0_eff - vars.s0_y[i]
-        Iqv = params.Kqv[i] * (Verr - params.Iqv_clamp_high[i] * params.dbd2[i] - params.Iqv_clamp_low[i] * params.dbd1[i] - params.Iqv_clamp_mid[i] * Verr)
-        VDL1 = params.Iq1[i] * params.VDL1_vdl1_below[i] + params.Iq4[i] * params.VDL1_vdl1_above[i] + params.VDL1_vdl1_segment1[i] * (params.Iq1[i] + (params.Iq2[i] - params.Iq1[i]) * (vars.s0_y[i] - params.Vq1[i]) / (params.Vq2[i] - params.Vq1[i])) + params.VDL1_vdl1_segment2[i] * (params.Iq2[i] + (params.Iq3[i] - params.Iq2[i]) * (vars.s0_y[i] - params.Vq2[i]) / (params.Vq3[i] - params.Vq2[i])) + params.VDL1_vdl1_segment3[i] * (params.Iq3[i] + (params.Iq4[i] - params.Iq3[i]) * (vars.s0_y[i] - params.Vq3[i]) / (params.Vq4[i] - params.Vq3[i]))
-        VDL2 = params.Ip1[i] * params.VDL2_vdl2_below[i] + params.Ip4[i] * params.VDL2_vdl2_above[i] + params.VDL2_vdl2_segment1[i] * (params.Ip1[i] + (params.Ip2[i] - params.Ip1[i]) * (vars.s0_y[i] - params.Vp1[i]) / (params.Vp2[i] - params.Vp1[i])) + params.VDL2_vdl2_segment2[i] * (params.Ip2[i] + (params.Ip3[i] - params.Ip2[i]) * (vars.s0_y[i] - params.Vp2[i]) / (params.Vp3[i] - params.Vp2[i])) + params.VDL2_vdl2_segment3[i] * (params.Ip3[i] + (params.Ip4[i] - params.Ip3[i]) * (vars.s0_y[i] - params.Vp3[i]) / (params.Vp4[i] - params.Vp3[i]))
-        Psel = vars.pfilt_y[i] * (1 - params.PFLAG[i]) + params.PFLAG[i] * vars.pfilt_y[i] * wg
+        PIQ_xi_rate = moving * params.Kqi[i] * (params.VFLAG[i] * vars.Qerr[i])
+        PIQ_xi_unlimited = params.Kqp[i] * (params.VFLAG[i] * vars.Qerr[i]) + vars.PIQ_xi[i]
+        PIQ_y = params.VMAX[i] * params.PIQ_y_clamp_high[i] + params.VMIN[i] * params.PIQ_y_clamp_low[i] + (params.Kqp[i] * (params.VFLAG[i] * vars.Qerr[i]) + vars.PIQ_xi[i]) * params.PIQ_y_clamp_mid[i]
+        Iqv = params.Kqv[i] * (Verr - (params.dbd2[i] * params.Iqv_clamp_high[i] + params.dbd1[i] * params.Iqv_clamp_low[i] + Verr * params.Iqv_clamp_mid[i]))
         s5_y_rate = moving * (Psel - vars.s5_y[i]) / params.Tpord[i]
         # === Residual Assignments ===
         outputs.ds4_y[i] = mask * (moving * (PFsel / vfloor - vars.s4_y[i]) / params.Tiq[i])
-        outputs.dpfilt_y[i] = mask * (params.dPmax[i] * params.pfilt_y_rate_clamp_high[i] + params.dPmin[i] * params.pfilt_y_rate_clamp_low[i] + params.pfilt_y_rate_clamp_mid[i] * (vars.Pref[i] - vars.pfilt_y[i]) / tpfilt)
+        outputs.dpfilt_y[i] = mask * (params.dPmax[i] * params.pfilt_y_rate_clamp_high[i] + params.dPmin[i] * params.pfilt_y_rate_clamp_low[i] + (vars.Pref[i] - vars.pfilt_y[i]) / tpfilt * params.pfilt_y_rate_clamp_mid[i])
         outputs.ds5_y[i] = mask * (params.s5_y_gate[i] * s5_y_rate)
-        outputs.ds0_y[i] = mask * (s0_dy)
-        outputs.dS1_y[i] = mask * (S1_dy)
-        outputs.dPIV_xi[i] = mask * (params.PIV_gate[i] * PIV_rate)
-        outputs.dPIQ_xi[i] = mask * (params.PIQ_gate[i] * PIQ_rate)
+        outputs.ds0_y[i] = mask * ((1.0 * vars.v[i] - vars.s0_y[i]) / params.Trv[i])
+        outputs.dS1_y[i] = mask * ((1.0 * vars.Pe[i] - vars.S1_y[i]) / params.Tp[i])
+        outputs.dPIV_xi[i] = mask * (params.PIV_xi_gate[i] * PIV_xi_rate)
+        outputs.dPIQ_xi[i] = mask * (params.PIQ_xi_gate[i] * PIQ_xi_rate)
         outputs.g_Pref[i] = mask * (params.Pref0[i] - vars.Pref[i])
         outputs.g_pfaref[i] = mask * (params.pfaref0[i] - vars.pfaref[i])
         outputs.g_Qref[i] = mask * (params.Qref0[i] - vars.Qref[i])
-        outputs.g_Ipcmd_out[i] = mask * (params.Ipcmd_out_clamp_high[i] * vars.Ipmax[i] + params.Ipcmd_out_clamp_mid[i] * vars.s5_y[i] / vfloor - vars.Ipcmd_out[i])
-        outputs.g_Iqcmd_out[i] = mask * (params.Iqcmd_out_clamp_high[i] * vars.Iqmax[i] + params.Iqcmd_out_clamp_mid[i] * (vars.Iqinj[i] + PIV_y * params.QFLAG[i] + vars.s4_y[i] * (1 - params.QFLAG[i])) - vars.Iqcmd_out[i] - params.Iqcmd_out_clamp_low[i] * vars.Iqmax[i])
-        outputs.g_Qerr[i] = mask * (PFsel * params.Qerr_clamp_mid[i] + params.QMax[i] * params.Qerr_clamp_high[i] + params.QMin[i] * params.Qerr_clamp_low[i] - vars.Qerr[i] - vars.Qgen[i])
-        outputs.g_Vsel[i] = mask * (params.VMAX[i] * params.Vsel_clamp_high[i] + params.VMIN[i] * params.Vsel_clamp_low[i] + params.Vsel_clamp_mid[i] * (PIQ_y * params.VFLAG[i] + (1 - params.VFLAG[i]) * (PFsel + params.Vref1[i])) - vars.Vsel[i])
-        outputs.g_Iqinj[i] = mask * (params.Iqfrz[i] * params.in_state2[i] + params.in_state1[i] * (params.Iqh1[i] * params.Iqinj_clamp_high[i] + params.Iqinj_clamp_low[i] * params.Iql1[i] + params.Iqinj_clamp_mid[i] * Iqv) - vars.Iqinj[i])
-        outputs.g_Iqmax[i] = mask * (params.PQFLAG[i] * (params.Iqmax_min_first[i] * VDL1 + params.Iqmax_min_second[i] * sqrt(params.Iqmax_max_second[i]) * sqrt(max(0, params.Imax[i] ^ 2 - vars.Ipcmd_out[i] ^ 2))) + (1 - params.PQFLAG[i]) * (params.Imax[i] * params.Iqmax_min_2_first[i] + params.Iqmax_min_2_second[i] * VDL1) - vars.Iqmax[i])
-        outputs.g_Ipmax[i] = mask * (params.Ipmax_held[i] * params.Ipmax_hold[i] + (1 - params.Ipmax_hold[i]) * (params.PQFLAG[i] * (params.Imax[i] * params.Ipmax_min_first[i] + params.Ipmax_min_second[i] * VDL2) + (1 - params.PQFLAG[i]) * (params.Ipmax_min_2_first[i] * VDL2 + params.Ipmax_min_2_second[i] * sqrt(params.Ipmax_max_second[i]) * sqrt(max(0, params.Imax[i] ^ 2 - vars.Iqcmd_out[i] ^ 2)))) - vars.Ipmax[i])
+        outputs.g_Ipcmd_out[i] = mask * (vars.Ipmax[i] * params.Ipcmd_out_clamp_high[i] + 0 * params.Ipcmd_out_clamp_low[i] + vars.s5_y[i] / vfloor * params.Ipcmd_out_clamp_mid[i] - vars.Ipcmd_out[i])
+        outputs.g_Iqcmd_out[i] = mask * (vars.Iqmax[i] * params.Iqcmd_out_clamp_high[i] + -vars.Iqmax[i] * params.Iqcmd_out_clamp_low[i] + (params.QFLAG[i] * PIV_y + (1 - params.QFLAG[i]) * vars.s4_y[i] + vars.Iqinj[i]) * params.Iqcmd_out_clamp_mid[i] - vars.Iqcmd_out[i])
+        outputs.g_Qerr[i] = mask * (params.QMax[i] * params.Qerr_clamp_high[i] + params.QMin[i] * params.Qerr_clamp_low[i] + PFsel * params.Qerr_clamp_mid[i] - vars.Qgen[i] - vars.Qerr[i])
+        outputs.g_Vsel[i] = mask * (params.VMAX[i] * params.Vsel_clamp_high[i] + params.VMIN[i] * params.Vsel_clamp_low[i] + (params.VFLAG[i] * PIQ_y + (1 - params.VFLAG[i]) * (params.Vref1[i] + PFsel)) * params.Vsel_clamp_mid[i] - vars.Vsel[i])
+        outputs.g_Iqinj[i] = mask * (params.in_state1[i] * (params.Iqh1[i] * params.Iqinj_clamp_high[i] + params.Iql1[i] * params.Iqinj_clamp_low[i] + Iqv * params.Iqinj_clamp_mid[i]) + params.in_state2[i] * params.Iqfrz[i] - vars.Iqinj[i])
+        outputs.g_Iqmax[i] = mask * (params.PQFLAG[i] * (sqrt(max(0, params.Imax[i] ^ 2 - vars.Ipcmd_out[i] ^ 2) * params.Iqmax_max_second[i] + 0 * params.Iqmax_max_first[i]) * params.Iqmax_min_second[i] + VDL1 * params.Iqmax_min_first[i]) + (1 - params.PQFLAG[i]) * (params.Imax[i] * params.Iqmax_min_2_second[i] + VDL1 * params.Iqmax_min_2_first[i]) - vars.Iqmax[i])
+        outputs.g_Ipmax[i] = mask * ((1 - params.Ipmax_hold[i]) * (params.PQFLAG[i] * (params.Imax[i] * params.Ipmax_min_second[i] + VDL2 * params.Ipmax_min_first[i]) + (1 - params.PQFLAG[i]) * (sqrt(max(0, params.Imax[i] ^ 2 - vars.Iqcmd_out[i] ^ 2) * params.Ipmax_max_second[i] + 0 * params.Ipmax_max_first[i]) * params.Ipmax_min_2_second[i] + VDL2 * params.Ipmax_min_2_first[i])) + params.Ipmax_hold[i] * params.Ipmax_held[i] - vars.Ipmax[i])
         outputs.Ipcmd_contrib[i] = mask * (vars.Ipcmd_out[i] - params.Ipcmd0[i])
         outputs.Iqcmd_contrib[i] = mask * (params.Iqcmd0[i] - vars.Iqcmd_out[i])
     end
@@ -649,7 +649,7 @@ end
 ) where {T, AT}
     reeca1_residual_kernel!(
         (ds4_y = ws.res_vals.ds4_y, dpfilt_y = ws.res_vals.dpfilt_y, ds5_y = ws.res_vals.ds5_y, ds0_y = ws.res_vals.ds0_y, dS1_y = ws.res_vals.dS1_y, dPIV_xi = ws.res_vals.dPIV_xi, dPIQ_xi = ws.res_vals.dPIQ_xi, g_Pref = ws.res_vals.g_Pref, g_pfaref = ws.res_vals.g_pfaref, g_Qref = ws.res_vals.g_Qref, g_Ipcmd_out = ws.res_vals.g_Ipcmd_out, g_Iqcmd_out = ws.res_vals.g_Iqcmd_out, g_Qerr = ws.res_vals.g_Qerr, g_Vsel = ws.res_vals.g_Vsel, g_Iqinj = ws.res_vals.g_Iqinj, g_Iqmax = ws.res_vals.g_Iqmax, g_Ipmax = ws.res_vals.g_Ipmax, Ipcmd_contrib = ws.res_vals.Ipcmd_contrib, Iqcmd_contrib = ws.res_vals.Iqcmd_contrib),
-        (PFFLAG = model.PFFLAG, VFLAG = model.VFLAG, QFLAG = model.QFLAG, PFLAG = model.PFLAG, PQFLAG = model.PQFLAG, Vdip = model.Vdip, Vup = model.Vup, Trv = model.Trv, dbd1 = model.dbd1, dbd2 = model.dbd2, Kqv = model.Kqv, Iqh1 = model.Iqh1, Iql1 = model.Iql1, Vref0 = model.Vref0, Iqfrz = model.Iqfrz, Thld = model.Thld, Thld2 = model.Thld2, Tp = model.Tp, QMax = model.QMax, QMin = model.QMin, VMAX = model.VMAX, VMIN = model.VMIN, Kqp = model.Kqp, Kqi = model.Kqi, Kvp = model.Kvp, Kvi = model.Kvi, Vref1 = model.Vref1, Tiq = model.Tiq, dPmax = model.dPmax, dPmin = model.dPmin, PMAX = model.PMAX, PMIN = model.PMIN, Imax = model.Imax, Tpord = model.Tpord, Vq1 = model.Vq1, Iq1 = model.Iq1, Vq2 = model.Vq2, Iq2 = model.Iq2, Vq3 = model.Vq3, Iq3 = model.Iq3, Vq4 = model.Vq4, Iq4 = model.Iq4, Vp1 = model.Vp1, Ip1 = model.Ip1, Vp2 = model.Vp2, Ip2 = model.Ip2, Vp3 = model.Vp3, Ip3 = model.Ip3, Vp4 = model.Vp4, Ip4 = model.Ip4, Ipcmd0 = ws.setpoints.Ipcmd0, Iqcmd0 = ws.setpoints.Iqcmd0, v0 = ws.setpoints.v0, Pref0 = ws.setpoints.Pref0, pfaref0 = ws.setpoints.pfaref0, Qref0 = ws.setpoints.Qref0, Voltage_dip = ws.automata.discrete.Voltage_dip, in_state1 = ws.automata.discrete.in_state1, in_state2 = ws.automata.discrete.in_state2, Ipmax_hold = ws.automata.discrete.Ipmax_hold, PIV_gate = ws.automata.discrete.PIV_gate, PIV_side = ws.automata.discrete.PIV_side, PIQ_gate = ws.automata.discrete.PIQ_gate, PIQ_side = ws.automata.discrete.PIQ_side, s5_y_gate = ws.automata.discrete.s5_y_gate, vfloor_max_second = ws.automata.discrete.vfloor_max_second, vfloor_max_first = ws.automata.discrete.vfloor_max_first, PIV_y_clamp_high = ws.automata.discrete.PIV_y_clamp_high, PIV_y_clamp_low = ws.automata.discrete.PIV_y_clamp_low, PIV_y_clamp_mid = ws.automata.discrete.PIV_y_clamp_mid, PIQ_y_clamp_high = ws.automata.discrete.PIQ_y_clamp_high, PIQ_y_clamp_low = ws.automata.discrete.PIQ_y_clamp_low, PIQ_y_clamp_mid = ws.automata.discrete.PIQ_y_clamp_mid, Iqv_clamp_high = ws.automata.discrete.Iqv_clamp_high, Iqv_clamp_low = ws.automata.discrete.Iqv_clamp_low, Iqv_clamp_mid = ws.automata.discrete.Iqv_clamp_mid, VDL1_vdl1_below = ws.automata.discrete.VDL1_vdl1_below, VDL1_vdl1_segment1 = ws.automata.discrete.VDL1_vdl1_segment1, VDL1_vdl1_segment2 = ws.automata.discrete.VDL1_vdl1_segment2, VDL1_vdl1_segment3 = ws.automata.discrete.VDL1_vdl1_segment3, VDL1_vdl1_above = ws.automata.discrete.VDL1_vdl1_above, VDL2_vdl2_below = ws.automata.discrete.VDL2_vdl2_below, VDL2_vdl2_segment1 = ws.automata.discrete.VDL2_vdl2_segment1, VDL2_vdl2_segment2 = ws.automata.discrete.VDL2_vdl2_segment2, VDL2_vdl2_segment3 = ws.automata.discrete.VDL2_vdl2_segment3, VDL2_vdl2_above = ws.automata.discrete.VDL2_vdl2_above, Ipcmd_out_clamp_high = ws.automata.discrete.Ipcmd_out_clamp_high, Ipcmd_out_clamp_low = ws.automata.discrete.Ipcmd_out_clamp_low, Ipcmd_out_clamp_mid = ws.automata.discrete.Ipcmd_out_clamp_mid, Iqcmd_out_clamp_high = ws.automata.discrete.Iqcmd_out_clamp_high, Iqcmd_out_clamp_low = ws.automata.discrete.Iqcmd_out_clamp_low, Iqcmd_out_clamp_mid = ws.automata.discrete.Iqcmd_out_clamp_mid, Qerr_clamp_high = ws.automata.discrete.Qerr_clamp_high, Qerr_clamp_low = ws.automata.discrete.Qerr_clamp_low, Qerr_clamp_mid = ws.automata.discrete.Qerr_clamp_mid, Vsel_clamp_high = ws.automata.discrete.Vsel_clamp_high, Vsel_clamp_low = ws.automata.discrete.Vsel_clamp_low, Vsel_clamp_mid = ws.automata.discrete.Vsel_clamp_mid, Iqinj_clamp_high = ws.automata.discrete.Iqinj_clamp_high, Iqinj_clamp_low = ws.automata.discrete.Iqinj_clamp_low, Iqinj_clamp_mid = ws.automata.discrete.Iqinj_clamp_mid, Iqmax_max_second = ws.automata.discrete.Iqmax_max_second, Iqmax_max_first = ws.automata.discrete.Iqmax_max_first, Iqmax_min_second = ws.automata.discrete.Iqmax_min_second, Iqmax_min_first = ws.automata.discrete.Iqmax_min_first, Iqmax_min_2_second = ws.automata.discrete.Iqmax_min_2_second, Iqmax_min_2_first = ws.automata.discrete.Iqmax_min_2_first, Ipmax_min_second = ws.automata.discrete.Ipmax_min_second, Ipmax_min_first = ws.automata.discrete.Ipmax_min_first, Ipmax_max_second = ws.automata.discrete.Ipmax_max_second, Ipmax_max_first = ws.automata.discrete.Ipmax_max_first, Ipmax_min_2_second = ws.automata.discrete.Ipmax_min_2_second, Ipmax_min_2_first = ws.automata.discrete.Ipmax_min_2_first, pfilt_y_rate_clamp_high = ws.automata.discrete.pfilt_y_rate_clamp_high, pfilt_y_rate_clamp_low = ws.automata.discrete.pfilt_y_rate_clamp_low, pfilt_y_rate_clamp_mid = ws.automata.discrete.pfilt_y_rate_clamp_mid, t_release = ws.automata.memory.t_release, t_release2 = ws.automata.memory.t_release2, Ipmax_held = ws.automata.memory.Ipmax_held),
+        (PFFLAG = model.PFFLAG, VFLAG = model.VFLAG, QFLAG = model.QFLAG, PFLAG = model.PFLAG, PQFLAG = model.PQFLAG, Vdip = model.Vdip, Vup = model.Vup, Trv = model.Trv, dbd1 = model.dbd1, dbd2 = model.dbd2, Kqv = model.Kqv, Iqh1 = model.Iqh1, Iql1 = model.Iql1, Vref0 = model.Vref0, Iqfrz = model.Iqfrz, Thld = model.Thld, Thld2 = model.Thld2, Tp = model.Tp, QMax = model.QMax, QMin = model.QMin, VMAX = model.VMAX, VMIN = model.VMIN, Kqp = model.Kqp, Kqi = model.Kqi, Kvp = model.Kvp, Kvi = model.Kvi, Vref1 = model.Vref1, Tiq = model.Tiq, dPmax = model.dPmax, dPmin = model.dPmin, PMAX = model.PMAX, PMIN = model.PMIN, Imax = model.Imax, Tpord = model.Tpord, Vq1 = model.Vq1, Iq1 = model.Iq1, Vq2 = model.Vq2, Iq2 = model.Iq2, Vq3 = model.Vq3, Iq3 = model.Iq3, Vq4 = model.Vq4, Iq4 = model.Iq4, Vp1 = model.Vp1, Ip1 = model.Ip1, Vp2 = model.Vp2, Ip2 = model.Ip2, Vp3 = model.Vp3, Ip3 = model.Ip3, Vp4 = model.Vp4, Ip4 = model.Ip4, Ipcmd0 = ws.setpoints.Ipcmd0, Iqcmd0 = ws.setpoints.Iqcmd0, v0 = ws.setpoints.v0, Pref0 = ws.setpoints.Pref0, pfaref0 = ws.setpoints.pfaref0, Qref0 = ws.setpoints.Qref0, Voltage_dip = ws.automata.discrete.Voltage_dip, in_state1 = ws.automata.discrete.in_state1, in_state2 = ws.automata.discrete.in_state2, Ipmax_hold = ws.automata.discrete.Ipmax_hold, PIV_xi_gate = ws.automata.discrete.PIV_xi_gate, PIV_xi_side = ws.automata.discrete.PIV_xi_side, PIQ_xi_gate = ws.automata.discrete.PIQ_xi_gate, PIQ_xi_side = ws.automata.discrete.PIQ_xi_side, s5_y_gate = ws.automata.discrete.s5_y_gate, vfloor_max_second = ws.automata.discrete.vfloor_max_second, vfloor_max_first = ws.automata.discrete.vfloor_max_first, VDL1_vdl1_below = ws.automata.discrete.VDL1_vdl1_below, VDL1_vdl1_segment1 = ws.automata.discrete.VDL1_vdl1_segment1, VDL1_vdl1_segment2 = ws.automata.discrete.VDL1_vdl1_segment2, VDL1_vdl1_segment3 = ws.automata.discrete.VDL1_vdl1_segment3, VDL1_vdl1_above = ws.automata.discrete.VDL1_vdl1_above, VDL2_vdl2_below = ws.automata.discrete.VDL2_vdl2_below, VDL2_vdl2_segment1 = ws.automata.discrete.VDL2_vdl2_segment1, VDL2_vdl2_segment2 = ws.automata.discrete.VDL2_vdl2_segment2, VDL2_vdl2_segment3 = ws.automata.discrete.VDL2_vdl2_segment3, VDL2_vdl2_above = ws.automata.discrete.VDL2_vdl2_above, PIV_y_clamp_high = ws.automata.discrete.PIV_y_clamp_high, PIV_y_clamp_low = ws.automata.discrete.PIV_y_clamp_low, PIV_y_clamp_mid = ws.automata.discrete.PIV_y_clamp_mid, PIQ_y_clamp_high = ws.automata.discrete.PIQ_y_clamp_high, PIQ_y_clamp_low = ws.automata.discrete.PIQ_y_clamp_low, PIQ_y_clamp_mid = ws.automata.discrete.PIQ_y_clamp_mid, Iqv_clamp_high = ws.automata.discrete.Iqv_clamp_high, Iqv_clamp_low = ws.automata.discrete.Iqv_clamp_low, Iqv_clamp_mid = ws.automata.discrete.Iqv_clamp_mid, Ipcmd_out_clamp_high = ws.automata.discrete.Ipcmd_out_clamp_high, Ipcmd_out_clamp_low = ws.automata.discrete.Ipcmd_out_clamp_low, Ipcmd_out_clamp_mid = ws.automata.discrete.Ipcmd_out_clamp_mid, Iqcmd_out_clamp_high = ws.automata.discrete.Iqcmd_out_clamp_high, Iqcmd_out_clamp_low = ws.automata.discrete.Iqcmd_out_clamp_low, Iqcmd_out_clamp_mid = ws.automata.discrete.Iqcmd_out_clamp_mid, Qerr_clamp_high = ws.automata.discrete.Qerr_clamp_high, Qerr_clamp_low = ws.automata.discrete.Qerr_clamp_low, Qerr_clamp_mid = ws.automata.discrete.Qerr_clamp_mid, Vsel_clamp_high = ws.automata.discrete.Vsel_clamp_high, Vsel_clamp_low = ws.automata.discrete.Vsel_clamp_low, Vsel_clamp_mid = ws.automata.discrete.Vsel_clamp_mid, Iqinj_clamp_high = ws.automata.discrete.Iqinj_clamp_high, Iqinj_clamp_low = ws.automata.discrete.Iqinj_clamp_low, Iqinj_clamp_mid = ws.automata.discrete.Iqinj_clamp_mid, Iqmax_max_second = ws.automata.discrete.Iqmax_max_second, Iqmax_max_first = ws.automata.discrete.Iqmax_max_first, Iqmax_min_second = ws.automata.discrete.Iqmax_min_second, Iqmax_min_first = ws.automata.discrete.Iqmax_min_first, Iqmax_min_2_second = ws.automata.discrete.Iqmax_min_2_second, Iqmax_min_2_first = ws.automata.discrete.Iqmax_min_2_first, Ipmax_min_second = ws.automata.discrete.Ipmax_min_second, Ipmax_min_first = ws.automata.discrete.Ipmax_min_first, Ipmax_max_second = ws.automata.discrete.Ipmax_max_second, Ipmax_max_first = ws.automata.discrete.Ipmax_max_first, Ipmax_min_2_second = ws.automata.discrete.Ipmax_min_2_second, Ipmax_min_2_first = ws.automata.discrete.Ipmax_min_2_first, pfilt_y_rate_clamp_high = ws.automata.discrete.pfilt_y_rate_clamp_high, pfilt_y_rate_clamp_low = ws.automata.discrete.pfilt_y_rate_clamp_low, pfilt_y_rate_clamp_mid = ws.automata.discrete.pfilt_y_rate_clamp_mid, t_release = ws.automata.memory.t_release, t_release2 = ws.automata.memory.t_release2, Ipmax_held = ws.automata.memory.Ipmax_held),
         (s4_y = ws.var_vals.s4_y, pfilt_y = ws.var_vals.pfilt_y, s5_y = ws.var_vals.s5_y, s0_y = ws.var_vals.s0_y, S1_y = ws.var_vals.S1_y, PIV_xi = ws.var_vals.PIV_xi, PIQ_xi = ws.var_vals.PIQ_xi, Pref = ws.var_vals.Pref, pfaref = ws.var_vals.pfaref, Qref = ws.var_vals.Qref, Ipcmd_out = ws.var_vals.Ipcmd_out, Iqcmd_out = ws.var_vals.Iqcmd_out, Qerr = ws.var_vals.Qerr, Vsel = ws.var_vals.Vsel, Iqinj = ws.var_vals.Iqinj, Iqmax = ws.var_vals.Iqmax, Ipmax = ws.var_vals.Ipmax, v = ws.var_vals.v, Pe = ws.var_vals.Pe, Qgen = ws.var_vals.Qgen),
         active_mask,
         t,
@@ -661,52 +661,47 @@ end
     values::NamedTuple, params::NamedTuple, vars::NamedTuple,
     t, ::Type{AT}
 ) where AT
-    @inbounds for i in eachindex(values.PIV_unlimited_minus_Iqmax)
+    @inbounds for i in eachindex(values.PIV_xi_unlimited_minus_Iqmax)
         tpfilt = 0.02
         wg = 1.0
-        vfloor = 0.01 * params.vfloor_max_first[i] + vars.s0_y[i] * params.vfloor_max_second[i]
-        Qcpf = vars.S1_y[i] * tan(vars.pfaref[i])
-        PFsel = params.PFFLAG[i] * Qcpf + vars.Qref[i] * (1 - params.PFFLAG[i])
         moving = 1 - params.Voltage_dip[i]
-        PIV_rate = params.Kvi[i] * params.QFLAG[i] * moving * (vars.Vsel[i] - vars.s0_y[i])
-        PIV_unlimited = vars.PIV_xi[i] + params.Kvp[i] * params.QFLAG[i] * (vars.Vsel[i] - vars.s0_y[i])
-        PIV_y = vars.Iqmax[i] * params.PIV_y_clamp_high[i] + params.PIV_y_clamp_mid[i] * (vars.PIV_xi[i] + params.Kvp[i] * params.QFLAG[i] * (vars.Vsel[i] - vars.s0_y[i])) - vars.Iqmax[i] * params.PIV_y_clamp_low[i]
-        PIQ_rate = params.Kqi[i] * vars.Qerr[i] * params.VFLAG[i] * moving
-        PIQ_unlimited = vars.PIQ_xi[i] + params.Kqp[i] * vars.Qerr[i] * params.VFLAG[i]
-        PIQ_y = params.PIQ_y_clamp_high[i] * params.VMAX[i] + params.PIQ_y_clamp_low[i] * params.VMIN[i] + params.PIQ_y_clamp_mid[i] * (vars.PIQ_xi[i] + params.Kqp[i] * vars.Qerr[i] * params.VFLAG[i])
+        Psel = params.PFLAG[i] * wg * vars.pfilt_y[i] + (1 - params.PFLAG[i]) * vars.pfilt_y[i]
+        vfloor = 0.01 * params.vfloor_max_second[i] + vars.s0_y[i] * params.vfloor_max_first[i]
+        Qcpf = vars.S1_y[i] * tan(vars.pfaref[i])
         Vref0_eff = ifelse(params.Vref0[i] == 0, params.v0[i], params.Vref0[i])
+        VDL1 = params.Iq1[i] * params.VDL1_vdl1_below[i] + (params.Iq1[i] + (params.Iq2[i] - params.Iq1[i]) / (params.Vq2[i] - params.Vq1[i]) * (vars.s0_y[i] - params.Vq1[i])) * params.VDL1_vdl1_segment1[i] + (params.Iq2[i] + (params.Iq3[i] - params.Iq2[i]) / (params.Vq3[i] - params.Vq2[i]) * (vars.s0_y[i] - params.Vq2[i])) * params.VDL1_vdl1_segment2[i] + (params.Iq3[i] + (params.Iq4[i] - params.Iq3[i]) / (params.Vq4[i] - params.Vq3[i]) * (vars.s0_y[i] - params.Vq3[i])) * params.VDL1_vdl1_segment3[i] + params.Iq4[i] * params.VDL1_vdl1_above[i]
+        VDL2 = params.Ip1[i] * params.VDL2_vdl2_below[i] + (params.Ip1[i] + (params.Ip2[i] - params.Ip1[i]) / (params.Vp2[i] - params.Vp1[i]) * (vars.s0_y[i] - params.Vp1[i])) * params.VDL2_vdl2_segment1[i] + (params.Ip2[i] + (params.Ip3[i] - params.Ip2[i]) / (params.Vp3[i] - params.Vp2[i]) * (vars.s0_y[i] - params.Vp2[i])) * params.VDL2_vdl2_segment2[i] + (params.Ip3[i] + (params.Ip4[i] - params.Ip3[i]) / (params.Vp4[i] - params.Vp3[i]) * (vars.s0_y[i] - params.Vp3[i])) * params.VDL2_vdl2_segment3[i] + params.Ip4[i] * params.VDL2_vdl2_above[i]
+        PIV_xi_rate = moving * params.Kvi[i] * (params.QFLAG[i] * (vars.Vsel[i] - vars.s0_y[i]))
+        PIV_xi_unlimited = params.Kvp[i] * (params.QFLAG[i] * (vars.Vsel[i] - vars.s0_y[i])) + vars.PIV_xi[i]
+        PIV_y = vars.Iqmax[i] * params.PIV_y_clamp_high[i] + -vars.Iqmax[i] * params.PIV_y_clamp_low[i] + (params.Kvp[i] * (params.QFLAG[i] * (vars.Vsel[i] - vars.s0_y[i])) + vars.PIV_xi[i]) * params.PIV_y_clamp_mid[i]
+        PFsel = params.PFFLAG[i] * Qcpf + (1 - params.PFFLAG[i]) * vars.Qref[i]
         Verr = Vref0_eff - vars.s0_y[i]
-        Iqv = params.Kqv[i] * (Verr - params.Iqv_clamp_high[i] * params.dbd2[i] - params.Iqv_clamp_low[i] * params.dbd1[i] - params.Iqv_clamp_mid[i] * Verr)
-        VDL1 = params.Iq1[i] * params.VDL1_vdl1_below[i] + params.Iq4[i] * params.VDL1_vdl1_above[i] + params.VDL1_vdl1_segment1[i] * (params.Iq1[i] + (params.Iq2[i] - params.Iq1[i]) * (vars.s0_y[i] - params.Vq1[i]) / (params.Vq2[i] - params.Vq1[i])) + params.VDL1_vdl1_segment2[i] * (params.Iq2[i] + (params.Iq3[i] - params.Iq2[i]) * (vars.s0_y[i] - params.Vq2[i]) / (params.Vq3[i] - params.Vq2[i])) + params.VDL1_vdl1_segment3[i] * (params.Iq3[i] + (params.Iq4[i] - params.Iq3[i]) * (vars.s0_y[i] - params.Vq3[i]) / (params.Vq4[i] - params.Vq3[i]))
-        VDL2 = params.Ip1[i] * params.VDL2_vdl2_below[i] + params.Ip4[i] * params.VDL2_vdl2_above[i] + params.VDL2_vdl2_segment1[i] * (params.Ip1[i] + (params.Ip2[i] - params.Ip1[i]) * (vars.s0_y[i] - params.Vp1[i]) / (params.Vp2[i] - params.Vp1[i])) + params.VDL2_vdl2_segment2[i] * (params.Ip2[i] + (params.Ip3[i] - params.Ip2[i]) * (vars.s0_y[i] - params.Vp2[i]) / (params.Vp3[i] - params.Vp2[i])) + params.VDL2_vdl2_segment3[i] * (params.Ip3[i] + (params.Ip4[i] - params.Ip3[i]) * (vars.s0_y[i] - params.Vp3[i]) / (params.Vp4[i] - params.Vp3[i]))
-        Psel = vars.pfilt_y[i] * (1 - params.PFLAG[i]) + params.PFLAG[i] * vars.pfilt_y[i] * wg
+        PIQ_xi_rate = moving * params.Kqi[i] * (params.VFLAG[i] * vars.Qerr[i])
+        PIQ_xi_unlimited = params.Kqp[i] * (params.VFLAG[i] * vars.Qerr[i]) + vars.PIQ_xi[i]
+        PIQ_y = params.VMAX[i] * params.PIQ_y_clamp_high[i] + params.VMIN[i] * params.PIQ_y_clamp_low[i] + (params.Kqp[i] * (params.VFLAG[i] * vars.Qerr[i]) + vars.PIQ_xi[i]) * params.PIQ_y_clamp_mid[i]
+        Iqv = params.Kqv[i] * (Verr - (params.dbd2[i] * params.Iqv_clamp_high[i] + params.dbd1[i] * params.Iqv_clamp_low[i] + Verr * params.Iqv_clamp_mid[i]))
         s5_y_rate = moving * (Psel - vars.s5_y[i]) / params.Tpord[i]
         # === Automaton Values ===
-        values.PIV_unlimited_minus_Iqmax[i] = PIV_unlimited - vars.Iqmax[i]
-        values.PIV_rate[i] = PIV_rate
-        values.PIV_value[i] = vars.Iqmax[i] + PIV_unlimited
-        values.PIQ_rate[i] = PIQ_rate
-        values.PIQ_unlimited_minus_VMAX[i] = PIQ_unlimited - params.VMAX[i]
-        values.PIV_side[i] = params.PIV_side[i]
-        values.PIQ_unlimited_minus_VMIN[i] = PIQ_unlimited - params.VMIN[i]
+        values.PIV_xi_unlimited_minus_Iqmax[i] = PIV_xi_unlimited - vars.Iqmax[i]
+        values.PIV_xi_rate[i] = PIV_xi_rate
+        values.PIV_xi_value[i] = PIV_xi_unlimited - -vars.Iqmax[i]
+        values.PIQ_xi_unlimited_minus_VMAX[i] = PIQ_xi_unlimited - params.VMAX[i]
+        values.PIV_xi_side[i] = params.PIV_xi_side[i]
+        values.PIQ_xi_rate[i] = PIQ_xi_rate
+        values.PIQ_xi_unlimited_minus_VMIN[i] = PIQ_xi_unlimited - params.VMIN[i]
+        values.PIQ_xi_value[i] = -params.PIV_xi_side[i]
         values.s5_y_minus_PMAX[i] = vars.s5_y[i] - params.PMAX[i]
         values.s5_y_rate[i] = s5_y_rate
         values.s5_y_minus_PMIN[i] = vars.s5_y[i] - params.PMIN[i]
-        values.v_minus_Vup[i] = vars.v[i] - params.Vup[i]
         values.v_minus_Vdip[i] = vars.v[i] - params.Vdip[i]
+        values.v_minus_Vup[i] = vars.v[i] - params.Vup[i]
         values.Thld[i] = params.Thld[i]
         values.t[i] = t
-        values.injection_value[i] = t - params.Thld[i] - params.t_release[i]
-        values.injection_value_2[i] = params.Thld[i] + t - params.t_release[i]
+        values.injection_value[i] = t - params.t_release[i] - params.Thld[i]
+        values.injection_value_2[i] = t - params.t_release[i] - -params.Thld[i]
         values.Ipmax[i] = vars.Ipmax[i]
-        values.ipmax_hold_value[i] = t - params.Thld2[i] - params.t_release2[i]
-        values.vfloor_max_value[i] = vars.s0_y[i] - 0.01
-        values.PIV_y_clamp_value[i] = vars.Iqmax[i] + vars.PIV_xi[i] + params.Kvp[i] * params.QFLAG[i] * (vars.Vsel[i] - vars.s0_y[i])
-        values.PIV_y_clamp_value_2[i] = vars.PIV_xi[i] + params.Kvp[i] * params.QFLAG[i] * (vars.Vsel[i] - vars.s0_y[i]) - vars.Iqmax[i]
-        values.PIQ_y_clamp_value[i] = vars.PIQ_xi[i] + params.Kqp[i] * vars.Qerr[i] * params.VFLAG[i] - params.VMAX[i]
-        values.PIQ_y_clamp_value_2[i] = vars.PIQ_xi[i] + params.Kqp[i] * vars.Qerr[i] * params.VFLAG[i] - params.VMIN[i]
-        values.Iqv_clamp_value[i] = Verr - params.dbd2[i]
-        values.Iqv_clamp_value_2[i] = Verr - params.dbd1[i]
+        values.ipmax_hold_value[i] = t - params.t_release2[i] - params.Thld2[i]
+        values.vfloor_max_value[i] = 0.01 - vars.s0_y[i]
         values.VDL1_vdl1_value[i] = vars.s0_y[i] - params.Vq1[i]
         values.VDL1_vdl1_value_2[i] = vars.s0_y[i] - params.Vq2[i]
         values.VDL1_vdl1_value_3[i] = vars.s0_y[i] - params.Vq3[i]
@@ -715,22 +710,28 @@ end
         values.VDL2_vdl2_value_2[i] = vars.s0_y[i] - params.Vp2[i]
         values.VDL2_vdl2_value_3[i] = vars.s0_y[i] - params.Vp3[i]
         values.VDL2_vdl2_value_4[i] = vars.s0_y[i] - params.Vp4[i]
-        values.Ipcmd_out_clamp_value[i] = vars.s5_y[i] / vfloor
-        values.Ipcmd_out_clamp_value_2[i] = vars.s5_y[i] / vfloor - vars.Ipmax[i]
-        values.Iqcmd_out_clamp_value[i] = vars.Iqinj[i] + vars.Iqmax[i] + PIV_y * params.QFLAG[i] + vars.s4_y[i] * (1 - params.QFLAG[i])
-        values.Iqcmd_out_clamp_value_2[i] = vars.Iqinj[i] + PIV_y * params.QFLAG[i] + vars.s4_y[i] * (1 - params.QFLAG[i]) - vars.Iqmax[i]
+        values.PIV_y_clamp_value[i] = params.Kvp[i] * (params.QFLAG[i] * (vars.Vsel[i] - vars.s0_y[i])) + vars.PIV_xi[i] - vars.Iqmax[i]
+        values.PIV_y_clamp_value_2[i] = params.Kvp[i] * (params.QFLAG[i] * (vars.Vsel[i] - vars.s0_y[i])) + vars.PIV_xi[i] - -vars.Iqmax[i]
+        values.PIQ_y_clamp_value[i] = params.Kqp[i] * (params.VFLAG[i] * vars.Qerr[i]) + vars.PIQ_xi[i] - params.VMAX[i]
+        values.PIQ_y_clamp_value_2[i] = params.Kqp[i] * (params.VFLAG[i] * vars.Qerr[i]) + vars.PIQ_xi[i] - params.VMIN[i]
+        values.Iqv_clamp_value[i] = Verr - params.dbd2[i]
+        values.Iqv_clamp_value_2[i] = Verr - params.dbd1[i]
+        values.Ipcmd_out_clamp_value[i] = vars.s5_y[i] / vfloor - vars.Ipmax[i]
+        values.Ipcmd_out_clamp_value_2[i] = vars.s5_y[i] / vfloor - 0
+        values.Iqcmd_out_clamp_value[i] = params.QFLAG[i] * PIV_y + (1 - params.QFLAG[i]) * vars.s4_y[i] + vars.Iqinj[i] - vars.Iqmax[i]
+        values.Iqcmd_out_clamp_value_2[i] = params.QFLAG[i] * PIV_y + (1 - params.QFLAG[i]) * vars.s4_y[i] + vars.Iqinj[i] - -vars.Iqmax[i]
         values.Qerr_clamp_value[i] = PFsel - params.QMax[i]
         values.Qerr_clamp_value_2[i] = PFsel - params.QMin[i]
-        values.Vsel_clamp_value[i] = PIQ_y * params.VFLAG[i] + (1 - params.VFLAG[i]) * (PFsel + params.Vref1[i]) - params.VMAX[i]
-        values.Vsel_clamp_value_2[i] = PIQ_y * params.VFLAG[i] + (1 - params.VFLAG[i]) * (PFsel + params.Vref1[i]) - params.VMIN[i]
+        values.Vsel_clamp_value[i] = params.VFLAG[i] * PIQ_y + (1 - params.VFLAG[i]) * (params.Vref1[i] + PFsel) - params.VMAX[i]
+        values.Vsel_clamp_value_2[i] = params.VFLAG[i] * PIQ_y + (1 - params.VFLAG[i]) * (params.Vref1[i] + PFsel) - params.VMIN[i]
         values.Iqinj_clamp_value[i] = Iqv - params.Iqh1[i]
         values.Iqinj_clamp_value_2[i] = Iqv - params.Iql1[i]
-        values.Iqmax_max_value[i] = params.Imax[i] ^ 2 - vars.Ipcmd_out[i] ^ 2
-        values.Iqmax_min_value[i] = sqrt(params.Iqmax_max_second[i]) * sqrt(max(0, params.Imax[i] ^ 2 - vars.Ipcmd_out[i] ^ 2)) - VDL1
-        values.Iqmax_min_2_value[i] = VDL1 - params.Imax[i]
-        values.Ipmax_min_value[i] = VDL2 - params.Imax[i]
-        values.Ipmax_max_value[i] = params.Imax[i] ^ 2 - vars.Iqcmd_out[i] ^ 2
-        values.Ipmax_min_2_value[i] = sqrt(params.Ipmax_max_second[i]) * sqrt(max(0, params.Imax[i] ^ 2 - vars.Iqcmd_out[i] ^ 2)) - VDL2
+        values.Iqmax_max_value[i] = params.Imax[i] ^ 2 - vars.Ipcmd_out[i] ^ 2 - 0
+        values.Iqmax_min_value[i] = sqrt(max(0, params.Imax[i] ^ 2 - vars.Ipcmd_out[i] ^ 2) * params.Iqmax_max_second[i] + 0 * params.Iqmax_max_first[i]) - VDL1
+        values.Iqmax_min_2_value[i] = params.Imax[i] - VDL1
+        values.Ipmax_min_value[i] = params.Imax[i] - VDL2
+        values.Ipmax_max_value[i] = params.Imax[i] ^ 2 - vars.Iqcmd_out[i] ^ 2 - 0
+        values.Ipmax_min_2_value[i] = sqrt(max(0, params.Imax[i] ^ 2 - vars.Iqcmd_out[i] ^ 2) * params.Ipmax_max_second[i] + 0 * params.Ipmax_max_first[i]) - VDL2
         values.pfilt_y_rate_clamp_value[i] = (vars.Pref[i] - vars.pfilt_y[i]) / tpfilt - params.dPmax[i]
         values.pfilt_y_rate_clamp_value_2[i] = (vars.Pref[i] - vars.pfilt_y[i]) / tpfilt - params.dPmin[i]
     end
@@ -742,8 +743,8 @@ end
     external::NamedTuple, ::PowerInjection, t
 ) where {T, AT}
     reeca1_automaton_values_kernel!(
-        (PIV_unlimited_minus_Iqmax = ws.automata.values.PIV_unlimited_minus_Iqmax, PIV_rate = ws.automata.values.PIV_rate, PIV_value = ws.automata.values.PIV_value, PIQ_rate = ws.automata.values.PIQ_rate, PIQ_unlimited_minus_VMAX = ws.automata.values.PIQ_unlimited_minus_VMAX, PIV_side = ws.automata.values.PIV_side, PIQ_unlimited_minus_VMIN = ws.automata.values.PIQ_unlimited_minus_VMIN, s5_y_minus_PMAX = ws.automata.values.s5_y_minus_PMAX, s5_y_rate = ws.automata.values.s5_y_rate, s5_y_minus_PMIN = ws.automata.values.s5_y_minus_PMIN, v_minus_Vup = ws.automata.values.v_minus_Vup, v_minus_Vdip = ws.automata.values.v_minus_Vdip, Thld = ws.automata.values.Thld, t = ws.automata.values.t, injection_value = ws.automata.values.injection_value, injection_value_2 = ws.automata.values.injection_value_2, Ipmax = ws.automata.values.Ipmax, ipmax_hold_value = ws.automata.values.ipmax_hold_value, vfloor_max_value = ws.automata.values.vfloor_max_value, PIV_y_clamp_value = ws.automata.values.PIV_y_clamp_value, PIV_y_clamp_value_2 = ws.automata.values.PIV_y_clamp_value_2, PIQ_y_clamp_value = ws.automata.values.PIQ_y_clamp_value, PIQ_y_clamp_value_2 = ws.automata.values.PIQ_y_clamp_value_2, Iqv_clamp_value = ws.automata.values.Iqv_clamp_value, Iqv_clamp_value_2 = ws.automata.values.Iqv_clamp_value_2, VDL1_vdl1_value = ws.automata.values.VDL1_vdl1_value, VDL1_vdl1_value_2 = ws.automata.values.VDL1_vdl1_value_2, VDL1_vdl1_value_3 = ws.automata.values.VDL1_vdl1_value_3, VDL1_vdl1_value_4 = ws.automata.values.VDL1_vdl1_value_4, VDL2_vdl2_value = ws.automata.values.VDL2_vdl2_value, VDL2_vdl2_value_2 = ws.automata.values.VDL2_vdl2_value_2, VDL2_vdl2_value_3 = ws.automata.values.VDL2_vdl2_value_3, VDL2_vdl2_value_4 = ws.automata.values.VDL2_vdl2_value_4, Ipcmd_out_clamp_value = ws.automata.values.Ipcmd_out_clamp_value, Ipcmd_out_clamp_value_2 = ws.automata.values.Ipcmd_out_clamp_value_2, Iqcmd_out_clamp_value = ws.automata.values.Iqcmd_out_clamp_value, Iqcmd_out_clamp_value_2 = ws.automata.values.Iqcmd_out_clamp_value_2, Qerr_clamp_value = ws.automata.values.Qerr_clamp_value, Qerr_clamp_value_2 = ws.automata.values.Qerr_clamp_value_2, Vsel_clamp_value = ws.automata.values.Vsel_clamp_value, Vsel_clamp_value_2 = ws.automata.values.Vsel_clamp_value_2, Iqinj_clamp_value = ws.automata.values.Iqinj_clamp_value, Iqinj_clamp_value_2 = ws.automata.values.Iqinj_clamp_value_2, Iqmax_max_value = ws.automata.values.Iqmax_max_value, Iqmax_min_value = ws.automata.values.Iqmax_min_value, Iqmax_min_2_value = ws.automata.values.Iqmax_min_2_value, Ipmax_min_value = ws.automata.values.Ipmax_min_value, Ipmax_max_value = ws.automata.values.Ipmax_max_value, Ipmax_min_2_value = ws.automata.values.Ipmax_min_2_value, pfilt_y_rate_clamp_value = ws.automata.values.pfilt_y_rate_clamp_value, pfilt_y_rate_clamp_value_2 = ws.automata.values.pfilt_y_rate_clamp_value_2),
-        (PFFLAG = model.PFFLAG, VFLAG = model.VFLAG, QFLAG = model.QFLAG, PFLAG = model.PFLAG, PQFLAG = model.PQFLAG, Vdip = model.Vdip, Vup = model.Vup, Trv = model.Trv, dbd1 = model.dbd1, dbd2 = model.dbd2, Kqv = model.Kqv, Iqh1 = model.Iqh1, Iql1 = model.Iql1, Vref0 = model.Vref0, Iqfrz = model.Iqfrz, Thld = model.Thld, Thld2 = model.Thld2, Tp = model.Tp, QMax = model.QMax, QMin = model.QMin, VMAX = model.VMAX, VMIN = model.VMIN, Kqp = model.Kqp, Kqi = model.Kqi, Kvp = model.Kvp, Kvi = model.Kvi, Vref1 = model.Vref1, Tiq = model.Tiq, dPmax = model.dPmax, dPmin = model.dPmin, PMAX = model.PMAX, PMIN = model.PMIN, Imax = model.Imax, Tpord = model.Tpord, Vq1 = model.Vq1, Iq1 = model.Iq1, Vq2 = model.Vq2, Iq2 = model.Iq2, Vq3 = model.Vq3, Iq3 = model.Iq3, Vq4 = model.Vq4, Iq4 = model.Iq4, Vp1 = model.Vp1, Ip1 = model.Ip1, Vp2 = model.Vp2, Ip2 = model.Ip2, Vp3 = model.Vp3, Ip3 = model.Ip3, Vp4 = model.Vp4, Ip4 = model.Ip4, Ipcmd0 = ws.setpoints.Ipcmd0, Iqcmd0 = ws.setpoints.Iqcmd0, v0 = ws.setpoints.v0, Pref0 = ws.setpoints.Pref0, pfaref0 = ws.setpoints.pfaref0, Qref0 = ws.setpoints.Qref0, Voltage_dip = ws.automata.discrete.Voltage_dip, in_state1 = ws.automata.discrete.in_state1, in_state2 = ws.automata.discrete.in_state2, Ipmax_hold = ws.automata.discrete.Ipmax_hold, PIV_gate = ws.automata.discrete.PIV_gate, PIV_side = ws.automata.discrete.PIV_side, PIQ_gate = ws.automata.discrete.PIQ_gate, PIQ_side = ws.automata.discrete.PIQ_side, s5_y_gate = ws.automata.discrete.s5_y_gate, vfloor_max_second = ws.automata.discrete.vfloor_max_second, vfloor_max_first = ws.automata.discrete.vfloor_max_first, PIV_y_clamp_high = ws.automata.discrete.PIV_y_clamp_high, PIV_y_clamp_low = ws.automata.discrete.PIV_y_clamp_low, PIV_y_clamp_mid = ws.automata.discrete.PIV_y_clamp_mid, PIQ_y_clamp_high = ws.automata.discrete.PIQ_y_clamp_high, PIQ_y_clamp_low = ws.automata.discrete.PIQ_y_clamp_low, PIQ_y_clamp_mid = ws.automata.discrete.PIQ_y_clamp_mid, Iqv_clamp_high = ws.automata.discrete.Iqv_clamp_high, Iqv_clamp_low = ws.automata.discrete.Iqv_clamp_low, Iqv_clamp_mid = ws.automata.discrete.Iqv_clamp_mid, VDL1_vdl1_below = ws.automata.discrete.VDL1_vdl1_below, VDL1_vdl1_segment1 = ws.automata.discrete.VDL1_vdl1_segment1, VDL1_vdl1_segment2 = ws.automata.discrete.VDL1_vdl1_segment2, VDL1_vdl1_segment3 = ws.automata.discrete.VDL1_vdl1_segment3, VDL1_vdl1_above = ws.automata.discrete.VDL1_vdl1_above, VDL2_vdl2_below = ws.automata.discrete.VDL2_vdl2_below, VDL2_vdl2_segment1 = ws.automata.discrete.VDL2_vdl2_segment1, VDL2_vdl2_segment2 = ws.automata.discrete.VDL2_vdl2_segment2, VDL2_vdl2_segment3 = ws.automata.discrete.VDL2_vdl2_segment3, VDL2_vdl2_above = ws.automata.discrete.VDL2_vdl2_above, Ipcmd_out_clamp_high = ws.automata.discrete.Ipcmd_out_clamp_high, Ipcmd_out_clamp_low = ws.automata.discrete.Ipcmd_out_clamp_low, Ipcmd_out_clamp_mid = ws.automata.discrete.Ipcmd_out_clamp_mid, Iqcmd_out_clamp_high = ws.automata.discrete.Iqcmd_out_clamp_high, Iqcmd_out_clamp_low = ws.automata.discrete.Iqcmd_out_clamp_low, Iqcmd_out_clamp_mid = ws.automata.discrete.Iqcmd_out_clamp_mid, Qerr_clamp_high = ws.automata.discrete.Qerr_clamp_high, Qerr_clamp_low = ws.automata.discrete.Qerr_clamp_low, Qerr_clamp_mid = ws.automata.discrete.Qerr_clamp_mid, Vsel_clamp_high = ws.automata.discrete.Vsel_clamp_high, Vsel_clamp_low = ws.automata.discrete.Vsel_clamp_low, Vsel_clamp_mid = ws.automata.discrete.Vsel_clamp_mid, Iqinj_clamp_high = ws.automata.discrete.Iqinj_clamp_high, Iqinj_clamp_low = ws.automata.discrete.Iqinj_clamp_low, Iqinj_clamp_mid = ws.automata.discrete.Iqinj_clamp_mid, Iqmax_max_second = ws.automata.discrete.Iqmax_max_second, Iqmax_max_first = ws.automata.discrete.Iqmax_max_first, Iqmax_min_second = ws.automata.discrete.Iqmax_min_second, Iqmax_min_first = ws.automata.discrete.Iqmax_min_first, Iqmax_min_2_second = ws.automata.discrete.Iqmax_min_2_second, Iqmax_min_2_first = ws.automata.discrete.Iqmax_min_2_first, Ipmax_min_second = ws.automata.discrete.Ipmax_min_second, Ipmax_min_first = ws.automata.discrete.Ipmax_min_first, Ipmax_max_second = ws.automata.discrete.Ipmax_max_second, Ipmax_max_first = ws.automata.discrete.Ipmax_max_first, Ipmax_min_2_second = ws.automata.discrete.Ipmax_min_2_second, Ipmax_min_2_first = ws.automata.discrete.Ipmax_min_2_first, pfilt_y_rate_clamp_high = ws.automata.discrete.pfilt_y_rate_clamp_high, pfilt_y_rate_clamp_low = ws.automata.discrete.pfilt_y_rate_clamp_low, pfilt_y_rate_clamp_mid = ws.automata.discrete.pfilt_y_rate_clamp_mid, t_release = ws.automata.memory.t_release, t_release2 = ws.automata.memory.t_release2, Ipmax_held = ws.automata.memory.Ipmax_held),
+        (PIV_xi_unlimited_minus_Iqmax = ws.automata.values.PIV_xi_unlimited_minus_Iqmax, PIV_xi_rate = ws.automata.values.PIV_xi_rate, PIV_xi_value = ws.automata.values.PIV_xi_value, PIQ_xi_unlimited_minus_VMAX = ws.automata.values.PIQ_xi_unlimited_minus_VMAX, PIV_xi_side = ws.automata.values.PIV_xi_side, PIQ_xi_rate = ws.automata.values.PIQ_xi_rate, PIQ_xi_unlimited_minus_VMIN = ws.automata.values.PIQ_xi_unlimited_minus_VMIN, PIQ_xi_value = ws.automata.values.PIQ_xi_value, s5_y_minus_PMAX = ws.automata.values.s5_y_minus_PMAX, s5_y_rate = ws.automata.values.s5_y_rate, s5_y_minus_PMIN = ws.automata.values.s5_y_minus_PMIN, v_minus_Vdip = ws.automata.values.v_minus_Vdip, v_minus_Vup = ws.automata.values.v_minus_Vup, Thld = ws.automata.values.Thld, t = ws.automata.values.t, injection_value = ws.automata.values.injection_value, injection_value_2 = ws.automata.values.injection_value_2, Ipmax = ws.automata.values.Ipmax, ipmax_hold_value = ws.automata.values.ipmax_hold_value, vfloor_max_value = ws.automata.values.vfloor_max_value, VDL1_vdl1_value = ws.automata.values.VDL1_vdl1_value, VDL1_vdl1_value_2 = ws.automata.values.VDL1_vdl1_value_2, VDL1_vdl1_value_3 = ws.automata.values.VDL1_vdl1_value_3, VDL1_vdl1_value_4 = ws.automata.values.VDL1_vdl1_value_4, VDL2_vdl2_value = ws.automata.values.VDL2_vdl2_value, VDL2_vdl2_value_2 = ws.automata.values.VDL2_vdl2_value_2, VDL2_vdl2_value_3 = ws.automata.values.VDL2_vdl2_value_3, VDL2_vdl2_value_4 = ws.automata.values.VDL2_vdl2_value_4, PIV_y_clamp_value = ws.automata.values.PIV_y_clamp_value, PIV_y_clamp_value_2 = ws.automata.values.PIV_y_clamp_value_2, PIQ_y_clamp_value = ws.automata.values.PIQ_y_clamp_value, PIQ_y_clamp_value_2 = ws.automata.values.PIQ_y_clamp_value_2, Iqv_clamp_value = ws.automata.values.Iqv_clamp_value, Iqv_clamp_value_2 = ws.automata.values.Iqv_clamp_value_2, Ipcmd_out_clamp_value = ws.automata.values.Ipcmd_out_clamp_value, Ipcmd_out_clamp_value_2 = ws.automata.values.Ipcmd_out_clamp_value_2, Iqcmd_out_clamp_value = ws.automata.values.Iqcmd_out_clamp_value, Iqcmd_out_clamp_value_2 = ws.automata.values.Iqcmd_out_clamp_value_2, Qerr_clamp_value = ws.automata.values.Qerr_clamp_value, Qerr_clamp_value_2 = ws.automata.values.Qerr_clamp_value_2, Vsel_clamp_value = ws.automata.values.Vsel_clamp_value, Vsel_clamp_value_2 = ws.automata.values.Vsel_clamp_value_2, Iqinj_clamp_value = ws.automata.values.Iqinj_clamp_value, Iqinj_clamp_value_2 = ws.automata.values.Iqinj_clamp_value_2, Iqmax_max_value = ws.automata.values.Iqmax_max_value, Iqmax_min_value = ws.automata.values.Iqmax_min_value, Iqmax_min_2_value = ws.automata.values.Iqmax_min_2_value, Ipmax_min_value = ws.automata.values.Ipmax_min_value, Ipmax_max_value = ws.automata.values.Ipmax_max_value, Ipmax_min_2_value = ws.automata.values.Ipmax_min_2_value, pfilt_y_rate_clamp_value = ws.automata.values.pfilt_y_rate_clamp_value, pfilt_y_rate_clamp_value_2 = ws.automata.values.pfilt_y_rate_clamp_value_2),
+        (PFFLAG = model.PFFLAG, VFLAG = model.VFLAG, QFLAG = model.QFLAG, PFLAG = model.PFLAG, PQFLAG = model.PQFLAG, Vdip = model.Vdip, Vup = model.Vup, Trv = model.Trv, dbd1 = model.dbd1, dbd2 = model.dbd2, Kqv = model.Kqv, Iqh1 = model.Iqh1, Iql1 = model.Iql1, Vref0 = model.Vref0, Iqfrz = model.Iqfrz, Thld = model.Thld, Thld2 = model.Thld2, Tp = model.Tp, QMax = model.QMax, QMin = model.QMin, VMAX = model.VMAX, VMIN = model.VMIN, Kqp = model.Kqp, Kqi = model.Kqi, Kvp = model.Kvp, Kvi = model.Kvi, Vref1 = model.Vref1, Tiq = model.Tiq, dPmax = model.dPmax, dPmin = model.dPmin, PMAX = model.PMAX, PMIN = model.PMIN, Imax = model.Imax, Tpord = model.Tpord, Vq1 = model.Vq1, Iq1 = model.Iq1, Vq2 = model.Vq2, Iq2 = model.Iq2, Vq3 = model.Vq3, Iq3 = model.Iq3, Vq4 = model.Vq4, Iq4 = model.Iq4, Vp1 = model.Vp1, Ip1 = model.Ip1, Vp2 = model.Vp2, Ip2 = model.Ip2, Vp3 = model.Vp3, Ip3 = model.Ip3, Vp4 = model.Vp4, Ip4 = model.Ip4, Ipcmd0 = ws.setpoints.Ipcmd0, Iqcmd0 = ws.setpoints.Iqcmd0, v0 = ws.setpoints.v0, Pref0 = ws.setpoints.Pref0, pfaref0 = ws.setpoints.pfaref0, Qref0 = ws.setpoints.Qref0, Voltage_dip = ws.automata.discrete.Voltage_dip, in_state1 = ws.automata.discrete.in_state1, in_state2 = ws.automata.discrete.in_state2, Ipmax_hold = ws.automata.discrete.Ipmax_hold, PIV_xi_gate = ws.automata.discrete.PIV_xi_gate, PIV_xi_side = ws.automata.discrete.PIV_xi_side, PIQ_xi_gate = ws.automata.discrete.PIQ_xi_gate, PIQ_xi_side = ws.automata.discrete.PIQ_xi_side, s5_y_gate = ws.automata.discrete.s5_y_gate, vfloor_max_second = ws.automata.discrete.vfloor_max_second, vfloor_max_first = ws.automata.discrete.vfloor_max_first, VDL1_vdl1_below = ws.automata.discrete.VDL1_vdl1_below, VDL1_vdl1_segment1 = ws.automata.discrete.VDL1_vdl1_segment1, VDL1_vdl1_segment2 = ws.automata.discrete.VDL1_vdl1_segment2, VDL1_vdl1_segment3 = ws.automata.discrete.VDL1_vdl1_segment3, VDL1_vdl1_above = ws.automata.discrete.VDL1_vdl1_above, VDL2_vdl2_below = ws.automata.discrete.VDL2_vdl2_below, VDL2_vdl2_segment1 = ws.automata.discrete.VDL2_vdl2_segment1, VDL2_vdl2_segment2 = ws.automata.discrete.VDL2_vdl2_segment2, VDL2_vdl2_segment3 = ws.automata.discrete.VDL2_vdl2_segment3, VDL2_vdl2_above = ws.automata.discrete.VDL2_vdl2_above, PIV_y_clamp_high = ws.automata.discrete.PIV_y_clamp_high, PIV_y_clamp_low = ws.automata.discrete.PIV_y_clamp_low, PIV_y_clamp_mid = ws.automata.discrete.PIV_y_clamp_mid, PIQ_y_clamp_high = ws.automata.discrete.PIQ_y_clamp_high, PIQ_y_clamp_low = ws.automata.discrete.PIQ_y_clamp_low, PIQ_y_clamp_mid = ws.automata.discrete.PIQ_y_clamp_mid, Iqv_clamp_high = ws.automata.discrete.Iqv_clamp_high, Iqv_clamp_low = ws.automata.discrete.Iqv_clamp_low, Iqv_clamp_mid = ws.automata.discrete.Iqv_clamp_mid, Ipcmd_out_clamp_high = ws.automata.discrete.Ipcmd_out_clamp_high, Ipcmd_out_clamp_low = ws.automata.discrete.Ipcmd_out_clamp_low, Ipcmd_out_clamp_mid = ws.automata.discrete.Ipcmd_out_clamp_mid, Iqcmd_out_clamp_high = ws.automata.discrete.Iqcmd_out_clamp_high, Iqcmd_out_clamp_low = ws.automata.discrete.Iqcmd_out_clamp_low, Iqcmd_out_clamp_mid = ws.automata.discrete.Iqcmd_out_clamp_mid, Qerr_clamp_high = ws.automata.discrete.Qerr_clamp_high, Qerr_clamp_low = ws.automata.discrete.Qerr_clamp_low, Qerr_clamp_mid = ws.automata.discrete.Qerr_clamp_mid, Vsel_clamp_high = ws.automata.discrete.Vsel_clamp_high, Vsel_clamp_low = ws.automata.discrete.Vsel_clamp_low, Vsel_clamp_mid = ws.automata.discrete.Vsel_clamp_mid, Iqinj_clamp_high = ws.automata.discrete.Iqinj_clamp_high, Iqinj_clamp_low = ws.automata.discrete.Iqinj_clamp_low, Iqinj_clamp_mid = ws.automata.discrete.Iqinj_clamp_mid, Iqmax_max_second = ws.automata.discrete.Iqmax_max_second, Iqmax_max_first = ws.automata.discrete.Iqmax_max_first, Iqmax_min_second = ws.automata.discrete.Iqmax_min_second, Iqmax_min_first = ws.automata.discrete.Iqmax_min_first, Iqmax_min_2_second = ws.automata.discrete.Iqmax_min_2_second, Iqmax_min_2_first = ws.automata.discrete.Iqmax_min_2_first, Ipmax_min_second = ws.automata.discrete.Ipmax_min_second, Ipmax_min_first = ws.automata.discrete.Ipmax_min_first, Ipmax_max_second = ws.automata.discrete.Ipmax_max_second, Ipmax_max_first = ws.automata.discrete.Ipmax_max_first, Ipmax_min_2_second = ws.automata.discrete.Ipmax_min_2_second, Ipmax_min_2_first = ws.automata.discrete.Ipmax_min_2_first, pfilt_y_rate_clamp_high = ws.automata.discrete.pfilt_y_rate_clamp_high, pfilt_y_rate_clamp_low = ws.automata.discrete.pfilt_y_rate_clamp_low, pfilt_y_rate_clamp_mid = ws.automata.discrete.pfilt_y_rate_clamp_mid, t_release = ws.automata.memory.t_release, t_release2 = ws.automata.memory.t_release2, Ipmax_held = ws.automata.memory.Ipmax_held),
         (s4_y = ws.var_vals.s4_y, pfilt_y = ws.var_vals.pfilt_y, s5_y = ws.var_vals.s5_y, s0_y = ws.var_vals.s0_y, S1_y = ws.var_vals.S1_y, PIV_xi = ws.var_vals.PIV_xi, PIQ_xi = ws.var_vals.PIQ_xi, Pref = ws.var_vals.Pref, pfaref = ws.var_vals.pfaref, Qref = ws.var_vals.Qref, Ipcmd_out = ws.var_vals.Ipcmd_out, Iqcmd_out = ws.var_vals.Iqcmd_out, Qerr = ws.var_vals.Qerr, Vsel = ws.var_vals.Vsel, Iqinj = ws.var_vals.Iqinj, Iqmax = ws.var_vals.Iqmax, Ipmax = ws.var_vals.Ipmax, v = ws.var_vals.v, Pe = ws.var_vals.Pe, Qgen = ws.var_vals.Qgen),
         t,
         AT
@@ -787,8 +788,8 @@ function initialize_dynamic_states(
     # === Compute Initial Values ===
     @inbounds for i in 1:n
         # injection: the mode of its first initial clause that holds
-        Voltage_dip = ifelse(ifelse(v[i] > model.Vup[i], true, v[i] < model.Vdip[i]), 1.0, 0.0)
-        in_state1 = ifelse(ifelse(v[i] > model.Vup[i], true, v[i] < model.Vdip[i]), 1.0, 0.0)
+        Voltage_dip = ifelse(ifelse(v[i] < model.Vdip[i], true, v[i] > model.Vup[i]), 1.0, 0.0)
+        in_state1 = ifelse(ifelse(v[i] < model.Vdip[i], true, v[i] > model.Vup[i]), 1.0, 0.0)
         in_state2 = 0.0
 
         # State initial values
@@ -796,29 +797,29 @@ function initialize_dynamic_states(
         S1_y[i] = Pe_init[i]
 
         # Algebraic initial values
-        Iqinj[i] = model.Iqfrz[i] * in_state2 + in_state1 * clamp(model.Kqv[i] * (ifelse(model.Vref0[i] == 0, v[i], model.Vref0[i]) - v[i] - clamp(ifelse(model.Vref0[i] == 0, v[i], model.Vref0[i]) - v[i], model.dbd1[i], model.dbd2[i])), model.Iql1[i], model.Iqh1[i])
-        Qref[i] = model.QFLAG[i] * (Qgen_init[i] * model.VFLAG[i] + (1 - model.VFLAG[i]) * (v[i] - model.Vref1[i])) + (1 - model.QFLAG[i]) * (Qgen_init[i] - Iqinj[i] * max(0.01, v[i]))
+        Iqinj[i] = in_state1 * clamp(model.Kqv[i] * (ifelse(model.Vref0[i] == 0, v[i], model.Vref0[i]) - v[i] - clamp(ifelse(model.Vref0[i] == 0, v[i], model.Vref0[i]) - v[i], model.dbd1[i], model.dbd2[i])), model.Iql1[i], model.Iqh1[i]) + in_state2 * model.Iqfrz[i]
+        Qref[i] = model.QFLAG[i] * (model.VFLAG[i] * Qgen_init[i] + (1 - model.VFLAG[i]) * (v[i] - model.Vref1[i])) + (1 - model.QFLAG[i]) * (Qgen_init[i] - Iqinj[i] * max(0.01, v[i]))
         pfaref[i] = atan(Qref[i], S1_y[i])
         Pref[i] = Ipcmd_init[i] * max(0.01, v[i])
         Ipcmd_out[i] = Ipcmd_init[i]
-        Iqmax[i] = model.PQFLAG[i] * min(sqrt(max(0, model.Imax[i] ^ 2 - Ipcmd_out[i] ^ 2)), model.Iq1[i] + (model.Iq2[i] - model.Iq1[i]) * (clamp(s0_y[i], model.Vq1[i], model.Vq2[i]) - model.Vq1[i]) / (model.Vq2[i] - model.Vq1[i]) + (model.Iq3[i] - model.Iq2[i]) * (clamp(s0_y[i], model.Vq2[i], model.Vq3[i]) - model.Vq2[i]) / (model.Vq3[i] - model.Vq2[i]) + (model.Iq4[i] - model.Iq3[i]) * (clamp(s0_y[i], model.Vq3[i], model.Vq4[i]) - model.Vq3[i]) / (model.Vq4[i] - model.Vq3[i])) + (1 - model.PQFLAG[i]) * min(model.Iq1[i] + (model.Iq2[i] - model.Iq1[i]) * (clamp(s0_y[i], model.Vq1[i], model.Vq2[i]) - model.Vq1[i]) / (model.Vq2[i] - model.Vq1[i]) + (model.Iq3[i] - model.Iq2[i]) * (clamp(s0_y[i], model.Vq2[i], model.Vq3[i]) - model.Vq2[i]) / (model.Vq3[i] - model.Vq2[i]) + (model.Iq4[i] - model.Iq3[i]) * (clamp(s0_y[i], model.Vq3[i], model.Vq4[i]) - model.Vq3[i]) / (model.Vq4[i] - model.Vq3[i]), model.Imax[i])
+        Iqmax[i] = model.PQFLAG[i] * min(model.Iq1[i] + (model.Iq2[i] - model.Iq1[i]) / (model.Vq2[i] - model.Vq1[i]) * (clamp(s0_y[i], model.Vq1[i], model.Vq2[i]) - model.Vq1[i]) + (model.Iq3[i] - model.Iq2[i]) / (model.Vq3[i] - model.Vq2[i]) * (clamp(s0_y[i], model.Vq2[i], model.Vq3[i]) - model.Vq2[i]) + (model.Iq4[i] - model.Iq3[i]) / (model.Vq4[i] - model.Vq3[i]) * (clamp(s0_y[i], model.Vq3[i], model.Vq4[i]) - model.Vq3[i]), sqrt(max(0, model.Imax[i] ^ 2 - Ipcmd_out[i] ^ 2))) + (1 - model.PQFLAG[i]) * min(model.Iq1[i] + (model.Iq2[i] - model.Iq1[i]) / (model.Vq2[i] - model.Vq1[i]) * (clamp(s0_y[i], model.Vq1[i], model.Vq2[i]) - model.Vq1[i]) + (model.Iq3[i] - model.Iq2[i]) / (model.Vq3[i] - model.Vq2[i]) * (clamp(s0_y[i], model.Vq2[i], model.Vq3[i]) - model.Vq2[i]) + (model.Iq4[i] - model.Iq3[i]) / (model.Vq4[i] - model.Vq3[i]) * (clamp(s0_y[i], model.Vq3[i], model.Vq4[i]) - model.Vq3[i]), model.Imax[i])
         Iqcmd_out[i] = -Iqcmd_init[i]
-        Qerr[i] = clamp(Qref[i] * (1 - model.PFFLAG[i]) + model.PFFLAG[i] * S1_y[i] * tan(pfaref[i]), model.QMin[i], model.QMax[i]) - Qgen_init[i]
+        Qerr[i] = clamp(model.PFFLAG[i] * S1_y[i] * tan(pfaref[i]) + (1 - model.PFFLAG[i]) * Qref[i], model.QMin[i], model.QMax[i]) - Qgen_init[i]
 
         # State initial values
-        PIQ_xi[i] = ifelse(ifelse(model.QFLAG[i] == 1, ifelse(v[i] >= model.Vdip[i], v[i] <= model.Vup[i], false), false), v[i] - model.Kqp[i] * Qerr[i] * model.VFLAG[i], clamp(v[i] - model.Kqp[i] * Qerr[i] * model.VFLAG[i], model.VMIN[i], model.VMAX[i]))
+        PIQ_xi[i] = ifelse(ifelse(model.QFLAG[i] == 1, ifelse(v[i] >= model.Vdip[i], v[i] <= model.Vup[i], false), false), v[i] - model.Kqp[i] * model.VFLAG[i] * Qerr[i], clamp(v[i] - model.Kqp[i] * model.VFLAG[i] * Qerr[i], model.VMIN[i], model.VMAX[i]))
 
         # Algebraic initial values
-        Vsel[i] = clamp(model.VFLAG[i] * clamp(PIQ_xi[i] + model.Kqp[i] * Qerr[i] * model.VFLAG[i], model.VMIN[i], model.VMAX[i]) + (1 - model.VFLAG[i]) * (model.Vref1[i] + Qref[i] * (1 - model.PFFLAG[i]) + model.PFFLAG[i] * S1_y[i] * tan(pfaref[i])), model.VMIN[i], model.VMAX[i])
+        Vsel[i] = clamp(model.VFLAG[i] * clamp(PIQ_xi[i] + model.Kqp[i] * model.VFLAG[i] * Qerr[i], model.VMIN[i], model.VMAX[i]) + (1 - model.VFLAG[i]) * (model.Vref1[i] + (model.PFFLAG[i] * S1_y[i] * tan(pfaref[i]) + (1 - model.PFFLAG[i]) * Qref[i])), model.VMIN[i], model.VMAX[i])
 
         # State initial values
         PIV_xi[i] = ifelse(ifelse(model.QFLAG[i] == 1, ifelse(v[i] >= model.Vdip[i], v[i] <= model.Vup[i], false), false), -Iqcmd_init[i] - Iqinj[i] - model.Kvp[i] * model.QFLAG[i] * (Vsel[i] - v[i]), clamp(model.QFLAG[i] * (-Iqcmd_init[i] - Iqinj[i] - model.Kvp[i] * model.QFLAG[i] * (Vsel[i] - v[i])), -Iqmax[i], Iqmax[i]))
-        s4_y[i] = (Qref[i] * (1 - model.PFFLAG[i]) + model.PFFLAG[i] * S1_y[i] * tan(pfaref[i])) / max(0.01, v[i])
+        s4_y[i] = (model.PFFLAG[i] * S1_y[i] * tan(pfaref[i]) + (1 - model.PFFLAG[i]) * Qref[i]) / max(0.01, v[i])
         pfilt_y[i] = Pref[i]
         s5_y[i] = Pref[i]
 
         # Algebraic initial values
-        Ipmax[i] = model.PQFLAG[i] * min(model.Ip1[i] + (model.Ip2[i] - model.Ip1[i]) * (clamp(s0_y[i], model.Vp1[i], model.Vp2[i]) - model.Vp1[i]) / (model.Vp2[i] - model.Vp1[i]) + (model.Ip3[i] - model.Ip2[i]) * (clamp(s0_y[i], model.Vp2[i], model.Vp3[i]) - model.Vp2[i]) / (model.Vp3[i] - model.Vp2[i]) + (model.Ip4[i] - model.Ip3[i]) * (clamp(s0_y[i], model.Vp3[i], model.Vp4[i]) - model.Vp3[i]) / (model.Vp4[i] - model.Vp3[i]), model.Imax[i]) + (1 - model.PQFLAG[i]) * min(sqrt(max(0, model.Imax[i] ^ 2 - Iqcmd_out[i] ^ 2)), model.Ip1[i] + (model.Ip2[i] - model.Ip1[i]) * (clamp(s0_y[i], model.Vp1[i], model.Vp2[i]) - model.Vp1[i]) / (model.Vp2[i] - model.Vp1[i]) + (model.Ip3[i] - model.Ip2[i]) * (clamp(s0_y[i], model.Vp2[i], model.Vp3[i]) - model.Vp2[i]) / (model.Vp3[i] - model.Vp2[i]) + (model.Ip4[i] - model.Ip3[i]) * (clamp(s0_y[i], model.Vp3[i], model.Vp4[i]) - model.Vp3[i]) / (model.Vp4[i] - model.Vp3[i]))
+        Ipmax[i] = model.PQFLAG[i] * min(model.Ip1[i] + (model.Ip2[i] - model.Ip1[i]) / (model.Vp2[i] - model.Vp1[i]) * (clamp(s0_y[i], model.Vp1[i], model.Vp2[i]) - model.Vp1[i]) + (model.Ip3[i] - model.Ip2[i]) / (model.Vp3[i] - model.Vp2[i]) * (clamp(s0_y[i], model.Vp2[i], model.Vp3[i]) - model.Vp2[i]) + (model.Ip4[i] - model.Ip3[i]) / (model.Vp4[i] - model.Vp3[i]) * (clamp(s0_y[i], model.Vp3[i], model.Vp4[i]) - model.Vp3[i]), model.Imax[i]) + (1 - model.PQFLAG[i]) * min(model.Ip1[i] + (model.Ip2[i] - model.Ip1[i]) / (model.Vp2[i] - model.Vp1[i]) * (clamp(s0_y[i], model.Vp1[i], model.Vp2[i]) - model.Vp1[i]) + (model.Ip3[i] - model.Ip2[i]) / (model.Vp3[i] - model.Vp2[i]) * (clamp(s0_y[i], model.Vp2[i], model.Vp3[i]) - model.Vp2[i]) + (model.Ip4[i] - model.Ip3[i]) / (model.Vp4[i] - model.Vp3[i]) * (clamp(s0_y[i], model.Vp3[i], model.Vp4[i]) - model.Vp3[i]), sqrt(max(0, model.Imax[i] ^ 2 - Iqcmd_out[i] ^ 2)))
     end
 
     # === Return Initial Values ===

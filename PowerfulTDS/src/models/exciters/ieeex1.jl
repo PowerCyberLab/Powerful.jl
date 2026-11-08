@@ -58,19 +58,19 @@ function check_parameter_domains(x::IEEEX1, from::AbstractString)
     (x.Switch >= 0.0 && x.Switch <= 0.0) || throw(ArgumentError("IEEEX1 ($from): Switch = $(x.Switch) is not >= 0 and <= 0"))
     (x.SE1 >= 0.0) || throw(ArgumentError("IEEEX1 ($from): SE1 = $(x.SE1) is not >= 0"))
     (x.SE2 >= 0.0) || throw(ArgumentError("IEEEX1 ($from): SE2 = $(x.SE2) is not >= 0"))
+    x.VRMIN <= x.VRMAX || throw(ArgumentError("IEEEX1 ($from) does not satisfy its constraint VR.x_limits_ordered: VR.x: the lower limit of VR.x is at most its upper limit"))
     x.SE1 >= 0.0 || throw(ArgumentError("IEEEX1 ($from) does not satisfy its constraint sat0_S1_min: QuadraticSaturation admits S1 >= 0"))
     x.SE2 >= 0.0 || throw(ArgumentError("IEEEX1 ($from) does not satisfy its constraint sat0_S2_min: QuadraticSaturation admits S2 >= 0"))
     ifelse(0 < x.E1, ifelse(0 < x.E2, x.E1 != x.E2, false), false) || throw(ArgumentError("IEEEX1 ($from) does not satisfy its constraint sat0_points_distinct: The points are at positive, different magnitudes"))
     ifelse(ifelse(x.E1 < x.E2, x.E2 * x.SE1 <= x.E1 * x.SE2, false), true, ifelse(x.E2 < x.E1, x.E1 * x.SE2 <= x.E2 * x.SE1, false)) || throw(ArgumentError("IEEEX1 ($from) does not satisfy its constraint sat0_knee_nonnegative: The saturation per unit of magnitude does not fall from the lower point to the upper, so the fitted knee A is at or above zero"))
-    x.VRMIN <= x.VRMAX || throw(ArgumentError("IEEEX1 ($from) does not satisfy its constraint VR_limits_ordered: VR: the lower limit of VR.x is at most its upper limit"))
-    (x.TF != 0) || throw(ArgumentError("IEEEX1 ($from): TF is zero, and the model divides by it (services.kfw)"))
-    (ifelse(x.E1 < x.E2, x.SE2, x.SE1) <= 0 || max(x.E1, x.E2) != 0) || throw(ArgumentError("IEEEX1 ($from): max(E1, E2) is zero, and the model divides by it (services.sat0.services.r)"))
-    (ifelse(x.E1 < x.E2, x.SE2, x.SE1) <= 0 || ifelse(ifelse(x.E1 < x.E2, x.SE2, x.SE1) > 0, ifelse(x.E1 < x.E2, x.SE2, x.SE1), 1) != 0) || throw(ArgumentError("IEEEX1 ($from): ifelse(ifelse(E1 < E2, SE2, SE1) > 0, ifelse(E1 < E2, SE2, SE1), 1) is zero, and the model divides by it (services.sat0.services.r)"))
-    (1 - (ifelse(x.E1 < x.E2, x.SE2, x.SE1) > 0 ? sqrt(min(x.E1, x.E2) * ifelse(x.E1 < x.E2, x.SE1, x.SE2) / (max(x.E1, x.E2) * ifelse(ifelse(x.E1 < x.E2, x.SE2, x.SE1) > 0, ifelse(x.E1 < x.E2, x.SE2, x.SE1), 1))) : 0) != 0) || throw(ArgumentError("IEEEX1 ($from): 1 - (ifelse(E1 < E2, SE2, SE1) > 0 ? sqrt(min(E1, E2) * ifelse(E1 < E2, SE1, SE2) / (max(E1, E2) * ifelse(ifelse(E1 < E2, SE2, SE1) > 0, ifelse(E1 < E2, SE2, SE1), 1))) : 0) is zero, and the model divides by it (services.sat0.services.A)"))
-    (max(x.E1, x.E2) - (min(x.E1, x.E2) - max(x.E1, x.E2) * (ifelse(x.E1 < x.E2, x.SE2, x.SE1) > 0 ? sqrt(min(x.E1, x.E2) * ifelse(x.E1 < x.E2, x.SE1, x.SE2) / (max(x.E1, x.E2) * ifelse(ifelse(x.E1 < x.E2, x.SE2, x.SE1) > 0, ifelse(x.E1 < x.E2, x.SE2, x.SE1), 1))) : 0)) / (1 - (ifelse(x.E1 < x.E2, x.SE2, x.SE1) > 0 ? sqrt(min(x.E1, x.E2) * ifelse(x.E1 < x.E2, x.SE1, x.SE2) / (max(x.E1, x.E2) * ifelse(ifelse(x.E1 < x.E2, x.SE2, x.SE1) > 0, ifelse(x.E1 < x.E2, x.SE2, x.SE1), 1))) : 0)) != 0) || throw(ArgumentError("IEEEX1 ($from): max(E1, E2) - (min(E1, E2) - max(E1, E2) * (ifelse(E1 < E2, SE2, SE1) > 0 ? sqrt(min(E1, E2) * ifelse(E1 < E2, SE1, SE2) / (max(E1, E2) * ifelse(ifelse(E1 < E2, SE2, SE1) > 0, ifelse(E1 < E2, SE2, SE1), 1))) : 0)) / (1 - (ifelse(E1 < E2, SE2, SE1) > 0 ? sqrt(min(E1, E2) * ifelse(E1 < E2, SE1, SE2) / (max(E1, E2) * ifelse(ifelse(E1 < E2, SE2, SE1) > 0, ifelse(E1 < E2, SE2, SE1), 1))) : 0)) is zero, and the model divides by it (services.sat0.services.B)"))
-    (x.TE != 0) || throw(ArgumentError("IEEEX1 ($from): TE is zero, and the model divides by it (graph[6].efd_rate)"))
-    (x.KA != 0) || throw(ArgumentError("IEEEX1 ($from): KA is zero, and the model divides by it (algebraics.vref.init)"))
-    (ifelse(x.TB != 0, true, x.TC == 0) || x.TB != 0) || throw(ArgumentError("IEEEX1 ($from): TB is zero, and the model divides by it (graph[2].LL)"))
+    (x.TF != 0) || throw(ArgumentError("IEEEX1 ($from): TF is zero, and the model divides by it (services.kfw.expr)"))
+    (ifelse(x.E1 < x.E2, x.SE2, x.SE1) <= 0 || max(x.E1, x.E2) != 0) || throw(ArgumentError("IEEEX1 ($from): max(E1, E2) is zero, and the model divides by it (components.sat0)"))
+    (ifelse(x.E1 < x.E2, x.SE2, x.SE1) <= 0 || ifelse(ifelse(x.E1 < x.E2, x.SE2, x.SE1) > 0, ifelse(x.E1 < x.E2, x.SE2, x.SE1), 1) != 0) || throw(ArgumentError("IEEEX1 ($from): ifelse(ifelse(E1 < E2, SE2, SE1) > 0, ifelse(E1 < E2, SE2, SE1), 1) is zero, and the model divides by it (components.sat0)"))
+    (1 - (ifelse(x.E1 < x.E2, x.SE2, x.SE1) > 0 ? sqrt(min(x.E1, x.E2) * ifelse(x.E1 < x.E2, x.SE1, x.SE2) / (max(x.E1, x.E2) * ifelse(ifelse(x.E1 < x.E2, x.SE2, x.SE1) > 0, ifelse(x.E1 < x.E2, x.SE2, x.SE1), 1))) : 0) != 0) || throw(ArgumentError("IEEEX1 ($from): 1 - (ifelse(E1 < E2, SE2, SE1) > 0 ? sqrt(min(E1, E2) * ifelse(E1 < E2, SE1, SE2) / (max(E1, E2) * ifelse(ifelse(E1 < E2, SE2, SE1) > 0, ifelse(E1 < E2, SE2, SE1), 1))) : 0) is zero, and the model divides by it (components.sat0)"))
+    (max(x.E1, x.E2) - (min(x.E1, x.E2) - max(x.E1, x.E2) * (ifelse(x.E1 < x.E2, x.SE2, x.SE1) > 0 ? sqrt(min(x.E1, x.E2) * ifelse(x.E1 < x.E2, x.SE1, x.SE2) / (max(x.E1, x.E2) * ifelse(ifelse(x.E1 < x.E2, x.SE2, x.SE1) > 0, ifelse(x.E1 < x.E2, x.SE2, x.SE1), 1))) : 0)) / (1 - (ifelse(x.E1 < x.E2, x.SE2, x.SE1) > 0 ? sqrt(min(x.E1, x.E2) * ifelse(x.E1 < x.E2, x.SE1, x.SE2) / (max(x.E1, x.E2) * ifelse(ifelse(x.E1 < x.E2, x.SE2, x.SE1) > 0, ifelse(x.E1 < x.E2, x.SE2, x.SE1), 1))) : 0)) != 0) || throw(ArgumentError("IEEEX1 ($from): max(E1, E2) - (min(E1, E2) - max(E1, E2) * (ifelse(E1 < E2, SE2, SE1) > 0 ? sqrt(min(E1, E2) * ifelse(E1 < E2, SE1, SE2) / (max(E1, E2) * ifelse(ifelse(E1 < E2, SE2, SE1) > 0, ifelse(E1 < E2, SE2, SE1), 1))) : 0)) / (1 - (ifelse(E1 < E2, SE2, SE1) > 0 ? sqrt(min(E1, E2) * ifelse(E1 < E2, SE1, SE2) / (max(E1, E2) * ifelse(ifelse(E1 < E2, SE2, SE1) > 0, ifelse(E1 < E2, SE2, SE1), 1))) : 0)) is zero, and the model divides by it (components.sat0)"))
+    (ifelse(x.TB != 0, true, x.TC == 0) || x.TB != 0) || throw(ArgumentError("IEEEX1 ($from): TB is zero, and the model divides by it (parts.LL.outputs.y.expr)"))
+    (x.TE != 0) || throw(ArgumentError("IEEEX1 ($from): TE is zero, and the model divides by it (intermediates.efd_rate.expr)"))
+    (x.KA != 0) || throw(ArgumentError("IEEEX1 ($from): KA is zero, and the model divides by it (initialization.values.LL.x)"))
     return x
 end
 
@@ -93,7 +93,12 @@ implements_group(::Type{<:IEEEX1}) = :exciters
 # Map group canonical variable names to IEEEX1's actual variable names
 function group_var_mapping(::Type{<:IEEEX1})
     Dict(
+        :EFD_y => :EFD_y, # Same name
         :E_fd => :E_fd, # Same name
+        :LG_x => :LG_x, # Same name
+        :LL_x => :LL_x, # Same name
+        :VR_x => :VR_x, # Same name
+        :WF_x => :WF_x, # Same name
         :vref => :vref, # Same name
     )
 end
@@ -136,15 +141,15 @@ function model_metadata(::Type{IEEEX1})
         name = :IEEEX1,
         vars = [
             ModelVar(:LG_x, StateVar();
-                description="Terminal voltage transducer"),
+                description="Terminal voltage transducer: Internal state, unused where T is zero"),
             ModelVar(:LL_x, StateVar();
-                description="Transient gain reduction"),
+                description="Transient gain reduction: Internal state, unused where T2 is zero"),
             ModelVar(:VR_x, StateVar();
-                description="Regulator, its state held within [VRMIN, VRMAX]"),
+                description="Regulator, its state held within [VRMIN, VRMAX]: Internal state, held within its limits, unused where T is zero"),
             ModelVar(:EFD_y, StateVar();
                 description="Exciter output, with no limit"),
             ModelVar(:WF_x, StateVar();
-                description="Rate feedback of the exciter output"),
+                description="Rate feedback of the exciter output: Internal state"),
             ModelVar(:vref, AlgebVar();
                 description="Reference voltage setpoint (control input; the stabilizer adds to it)"),
             ModelVar(:yfb, AlgebVar();
@@ -156,15 +161,15 @@ function model_metadata(::Type{IEEEX1})
         ],
         residuals = [
         ModelResidual(:dLG_x, StateRes(), PrivateRes();
-            description="Terminal voltage transducer"),
+            description="Terminal voltage transducer: Internal state, unused where T is zero"),
         ModelResidual(:dLL_x, StateRes(), PrivateRes();
-            description="Transient gain reduction"),
+            description="Transient gain reduction: Internal state, unused where T2 is zero"),
         ModelResidual(:dVR_x, StateRes(), PrivateRes();
-            description="Regulator, its state held within [VRMIN, VRMAX]"),
+            description="Regulator, its state held within [VRMIN, VRMAX]: Internal state, held within its limits, unused where T is zero"),
         ModelResidual(:dEFD_y, StateRes(), PrivateRes();
             description="Exciter output, with no limit"),
         ModelResidual(:dWF_x, StateRes(), PrivateRes();
-            description="Rate feedback of the exciter output"),
+            description="Rate feedback of the exciter output: Internal state"),
         ModelResidual(:g_vref, AlgebRes(), SharedRes(:add);
             description="Reference voltage setpoint (control input; the stabilizer adds to it)"),
         ModelResidual(:g_yfb, AlgebRes(), PrivateRes();
@@ -188,18 +193,38 @@ function model_metadata(::Type{IEEEX1})
     ],
         variable_limits = [VariableLimit(:VR_x, :VRMIN, :VRMAX)],
         automata = (
-            Automaton(:VR;
-                modes = [Mode(:free; holds = [:VR_gate => 1.0]),
-                    Mode(:upper; holds = [:VR_gate => 0.0]),
-                    Mode(:lower; holds = [:VR_gate => 0.0])],
-                transitions = [Transition(:free, :upper; when = AllOf(Condition[Atom(:VR_x_minus_VRMAX, :>=), Atom(:VR_rate, :>)])),
-                    Transition(:free, :lower; when = AllOf(Condition[Atom(:VR_x_minus_VRMIN, :<=), Atom(:VR_rate, :<)])),
-                    Transition(:upper, :free; when = Atom(:VR_rate, :<)),
-                    Transition(:lower, :free; when = Atom(:VR_rate, :>))],
-                initial = [InitialMode(:upper; when = AllOf(Condition[Atom(:VR_x_minus_VRMAX, :>=), Atom(:VR_rate, :>)])),
-                    InitialMode(:lower; when = AllOf(Condition[Atom(:VR_x_minus_VRMIN, :<=), Atom(:VR_rate, :<)])),
+            Automaton(:VR_x;
+                modes = [Mode(:free; holds = [:VR_x_gate => 1.0]),
+                    Mode(:upper; holds = [:VR_x_gate => 0.0]),
+                    Mode(:lower; holds = [:VR_x_gate => 0.0])],
+                transitions = [Transition(:free, :upper; when = AllOf(Condition[Atom(:VR_x_minus_VRMAX, :>=), Atom(:VR_x_rate, :>)])),
+                    Transition(:free, :lower; when = AllOf(Condition[Atom(:VR_x_minus_VRMIN, :<=), Atom(:VR_x_rate, :<)])),
+                    Transition(:upper, :free; when = Atom(:VR_x_rate, :<)),
+                    Transition(:lower, :free; when = Atom(:VR_x_rate, :>))],
+                initial = [InitialMode(:upper; when = AllOf(Condition[Atom(:VR_x_minus_VRMAX, :>=), Atom(:VR_x_rate, :>)])),
+                    InitialMode(:lower; when = AllOf(Condition[Atom(:VR_x_minus_VRMIN, :<=), Atom(:VR_x_rate, :<)])),
                     InitialMode(:free)],
-                at_rest = [:VR_rate]),
+                at_rest = [:VR_x_rate]),
+            Automaton(:SAT_over_max;
+                modes = [Mode(:second; holds = [:SAT_over_max_second => 1.0, :SAT_over_max_first => 0.0]),
+                    Mode(:first; holds = [:SAT_over_max_second => 0.0, :SAT_over_max_first => 1.0])],
+                transitions = [Transition(:second, :first; when = Atom(:SAT_over_max_value, :<=)),
+                    Transition(:first, :second; when = Atom(:SAT_over_max_value, :>))],
+                initial = [InitialMode(:second; when = Atom(:SAT_over_max_value, :>)),
+                    InitialMode(:first)]),
+            Automaton(:VR_y_clamp;
+                modes = [Mode(:high; holds = [:VR_y_clamp_high => 1.0, :VR_y_clamp_low => 0.0, :VR_y_clamp_mid => 0.0]),
+                    Mode(:low; holds = [:VR_y_clamp_high => 0.0, :VR_y_clamp_low => 1.0, :VR_y_clamp_mid => 0.0]),
+                    Mode(:mid; holds = [:VR_y_clamp_high => 0.0, :VR_y_clamp_low => 0.0, :VR_y_clamp_mid => 1.0])],
+                transitions = [Transition(:high, :low; when = AllOf(Condition[Atom(:VR_y_clamp_value, :<=), Atom(:VR_y_clamp_value_2, :<)])),
+                    Transition(:high, :mid; when = AllOf(Condition[Atom(:VR_y_clamp_value, :<=), Atom(:VR_y_clamp_value_2, :>=)])),
+                    Transition(:low, :high; when = Atom(:VR_y_clamp_value, :>)),
+                    Transition(:low, :mid; when = AllOf(Condition[Atom(:VR_y_clamp_value, :<=), Atom(:VR_y_clamp_value_2, :>=)])),
+                    Transition(:mid, :high; when = Atom(:VR_y_clamp_value, :>)),
+                    Transition(:mid, :low; when = AllOf(Condition[Atom(:VR_y_clamp_value, :<=), Atom(:VR_y_clamp_value_2, :<)]))],
+                initial = [InitialMode(:high; when = Atom(:VR_y_clamp_value, :>)),
+                    InitialMode(:low; when = AllOf(Condition[Atom(:VR_y_clamp_value, :<=), Atom(:VR_y_clamp_value_2, :<)])),
+                    InitialMode(:mid)]),
         ),
         status_field = :status,
         evaluation_pass = 2,
@@ -218,35 +243,23 @@ end
         sat0_A = (min(params.E1[i], params.E2[i]) - max(params.E1[i], params.E2[i]) * sat0_r) / (1 - sat0_r)
         sat0_B = max(params.E1[i], params.E2[i]) * ifelse(params.E1[i] < params.E2[i], params.SE2[i], params.SE1[i]) / (max(params.E1[i], params.E2[i]) - sat0_A) ^ 2
 
-        # --- LG: LagBypass ---
-        LG_y = ifelse((params.TR[i]) == 0, (1.0) * (vars.v[i]), vars.LG_x[i])
-        LG_dx = ifelse((params.TR[i]) == 0, 0, ((1.0) * (vars.v[i]) - vars.LG_x[i]) / (params.TR[i]))
-
-        err = vars.vref[i] - LG_y - vars.yfb[i]
-        # --- LL: LeadLagBypass ---
-        LL_y = ifelse((params.TB[i]) == 0, ifelse((params.TC[i]) == 0, (err), vars.LL_x[i] + ((params.TC[i]) / (params.TB[i])) * ((err) - vars.LL_x[i])), vars.LL_x[i] + ((params.TC[i]) / (params.TB[i])) * ((err) - vars.LL_x[i]))
-        LL_dx = ifelse((params.TB[i]) == 0, 0, ((err) - vars.LL_x[i]) / (params.TB[i]))
-
-        VR_rate = ifelse(params.TA[i] == 0, 0, (params.KA[i] * LL_y - vars.VR_x[i]) / params.TA[i])
-        VR_y = ifelse(params.TA[i] == 0, clamp(params.KA[i] * LL_y, params.VRMIN[i], params.VRMAX[i]), vars.VR_x[i])
         SAT_excess = vars.E_fd[i] - sat0_A
-        SAT_over = max(0, SAT_excess)
+        SAT_over = 0 * params.SAT_over_max_second[i] + SAT_excess * params.SAT_over_max_first[i]
         SAT_us = sat0_B * SAT_over ^ 2
+        LG_y = ifelse(params.TR[i] == 0, 1.0 * vars.v[i], vars.LG_x[i])
+        WF_y = kfw * (vars.E_fd[i] - vars.WF_x[i])
+        err = vars.vref[i] - LG_y - vars.yfb[i]
         vfe = params.KE[i] * vars.E_fd[i] + SAT_us
+        LL_y = ifelse(params.TB[i] == 0, ifelse(params.TC[i] == 0, err, vars.LL_x[i] + params.TC[i] / params.TB[i] * (err - vars.LL_x[i])), vars.LL_x[i] + params.TC[i] / params.TB[i] * (err - vars.LL_x[i]))
+        VR_x_rate = ifelse(params.TA[i] == 0, 0, (params.KA[i] * LL_y - vars.VR_x[i]) / params.TA[i])
+        VR_y = ifelse(params.TA[i] == 0, params.VRMAX[i] * params.VR_y_clamp_high[i] + params.VRMIN[i] * params.VR_y_clamp_low[i] + params.KA[i] * LL_y * params.VR_y_clamp_mid[i], vars.VR_x[i])
         efd_rate = (VR_y - vfe) / params.TE[i]
-        # --- EFD: Integrator ---
-        EFD_dy = (1.0) * (efd_rate) / (1.0)
-
-        # --- WF: Washout ---
-        WF_y = (kfw) * ((vars.E_fd[i]) - vars.WF_x[i])
-        WF_dx = ((vars.E_fd[i]) - vars.WF_x[i]) / (params.TF[i])
-
         # === Residual Assignments ===
-        outputs.dLG_x[i] = mask * (LG_dx)
-        outputs.dLL_x[i] = mask * (LL_dx)
-        outputs.dVR_x[i] = mask * (params.VR_gate[i] * VR_rate)
-        outputs.dEFD_y[i] = mask * (EFD_dy)
-        outputs.dWF_x[i] = mask * (WF_dx)
+        outputs.dLG_x[i] = mask * (ifelse(params.TR[i] == 0, 0, (1.0 * vars.v[i] - vars.LG_x[i]) / params.TR[i]))
+        outputs.dLL_x[i] = mask * (ifelse(params.TB[i] == 0, 0, (err - vars.LL_x[i]) / params.TB[i]))
+        outputs.dVR_x[i] = mask * (params.VR_x_gate[i] * VR_x_rate)
+        outputs.dEFD_y[i] = mask * (1.0 * efd_rate / 1.0)
+        outputs.dWF_x[i] = mask * ((vars.E_fd[i] - vars.WF_x[i]) / params.TF[i])
         outputs.g_vref[i] = mask * (params.vref0[i] - vars.vref[i])
         outputs.g_yfb[i] = mask * (WF_y - vars.yfb[i])
         outputs.g_E_fd[i] = mask * (vars.EFD_y[i] - vars.E_fd[i])
@@ -262,7 +275,7 @@ end
 ) where {T, AT}
     ieeex1_residual_kernel!(
         (dLG_x = ws.res_vals.dLG_x, dLL_x = ws.res_vals.dLL_x, dVR_x = ws.res_vals.dVR_x, dEFD_y = ws.res_vals.dEFD_y, dWF_x = ws.res_vals.dWF_x, g_vref = ws.res_vals.g_vref, g_yfb = ws.res_vals.g_yfb, g_E_fd = ws.res_vals.g_E_fd, E_fd_out = ws.res_vals.E_fd_out),
-        (TR = model.TR, KA = model.KA, TA = model.TA, TB = model.TB, TC = model.TC, VRMAX = model.VRMAX, VRMIN = model.VRMIN, KE = model.KE, TE = model.TE, KF = model.KF, TF = model.TF, Switch = model.Switch, E1 = model.E1, SE1 = model.SE1, E2 = model.E2, SE2 = model.SE2, E_fd0 = ws.setpoints.E_fd0, vref0 = ws.setpoints.vref0, VR_gate = ws.automata.discrete.VR_gate),
+        (TR = model.TR, KA = model.KA, TA = model.TA, TB = model.TB, TC = model.TC, VRMAX = model.VRMAX, VRMIN = model.VRMIN, KE = model.KE, TE = model.TE, KF = model.KF, TF = model.TF, Switch = model.Switch, E1 = model.E1, SE1 = model.SE1, E2 = model.E2, SE2 = model.SE2, E_fd0 = ws.setpoints.E_fd0, vref0 = ws.setpoints.vref0, VR_x_gate = ws.automata.discrete.VR_x_gate, SAT_over_max_second = ws.automata.discrete.SAT_over_max_second, SAT_over_max_first = ws.automata.discrete.SAT_over_max_first, VR_y_clamp_high = ws.automata.discrete.VR_y_clamp_high, VR_y_clamp_low = ws.automata.discrete.VR_y_clamp_low, VR_y_clamp_mid = ws.automata.discrete.VR_y_clamp_mid),
         (LG_x = ws.var_vals.LG_x, LL_x = ws.var_vals.LL_x, VR_x = ws.var_vals.VR_x, EFD_y = ws.var_vals.EFD_y, WF_x = ws.var_vals.WF_x, vref = ws.var_vals.vref, yfb = ws.var_vals.yfb, E_fd = ws.var_vals.E_fd, v = ws.var_vals.v),
         active_mask,
         t,
@@ -275,20 +288,20 @@ end
     t, ::Type{AT}
 ) where AT
     @inbounds for i in eachindex(values.VR_x_minus_VRMAX)
-        # --- LG: LagBypass ---
-        LG_y = ifelse((params.TR[i]) == 0, (1.0) * (vars.v[i]), vars.LG_x[i])
-        LG_dx = ifelse((params.TR[i]) == 0, 0, ((1.0) * (vars.v[i]) - vars.LG_x[i]) / (params.TR[i]))
-
+        sat0_r = (ifelse(params.E1[i] < params.E2[i], params.SE2[i], params.SE1[i]) > 0 ? sqrt(min(params.E1[i], params.E2[i]) * ifelse(params.E1[i] < params.E2[i], params.SE1[i], params.SE2[i]) / (max(params.E1[i], params.E2[i]) * ifelse(ifelse(params.E1[i] < params.E2[i], params.SE2[i], params.SE1[i]) > 0, ifelse(params.E1[i] < params.E2[i], params.SE2[i], params.SE1[i]), 1))) : 0)
+        sat0_A = (min(params.E1[i], params.E2[i]) - max(params.E1[i], params.E2[i]) * sat0_r) / (1 - sat0_r)
+        SAT_excess = vars.E_fd[i] - sat0_A
+        LG_y = ifelse(params.TR[i] == 0, 1.0 * vars.v[i], vars.LG_x[i])
         err = vars.vref[i] - LG_y - vars.yfb[i]
-        # --- LL: LeadLagBypass ---
-        LL_y = ifelse((params.TB[i]) == 0, ifelse((params.TC[i]) == 0, (err), vars.LL_x[i] + ((params.TC[i]) / (params.TB[i])) * ((err) - vars.LL_x[i])), vars.LL_x[i] + ((params.TC[i]) / (params.TB[i])) * ((err) - vars.LL_x[i]))
-        LL_dx = ifelse((params.TB[i]) == 0, 0, ((err) - vars.LL_x[i]) / (params.TB[i]))
-
-        VR_rate = ifelse(params.TA[i] == 0, 0, (params.KA[i] * LL_y - vars.VR_x[i]) / params.TA[i])
+        LL_y = ifelse(params.TB[i] == 0, ifelse(params.TC[i] == 0, err, vars.LL_x[i] + params.TC[i] / params.TB[i] * (err - vars.LL_x[i])), vars.LL_x[i] + params.TC[i] / params.TB[i] * (err - vars.LL_x[i]))
+        VR_x_rate = ifelse(params.TA[i] == 0, 0, (params.KA[i] * LL_y - vars.VR_x[i]) / params.TA[i])
         # === Automaton Values ===
         values.VR_x_minus_VRMAX[i] = vars.VR_x[i] - params.VRMAX[i]
-        values.VR_rate[i] = VR_rate
+        values.VR_x_rate[i] = VR_x_rate
         values.VR_x_minus_VRMIN[i] = vars.VR_x[i] - params.VRMIN[i]
+        values.SAT_over_max_value[i] = 0 - SAT_excess
+        values.VR_y_clamp_value[i] = params.KA[i] * LL_y - params.VRMAX[i]
+        values.VR_y_clamp_value_2[i] = params.KA[i] * LL_y - params.VRMIN[i]
     end
     nothing
 end
@@ -298,8 +311,8 @@ end
     external::NamedTuple, ::PowerInjection, t
 ) where {T, AT}
     ieeex1_automaton_values_kernel!(
-        (VR_x_minus_VRMAX = ws.automata.values.VR_x_minus_VRMAX, VR_rate = ws.automata.values.VR_rate, VR_x_minus_VRMIN = ws.automata.values.VR_x_minus_VRMIN),
-        (TR = model.TR, KA = model.KA, TA = model.TA, TB = model.TB, TC = model.TC, VRMAX = model.VRMAX, VRMIN = model.VRMIN, KE = model.KE, TE = model.TE, KF = model.KF, TF = model.TF, Switch = model.Switch, E1 = model.E1, SE1 = model.SE1, E2 = model.E2, SE2 = model.SE2, E_fd0 = ws.setpoints.E_fd0, vref0 = ws.setpoints.vref0, VR_gate = ws.automata.discrete.VR_gate),
+        (VR_x_minus_VRMAX = ws.automata.values.VR_x_minus_VRMAX, VR_x_rate = ws.automata.values.VR_x_rate, VR_x_minus_VRMIN = ws.automata.values.VR_x_minus_VRMIN, SAT_over_max_value = ws.automata.values.SAT_over_max_value, VR_y_clamp_value = ws.automata.values.VR_y_clamp_value, VR_y_clamp_value_2 = ws.automata.values.VR_y_clamp_value_2),
+        (TR = model.TR, KA = model.KA, TA = model.TA, TB = model.TB, TC = model.TC, VRMAX = model.VRMAX, VRMIN = model.VRMIN, KE = model.KE, TE = model.TE, KF = model.KF, TF = model.TF, Switch = model.Switch, E1 = model.E1, SE1 = model.SE1, E2 = model.E2, SE2 = model.SE2, E_fd0 = ws.setpoints.E_fd0, vref0 = ws.setpoints.vref0, VR_x_gate = ws.automata.discrete.VR_x_gate, SAT_over_max_second = ws.automata.discrete.SAT_over_max_second, SAT_over_max_first = ws.automata.discrete.SAT_over_max_first, VR_y_clamp_high = ws.automata.discrete.VR_y_clamp_high, VR_y_clamp_low = ws.automata.discrete.VR_y_clamp_low, VR_y_clamp_mid = ws.automata.discrete.VR_y_clamp_mid),
         (LG_x = ws.var_vals.LG_x, LL_x = ws.var_vals.LL_x, VR_x = ws.var_vals.VR_x, EFD_y = ws.var_vals.EFD_y, WF_x = ws.var_vals.WF_x, vref = ws.var_vals.vref, yfb = ws.var_vals.yfb, E_fd = ws.var_vals.E_fd, v = ws.var_vals.v),
         t,
         AT
@@ -337,6 +350,8 @@ function initialize_dynamic_states(
         sat0_over = max(sat0_excess, 0)
         sat0 = sat0_B * sat0_over ^ 2
         vr0 = model.KE[i] * E_fd0[i] + sat0
+
+        model.TA[i] >= 0 || throw(ArgumentError("IEEEX1 instance $i cannot start: it requires that the lag rests within its limits only for a time constant that is positive, or zero for the limited gain (check VR.rests_within_its_limits)"))
 
         # State initial values
         LG_x[i] = v[i]

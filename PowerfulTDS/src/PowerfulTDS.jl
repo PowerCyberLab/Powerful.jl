@@ -37,6 +37,11 @@ using PowerDynData
 _primal(x::Real) = x
 _primal(d::ForwardDiff.Dual) = ForwardDiff.value(d)
 
+# A guarded root `sqrt(max(0, a) * mode)` evaluates `sqrt` at a Dual zero when `mode == 0` or `a <= 0`, where
+# `Base.sqrt(::ForwardDiff.Dual)` multiplies `Inf * 0.0 = NaN` in every zero-partial slot.
+@inline sqrt(x) = Base.sqrt(x)
+@inline sqrt(d::ForwardDiff.Dual) = iszero(ForwardDiff.value(d)) ? zero(d) : Base.sqrt(d)
+
 # Import CommonSolve to extend solve
 import CommonSolve: solve
 

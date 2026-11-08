@@ -52,15 +52,15 @@ end
 function check_parameter_domains(x::REGCA1, from::AbstractString)
     (x.Lvplsw in (0.0, 1.0,)) || throw(ArgumentError("REGCA1 ($from): Lvplsw = $(x.Lvplsw) is not {0, 1}"))
     x.Zerox < x.Brkpt || throw(ArgumentError("REGCA1 ($from) does not satisfy its constraint lvpl_breakpoints: LVPL: Zerox is below Brkpt ([E18] Appendix F, Brkpt > Zerox)"))
-    x.Lvpnt0 < x.Lvpnt1 || throw(ArgumentError("REGCA1 ($from) does not satisfy its constraint lvacm_breakpoints: low-voltage active current management: Lvpnt0 is below Lvpnt1 ([E18] Appendix F, Lvpnt1 > Lvpnt0)"))
     x.Rrpwr > 0 || throw(ArgumentError("REGCA1 ($from) does not satisfy its constraint rrpwr_positive: the up-ramp rate limit Rrpwr is positive ([E18] Appendix F, rrpwr > 0)"))
     x.Iqrmax > 0 || throw(ArgumentError("REGCA1 ($from) does not satisfy its constraint iqrmax_positive: the up rate limit Iqrmax is positive ([E18] Appendix F, iqrmax > 0)"))
     x.Iqrmin < 0 || throw(ArgumentError("REGCA1 ($from) does not satisfy its constraint iqrmin_negative: the down rate limit Iqrmin is negative ([E18] Appendix F, iqrmin < 0)"))
+    x.Lvpnt0 < x.Lvpnt1 || throw(ArgumentError("REGCA1 ($from) does not satisfy its constraint lvacm_breakpoints: low-voltage active current management: Lvpnt0 is below Lvpnt1 ([E18] Appendix F, Lvpnt1 > Lvpnt0)"))
     x.Iolim < 0 || throw(ArgumentError("REGCA1 ($from) does not satisfy its constraint qmin_negative: qmin, Iolim, is negative ([E18] Appendix F, qmin < 0)"))
-    (x.Brkpt - x.Zerox != 0) || throw(ArgumentError("REGCA1 ($from): Brkpt - Zerox is zero, and the model divides by it (services.kLVPL)"))
-    (x.Tfltr != 0) || throw(ArgumentError("REGCA1 ($from): Tfltr is zero, and the model divides by it (graph[0].Vflt_rate)"))
-    (x.Tg != 0) || throw(ArgumentError("REGCA1 ($from): Tg is zero, and the model divides by it (graph[1].Ip_raw)"))
-    (x.Lvpnt1 - x.Lvpnt0 != 0) || throw(ArgumentError("REGCA1 ($from): Lvpnt1 - Lvpnt0 is zero, and the model divides by it (graph[3].multp)"))
+    (x.Lvpnt1 - x.Lvpnt0 != 0) || throw(ArgumentError("REGCA1 ($from): Lvpnt1 - Lvpnt0 is zero, and the model divides by it (intermediates.multp.expr)"))
+    (x.Brkpt - x.Zerox != 0) || throw(ArgumentError("REGCA1 ($from): Brkpt - Zerox is zero, and the model divides by it (parts.core.services.kLVPL.expr)"))
+    (x.Tfltr != 0) || throw(ArgumentError("REGCA1 ($from): Tfltr is zero, and the model divides by it (parts.core.intermediates.Vflt_rate.expr)"))
+    (x.Tg != 0) || throw(ArgumentError("REGCA1 ($from): Tg is zero, and the model divides by it (parts.core.intermediates.Ip_raw.expr)"))
     return x
 end
 
@@ -209,6 +209,16 @@ function model_metadata(::Type{REGCA1})
                 initial = [InitialMode(:upward; when = Atom(:Qgen0, :>)),
                     InitialMode(:downward; when = Atom(:Qgen0, :<)),
                     InitialMode(:neither)]),
+            Automaton(:Ip;
+                modes = [Mode(:free; holds = [:Ip_gate => 1.0, :Ip_at_upper_1 => 0.0]),
+                    Mode(:upper_0; holds = [:Ip_gate => 0.0, :Ip_at_upper_1 => 0.0], states = [:Ip => 0.0]),
+                    Mode(:upper_1; holds = [:Ip_gate => 0.0, :Ip_at_upper_1 => 1.0], states = [:Ip => :Ip_upper_1])],
+                transitions = [Transition(:free, :upper_0; when = AllOf(Condition[Atom(:Lvplsw, :>), Atom(:Vflt_minus_Zerox, :<=), AnyOf(Condition[Atom(:Ip, :>), AllOf(Condition[Atom(:Ip, :>=), Atom(:Ip_rate, :>)])])])),
+                    Transition(:upper_0, :free; when = AnyOf(Condition[Negation(AllOf(Condition[Atom(:Lvplsw, :>), Atom(:Vflt_minus_Zerox, :<=)])), Atom(:Ip_rate, :<), Atom(:Ip, :<)]), continuity = [:Vflt_minus_Zerox => [:Ip, :Ip_value]]),
+                    Transition(:free, :upper_1; when = AllOf(Condition[Atom(:Lvplsw, :>), Atom(:Vflt_minus_Zerox, :>), Atom(:Vflt_minus_Brkpt, :<), AnyOf(Condition[Atom(:Ip_value, :>), AllOf(Condition[Atom(:Ip_value, :>=), Atom(:Ip_value_2, :>)])])])),
+                    Transition(:upper_1, :free; when = AnyOf(Condition[Negation(AllOf(Condition[Atom(:Lvplsw, :>), Atom(:Vflt_minus_Zerox, :>), Atom(:Vflt_minus_Brkpt, :<)])), Atom(:Ip_value_2, :<), Atom(:Ip_value, :<)]), continuity = [:Ip_value_2 => [:Ip_value], :Vflt_minus_Zerox => [:Ip, :Ip_value], :Vflt_minus_Brkpt => [:Ip_value]])],
+                initial = [InitialMode(:free)],
+                at_rest = [:Ip_rate, :Ip_value_2]),
             Automaton(:hv;
                 modes = [Mode(:clear; holds = [:hv_clear => 1.0, :hv_clamp => 0.0, :hv_floor => 0.0]),
                     Mode(:clamp; holds = [:hv_clear => 0.0, :hv_clamp => 1.0, :hv_floor => 0.0]),
@@ -216,31 +226,21 @@ function model_metadata(::Type{REGCA1})
                 transitions = [Transition(:clear, :clamp; when = AllOf(Condition[Atom(:v_minus_Volim, :>), Atom(:hv_value, :>)]), continuity = [:v_minus_Volim => [:dq]]),
                     Transition(:clamp, :clear; when = Atom(:dq, :<), crossing_continuity = [:dq => [:v_minus_Volim]]),
                     Transition(:clamp, :floor; when = AllOf(Condition[Atom(:dq, :>=), Atom(:hv_value_2, :<)]), continuity = [:hv_value_2 => [:v_minus_Volim]]),
-                    Transition(:floor, :clamp; when = AllOf(Condition[Atom(:dq, :>=), Atom(:v_minus_Volim, :<)]), continuity = [:v_minus_Volim => [:hv_value_2]]),
+                    Transition(:floor, :clamp; when = AllOf(Condition[Atom(:v_minus_Volim, :<), Atom(:dq, :>=)]), continuity = [:v_minus_Volim => [:hv_value_2]]),
                     Transition(:floor, :clear; when = Atom(:dq, :<), continuity = [:dq => [:hv_value, :hv_value_2]])],
                 initial = [InitialMode(:clear)]),
-            Automaton(:Ip;
-                modes = [Mode(:free; holds = [:Ip_gate => 1.0, :Ip_at_upper_1 => 0.0]),
-                    Mode(:upper_0; holds = [:Ip_gate => 0.0, :Ip_at_upper_1 => 0.0], states = [:Ip => 0.0]),
-                    Mode(:upper_1; holds = [:Ip_gate => 0.0, :Ip_at_upper_1 => 1.0], states = [:Ip => :Ip_upper_1])],
-                transitions = [Transition(:free, :upper_0; when = AllOf(Condition[Atom(:Vflt_minus_Zerox, :<=), Atom(:Lvplsw, :>), AnyOf(Condition[Atom(:Ip, :>), AllOf(Condition[Atom(:Ip, :>=), Atom(:Ip_rate, :>)])])])),
-                    Transition(:upper_0, :free; when = AnyOf(Condition[Atom(:Ip, :<), Atom(:Ip_rate, :<), Negation(AllOf(Condition[Atom(:Vflt_minus_Zerox, :<=), Atom(:Lvplsw, :>)]))]), continuity = [:Vflt_minus_Zerox => [:Ip, :Ip_value]]),
-                    Transition(:free, :upper_1; when = AllOf(Condition[Atom(:Lvplsw, :>), Atom(:Vflt_minus_Zerox, :>), Atom(:Vflt_minus_Brkpt, :<), AnyOf(Condition[Atom(:Ip_value, :>), AllOf(Condition[Atom(:Ip_value_2, :>), Atom(:Ip_value, :>=)])])])),
-                    Transition(:upper_1, :free; when = AnyOf(Condition[Atom(:Ip_value_2, :<), Atom(:Ip_value, :<), Negation(AllOf(Condition[Atom(:Lvplsw, :>), Atom(:Vflt_minus_Zerox, :>), Atom(:Vflt_minus_Brkpt, :<)]))]), continuity = [:Ip_value_2 => [:Ip_value], :Vflt_minus_Zerox => [:Ip, :Ip_value], :Vflt_minus_Brkpt => [:Ip_value]])],
-                initial = [InitialMode(:free)],
-                at_rest = [:Ip_rate, :Ip_value_2]),
             Automaton(:multp_clamp;
                 modes = [Mode(:high; holds = [:multp_clamp_high => 1.0, :multp_clamp_low => 0.0, :multp_clamp_mid => 0.0]),
                     Mode(:low; holds = [:multp_clamp_high => 0.0, :multp_clamp_low => 1.0, :multp_clamp_mid => 0.0]),
                     Mode(:mid; holds = [:multp_clamp_high => 0.0, :multp_clamp_low => 0.0, :multp_clamp_mid => 1.0])],
-                transitions = [Transition(:high, :low; when = AllOf(Condition[Atom(:multp_clamp_value, :<), Atom(:multp_clamp_value_2, :<=)])),
-                    Transition(:high, :mid; when = AllOf(Condition[Atom(:multp_clamp_value, :>=), Atom(:multp_clamp_value_2, :<=)])),
-                    Transition(:low, :high; when = Atom(:multp_clamp_value_2, :>)),
-                    Transition(:low, :mid; when = AllOf(Condition[Atom(:multp_clamp_value, :>=), Atom(:multp_clamp_value_2, :<=)])),
-                    Transition(:mid, :high; when = Atom(:multp_clamp_value_2, :>)),
-                    Transition(:mid, :low; when = AllOf(Condition[Atom(:multp_clamp_value, :<), Atom(:multp_clamp_value_2, :<=)]))],
-                initial = [InitialMode(:high; when = Atom(:multp_clamp_value_2, :>)),
-                    InitialMode(:low; when = AllOf(Condition[Atom(:multp_clamp_value, :<), Atom(:multp_clamp_value_2, :<=)])),
+                transitions = [Transition(:high, :low; when = AllOf(Condition[Atom(:multp_clamp_value, :<=), Atom(:multp_clamp_value_2, :<)])),
+                    Transition(:high, :mid; when = AllOf(Condition[Atom(:multp_clamp_value, :<=), Atom(:multp_clamp_value_2, :>=)])),
+                    Transition(:low, :high; when = Atom(:multp_clamp_value, :>)),
+                    Transition(:low, :mid; when = AllOf(Condition[Atom(:multp_clamp_value, :<=), Atom(:multp_clamp_value_2, :>=)])),
+                    Transition(:mid, :high; when = Atom(:multp_clamp_value, :>)),
+                    Transition(:mid, :low; when = AllOf(Condition[Atom(:multp_clamp_value, :<=), Atom(:multp_clamp_value_2, :<)]))],
+                initial = [InitialMode(:high; when = Atom(:multp_clamp_value, :>)),
+                    InitialMode(:low; when = AllOf(Condition[Atom(:multp_clamp_value, :<=), Atom(:multp_clamp_value_2, :<)])),
                     InitialMode(:mid)]),
             Automaton(:Ip_rate_min;
                 modes = [Mode(:second; holds = [:Ip_rate_min_second => 1.0, :Ip_rate_min_first => 0.0]),
@@ -252,16 +252,9 @@ function model_metadata(::Type{REGCA1})
             Automaton(:Qe_max;
                 modes = [Mode(:second; holds = [:Qe_max_second => 1.0, :Qe_max_first => 0.0]),
                     Mode(:first; holds = [:Qe_max_second => 0.0, :Qe_max_first => 1.0])],
-                transitions = [Transition(:second, :first; when = Atom(:hv_value, :<=)),
-                    Transition(:first, :second; when = Atom(:hv_value, :>))],
-                initial = [InitialMode(:second; when = Atom(:hv_value, :>)),
-                    InitialMode(:first)]),
-            Automaton(:Iq_lag_rate_min;
-                modes = [Mode(:second; holds = [:Iq_lag_rate_min_second => 1.0, :Iq_lag_rate_min_first => 0.0]),
-                    Mode(:first; holds = [:Iq_lag_rate_min_second => 0.0, :Iq_lag_rate_min_first => 1.0])],
-                transitions = [Transition(:second, :first; when = Atom(:Iq_lag_rate_min_value, :>=)),
-                    Transition(:first, :second; when = Atom(:Iq_lag_rate_min_value, :<))],
-                initial = [InitialMode(:second; when = Atom(:Iq_lag_rate_min_value, :<)),
+                transitions = [Transition(:second, :first; when = Atom(:Qe_max_value, :<=)),
+                    Transition(:first, :second; when = Atom(:Qe_max_value, :>))],
+                initial = [InitialMode(:second; when = Atom(:Qe_max_value, :>)),
                     InitialMode(:first)]),
             Automaton(:Iq_lag_rate_max;
                 modes = [Mode(:second; holds = [:Iq_lag_rate_max_second => 1.0, :Iq_lag_rate_max_first => 0.0]),
@@ -269,6 +262,13 @@ function model_metadata(::Type{REGCA1})
                 transitions = [Transition(:second, :first; when = Atom(:Iq_lag_rate_max_value, :<=)),
                     Transition(:first, :second; when = Atom(:Iq_lag_rate_max_value, :>))],
                 initial = [InitialMode(:second; when = Atom(:Iq_lag_rate_max_value, :>)),
+                    InitialMode(:first)]),
+            Automaton(:Iq_lag_rate_min;
+                modes = [Mode(:second; holds = [:Iq_lag_rate_min_second => 1.0, :Iq_lag_rate_min_first => 0.0]),
+                    Mode(:first; holds = [:Iq_lag_rate_min_second => 0.0, :Iq_lag_rate_min_first => 1.0])],
+                transitions = [Transition(:second, :first; when = Atom(:Iq_lag_rate_min_value, :>=)),
+                    Transition(:first, :second; when = Atom(:Iq_lag_rate_min_value, :<))],
+                initial = [InitialMode(:second; when = Atom(:Iq_lag_rate_min_value, :<)),
                     InitialMode(:first)]),
         ),
         status_field = :status,
@@ -285,24 +285,24 @@ end
 
         kLVPL = params.Lvpl1[i] / (params.Brkpt[i] - params.Zerox[i])
 
+        multp = 1 * params.multp_clamp_high[i] + 0 * params.multp_clamp_low[i] + (vars.v[i] - params.Lvpnt0[i]) / (params.Lvpnt1[i] - params.Lvpnt0[i]) * params.multp_clamp_mid[i]
         Vflt_rate = (vars.v[i] - vars.Vflt[i]) / params.Tfltr[i]
         Ip_raw = (vars.Ipcmd[i] - vars.Ip[i]) / params.Tg[i]
-        Iq_raw = (-vars.Iq_lag[i] - vars.Iqcmd[i]) / params.Tg[i]
-        multp = params.multp_clamp_high[i] + params.multp_clamp_mid[i] * (vars.v[i] - params.Lvpnt0[i]) / (params.Lvpnt1[i] - params.Lvpnt0[i])
-        Ip_rate = params.Ip_rate_min_first[i] * Ip_raw + params.Ip_rate_min_second[i] * params.Rrpwr[i]
+        Iq_raw = (-vars.Iqcmd[i] - vars.Iq_lag[i]) / params.Tg[i]
+        Ip_rate = params.Rrpwr[i] * params.Ip_rate_min_second[i] + Ip_raw * params.Ip_rate_min_first[i]
         # === Residual Assignments ===
         outputs.dVflt[i] = mask * (Vflt_rate)
-        outputs.dIp[i] = mask * (params.Ip_gate[i] * Ip_rate + params.Ip_at_upper_1[i] * Vflt_rate * kLVPL)
-        outputs.dIq_lag[i] = mask * (Iq_raw - params.Iq_lag_rate_max_second[i] * params.up_limited[i] * (Iq_raw - params.Iqrmax[i]) - params.Iq_lag_rate_min_second[i] * params.down_limited[i] * (Iq_raw - params.Iqrmin[i]))
+        outputs.dIp[i] = mask * (params.Ip_gate[i] * Ip_rate + params.Ip_at_upper_1[i] * (kLVPL * 1 * Vflt_rate))
+        outputs.dIq_lag[i] = mask * (Iq_raw - params.up_limited[i] * (0 * params.Iq_lag_rate_max_second[i] + (Iq_raw - params.Iqrmax[i]) * params.Iq_lag_rate_max_first[i]) - params.down_limited[i] * (0 * params.Iq_lag_rate_min_second[i] + (Iq_raw - params.Iqrmin[i]) * params.Iq_lag_rate_min_first[i]))
         outputs.g_Ipcmd[i] = mask * (params.Ipcmd0[i] - vars.Ipcmd[i])
         outputs.g_Iqcmd[i] = mask * (params.Iqcmd0[i] - vars.Iqcmd[i])
-        outputs.g_dq[i] = mask * (params.hv_clamp[i] * (params.Volim[i] - vars.v[i]) + params.hv_floor[i] * (vars.Iq_lag[i] * vars.v[i] - params.Iolim[i] - vars.dq[i]) - vars.dq[i] * params.hv_clear[i])
+        outputs.g_dq[i] = mask * (params.hv_clear[i] * (0 - vars.dq[i]) + params.hv_clamp[i] * (params.Volim[i] - vars.v[i]) + params.hv_floor[i] * (vars.Iq_lag[i] * vars.v[i] - params.Iolim[i] - vars.dq[i]))
         outputs.g_Pe[i] = mask * (vars.Ip[i] * multp * vars.v[i] - vars.Pe[i])
-        outputs.g_Qe[i] = mask * (params.Iolim[i] * params.hv_floor[i] + params.hv_clamp[i] * (vars.Iq_lag[i] * vars.v[i] - vars.dq[i]) + params.hv_clear[i] * (params.Iolim[i] * params.Qe_max_first[i] + vars.Iq_lag[i] * params.Qe_max_second[i] * vars.v[i]) - vars.Qe[i])
-        outputs.ip_inj[i] = mask * (vars.Ip[i] * params.Mratio[i] * multp)
+        outputs.g_Qe[i] = mask * (params.hv_clear[i] * (params.Iolim[i] * params.Qe_max_second[i] + vars.Iq_lag[i] * vars.v[i] * params.Qe_max_first[i]) + params.hv_clamp[i] * (vars.Iq_lag[i] * vars.v[i] - vars.dq[i]) + params.hv_floor[i] * params.Iolim[i] - vars.Qe[i])
+        outputs.ip_inj[i] = mask * (params.Mratio[i] * vars.Ip[i] * multp)
         outputs.iq_inj[i] = mask * (params.Mratio[i] * ifelse(vars.v[i] > 0, vars.Qe[i] / vars.v[i], vars.Iq_lag[i]))
-        outputs.p_inj[i] = mask * (vars.Ip[i] * params.Mratio[i] * multp * vars.v[i])
-        outputs.q_inj[i] = mask * (params.Mratio[i] * vars.v[i] * ifelse(vars.v[i] > 0, vars.Qe[i] / vars.v[i], vars.Iq_lag[i]))
+        outputs.p_inj[i] = mask * (vars.v[i] * (params.Mratio[i] * vars.Ip[i] * multp))
+        outputs.q_inj[i] = mask * (vars.v[i] * (params.Mratio[i] * ifelse(vars.v[i] > 0, vars.Qe[i] / vars.v[i], vars.Iq_lag[i])))
     end
     nothing
 end
@@ -314,7 +314,7 @@ end
 ) where {T, AT}
     regca1_residual_kernel!(
         (dVflt = ws.res_vals.dVflt, dIp = ws.res_vals.dIp, dIq_lag = ws.res_vals.dIq_lag, g_Ipcmd = ws.res_vals.g_Ipcmd, g_Iqcmd = ws.res_vals.g_Iqcmd, g_dq = ws.res_vals.g_dq, g_Pe = ws.res_vals.g_Pe, g_Qe = ws.res_vals.g_Qe, ip_inj = ws.res_vals.ip_inj, iq_inj = ws.res_vals.iq_inj, p_inj = ws.res_vals.p_inj, q_inj = ws.res_vals.q_inj),
-        (Lvplsw = model.Lvplsw, Tg = model.Tg, Rrpwr = model.Rrpwr, Brkpt = model.Brkpt, Zerox = model.Zerox, Lvpl1 = model.Lvpl1, Volim = model.Volim, Lvpnt1 = model.Lvpnt1, Lvpnt0 = model.Lvpnt0, Iolim = model.Iolim, Tfltr = model.Tfltr, Khv = model.Khv, Iqrmax = model.Iqrmax, Iqrmin = model.Iqrmin, Accel = model.Accel, Qgen0 = ws.setpoints.Qgen0, Ipcmd0 = ws.setpoints.Ipcmd0, Iqcmd0 = ws.setpoints.Iqcmd0, up_limited = ws.automata.discrete.up_limited, down_limited = ws.automata.discrete.down_limited, hv_clear = ws.automata.discrete.hv_clear, hv_clamp = ws.automata.discrete.hv_clamp, hv_floor = ws.automata.discrete.hv_floor, Ip_gate = ws.automata.discrete.Ip_gate, Ip_at_upper_1 = ws.automata.discrete.Ip_at_upper_1, multp_clamp_high = ws.automata.discrete.multp_clamp_high, multp_clamp_low = ws.automata.discrete.multp_clamp_low, multp_clamp_mid = ws.automata.discrete.multp_clamp_mid, Ip_rate_min_second = ws.automata.discrete.Ip_rate_min_second, Ip_rate_min_first = ws.automata.discrete.Ip_rate_min_first, Qe_max_second = ws.automata.discrete.Qe_max_second, Qe_max_first = ws.automata.discrete.Qe_max_first, Iq_lag_rate_min_second = ws.automata.discrete.Iq_lag_rate_min_second, Iq_lag_rate_min_first = ws.automata.discrete.Iq_lag_rate_min_first, Iq_lag_rate_max_second = ws.automata.discrete.Iq_lag_rate_max_second, Iq_lag_rate_max_first = ws.automata.discrete.Iq_lag_rate_max_first, Mratio = external.Mratio),
+        (Lvplsw = model.Lvplsw, Tg = model.Tg, Rrpwr = model.Rrpwr, Brkpt = model.Brkpt, Zerox = model.Zerox, Lvpl1 = model.Lvpl1, Volim = model.Volim, Lvpnt1 = model.Lvpnt1, Lvpnt0 = model.Lvpnt0, Iolim = model.Iolim, Tfltr = model.Tfltr, Khv = model.Khv, Iqrmax = model.Iqrmax, Iqrmin = model.Iqrmin, Accel = model.Accel, Qgen0 = ws.setpoints.Qgen0, Ipcmd0 = ws.setpoints.Ipcmd0, Iqcmd0 = ws.setpoints.Iqcmd0, hv_clear = ws.automata.discrete.hv_clear, hv_clamp = ws.automata.discrete.hv_clamp, hv_floor = ws.automata.discrete.hv_floor, up_limited = ws.automata.discrete.up_limited, down_limited = ws.automata.discrete.down_limited, Ip_gate = ws.automata.discrete.Ip_gate, Ip_at_upper_1 = ws.automata.discrete.Ip_at_upper_1, multp_clamp_high = ws.automata.discrete.multp_clamp_high, multp_clamp_low = ws.automata.discrete.multp_clamp_low, multp_clamp_mid = ws.automata.discrete.multp_clamp_mid, Ip_rate_min_second = ws.automata.discrete.Ip_rate_min_second, Ip_rate_min_first = ws.automata.discrete.Ip_rate_min_first, Qe_max_second = ws.automata.discrete.Qe_max_second, Qe_max_first = ws.automata.discrete.Qe_max_first, Iq_lag_rate_max_second = ws.automata.discrete.Iq_lag_rate_max_second, Iq_lag_rate_max_first = ws.automata.discrete.Iq_lag_rate_max_first, Iq_lag_rate_min_second = ws.automata.discrete.Iq_lag_rate_min_second, Iq_lag_rate_min_first = ws.automata.discrete.Iq_lag_rate_min_first, Mratio = external.Mratio),
         (Vflt = ws.var_vals.Vflt, Ip = ws.var_vals.Ip, Iq_lag = ws.var_vals.Iq_lag, Ipcmd = ws.var_vals.Ipcmd, Iqcmd = ws.var_vals.Iqcmd, dq = ws.var_vals.dq, Pe = ws.var_vals.Pe, Qe = ws.var_vals.Qe, v = ws.var_vals.v),
         active_mask,
         t,
@@ -330,26 +330,27 @@ end
         kLVPL = params.Lvpl1[i] / (params.Brkpt[i] - params.Zerox[i])
         Vflt_rate = (vars.v[i] - vars.Vflt[i]) / params.Tfltr[i]
         Ip_raw = (vars.Ipcmd[i] - vars.Ip[i]) / params.Tg[i]
-        Iq_raw = (-vars.Iq_lag[i] - vars.Iqcmd[i]) / params.Tg[i]
-        Ip_rate = params.Ip_rate_min_first[i] * Ip_raw + params.Ip_rate_min_second[i] * params.Rrpwr[i]
+        Iq_raw = (-vars.Iqcmd[i] - vars.Iq_lag[i]) / params.Tg[i]
+        Ip_rate = params.Rrpwr[i] * params.Ip_rate_min_second[i] + Ip_raw * params.Ip_rate_min_first[i]
         # === Automaton Values ===
         values.Qgen0[i] = params.Qgen0[i]
-        values.v_minus_Volim[i] = vars.v[i] - params.Volim[i]
-        values.hv_value[i] = vars.Iq_lag[i] * vars.v[i] - params.Iolim[i]
-        values.dq[i] = vars.dq[i]
-        values.hv_value_2[i] = vars.Iq_lag[i] * vars.v[i] - params.Iolim[i] - vars.dq[i]
         values.Ip_upper_1[i] = kLVPL * (vars.Vflt[i] - params.Zerox[i])
-        values.Vflt_minus_Zerox[i] = vars.Vflt[i] - params.Zerox[i]
         values.Lvplsw[i] = params.Lvplsw[i]
+        values.Vflt_minus_Zerox[i] = vars.Vflt[i] - params.Zerox[i]
         values.Ip[i] = vars.Ip[i]
         values.Ip_rate[i] = Ip_rate
         values.Vflt_minus_Brkpt[i] = vars.Vflt[i] - params.Brkpt[i]
-        values.Ip_value_2[i] = Ip_rate - Vflt_rate * kLVPL
-        values.multp_clamp_value[i] = (vars.v[i] - params.Lvpnt0[i]) / (params.Lvpnt1[i] - params.Lvpnt0[i])
-        values.multp_clamp_value_2[i] = (vars.v[i] - params.Lvpnt0[i]) / (params.Lvpnt1[i] - params.Lvpnt0[i]) - 1
+        values.Ip_value_2[i] = Ip_rate - kLVPL * 1 * Vflt_rate
+        values.v_minus_Volim[i] = vars.v[i] - params.Volim[i]
+        values.hv_value[i] = vars.Iq_lag[i] * vars.v[i] - params.Iolim[i]
+        values.dq[i] = vars.dq[i]
+        values.hv_value_2[i] = vars.Iq_lag[i] * vars.v[i] - vars.dq[i] - params.Iolim[i]
+        values.multp_clamp_value[i] = (vars.v[i] - params.Lvpnt0[i]) / (params.Lvpnt1[i] - params.Lvpnt0[i]) - 1
+        values.multp_clamp_value_2[i] = (vars.v[i] - params.Lvpnt0[i]) / (params.Lvpnt1[i] - params.Lvpnt0[i]) - 0
         values.Ip_rate_min_value[i] = params.Rrpwr[i] - Ip_raw
-        values.Iq_lag_rate_min_value[i] = Iq_raw - params.Iqrmin[i]
-        values.Iq_lag_rate_max_value[i] = Iq_raw - params.Iqrmax[i]
+        values.Qe_max_value[i] = params.Iolim[i] - vars.Iq_lag[i] * vars.v[i]
+        values.Iq_lag_rate_max_value[i] = 0 - (Iq_raw - params.Iqrmax[i])
+        values.Iq_lag_rate_min_value[i] = 0 - (Iq_raw - params.Iqrmin[i])
         values.Ip_value[i] = vars.Ip[i] - values.Ip_upper_1[i]
     end
     nothing
@@ -360,8 +361,8 @@ end
     external::NamedTuple, ::PowerInjection, t
 ) where {T, AT}
     regca1_automaton_values_kernel!(
-        (Qgen0 = ws.automata.values.Qgen0, v_minus_Volim = ws.automata.values.v_minus_Volim, hv_value = ws.automata.values.hv_value, dq = ws.automata.values.dq, hv_value_2 = ws.automata.values.hv_value_2, Ip_upper_1 = ws.automata.values.Ip_upper_1, Vflt_minus_Zerox = ws.automata.values.Vflt_minus_Zerox, Lvplsw = ws.automata.values.Lvplsw, Ip = ws.automata.values.Ip, Ip_rate = ws.automata.values.Ip_rate, Vflt_minus_Brkpt = ws.automata.values.Vflt_minus_Brkpt, Ip_value = ws.automata.values.Ip_value, Ip_value_2 = ws.automata.values.Ip_value_2, multp_clamp_value = ws.automata.values.multp_clamp_value, multp_clamp_value_2 = ws.automata.values.multp_clamp_value_2, Ip_rate_min_value = ws.automata.values.Ip_rate_min_value, Iq_lag_rate_min_value = ws.automata.values.Iq_lag_rate_min_value, Iq_lag_rate_max_value = ws.automata.values.Iq_lag_rate_max_value),
-        (Lvplsw = model.Lvplsw, Tg = model.Tg, Rrpwr = model.Rrpwr, Brkpt = model.Brkpt, Zerox = model.Zerox, Lvpl1 = model.Lvpl1, Volim = model.Volim, Lvpnt1 = model.Lvpnt1, Lvpnt0 = model.Lvpnt0, Iolim = model.Iolim, Tfltr = model.Tfltr, Khv = model.Khv, Iqrmax = model.Iqrmax, Iqrmin = model.Iqrmin, Accel = model.Accel, Qgen0 = ws.setpoints.Qgen0, Ipcmd0 = ws.setpoints.Ipcmd0, Iqcmd0 = ws.setpoints.Iqcmd0, up_limited = ws.automata.discrete.up_limited, down_limited = ws.automata.discrete.down_limited, hv_clear = ws.automata.discrete.hv_clear, hv_clamp = ws.automata.discrete.hv_clamp, hv_floor = ws.automata.discrete.hv_floor, Ip_gate = ws.automata.discrete.Ip_gate, Ip_at_upper_1 = ws.automata.discrete.Ip_at_upper_1, multp_clamp_high = ws.automata.discrete.multp_clamp_high, multp_clamp_low = ws.automata.discrete.multp_clamp_low, multp_clamp_mid = ws.automata.discrete.multp_clamp_mid, Ip_rate_min_second = ws.automata.discrete.Ip_rate_min_second, Ip_rate_min_first = ws.automata.discrete.Ip_rate_min_first, Qe_max_second = ws.automata.discrete.Qe_max_second, Qe_max_first = ws.automata.discrete.Qe_max_first, Iq_lag_rate_min_second = ws.automata.discrete.Iq_lag_rate_min_second, Iq_lag_rate_min_first = ws.automata.discrete.Iq_lag_rate_min_first, Iq_lag_rate_max_second = ws.automata.discrete.Iq_lag_rate_max_second, Iq_lag_rate_max_first = ws.automata.discrete.Iq_lag_rate_max_first, Mratio = external.Mratio),
+        (Qgen0 = ws.automata.values.Qgen0, Ip_upper_1 = ws.automata.values.Ip_upper_1, Lvplsw = ws.automata.values.Lvplsw, Vflt_minus_Zerox = ws.automata.values.Vflt_minus_Zerox, Ip = ws.automata.values.Ip, Ip_rate = ws.automata.values.Ip_rate, Vflt_minus_Brkpt = ws.automata.values.Vflt_minus_Brkpt, Ip_value = ws.automata.values.Ip_value, Ip_value_2 = ws.automata.values.Ip_value_2, v_minus_Volim = ws.automata.values.v_minus_Volim, hv_value = ws.automata.values.hv_value, dq = ws.automata.values.dq, hv_value_2 = ws.automata.values.hv_value_2, multp_clamp_value = ws.automata.values.multp_clamp_value, multp_clamp_value_2 = ws.automata.values.multp_clamp_value_2, Ip_rate_min_value = ws.automata.values.Ip_rate_min_value, Qe_max_value = ws.automata.values.Qe_max_value, Iq_lag_rate_max_value = ws.automata.values.Iq_lag_rate_max_value, Iq_lag_rate_min_value = ws.automata.values.Iq_lag_rate_min_value),
+        (Lvplsw = model.Lvplsw, Tg = model.Tg, Rrpwr = model.Rrpwr, Brkpt = model.Brkpt, Zerox = model.Zerox, Lvpl1 = model.Lvpl1, Volim = model.Volim, Lvpnt1 = model.Lvpnt1, Lvpnt0 = model.Lvpnt0, Iolim = model.Iolim, Tfltr = model.Tfltr, Khv = model.Khv, Iqrmax = model.Iqrmax, Iqrmin = model.Iqrmin, Accel = model.Accel, Qgen0 = ws.setpoints.Qgen0, Ipcmd0 = ws.setpoints.Ipcmd0, Iqcmd0 = ws.setpoints.Iqcmd0, hv_clear = ws.automata.discrete.hv_clear, hv_clamp = ws.automata.discrete.hv_clamp, hv_floor = ws.automata.discrete.hv_floor, up_limited = ws.automata.discrete.up_limited, down_limited = ws.automata.discrete.down_limited, Ip_gate = ws.automata.discrete.Ip_gate, Ip_at_upper_1 = ws.automata.discrete.Ip_at_upper_1, multp_clamp_high = ws.automata.discrete.multp_clamp_high, multp_clamp_low = ws.automata.discrete.multp_clamp_low, multp_clamp_mid = ws.automata.discrete.multp_clamp_mid, Ip_rate_min_second = ws.automata.discrete.Ip_rate_min_second, Ip_rate_min_first = ws.automata.discrete.Ip_rate_min_first, Qe_max_second = ws.automata.discrete.Qe_max_second, Qe_max_first = ws.automata.discrete.Qe_max_first, Iq_lag_rate_max_second = ws.automata.discrete.Iq_lag_rate_max_second, Iq_lag_rate_max_first = ws.automata.discrete.Iq_lag_rate_max_first, Iq_lag_rate_min_second = ws.automata.discrete.Iq_lag_rate_min_second, Iq_lag_rate_min_first = ws.automata.discrete.Iq_lag_rate_min_first, Mratio = external.Mratio),
         (Vflt = ws.var_vals.Vflt, Ip = ws.var_vals.Ip, Iq_lag = ws.var_vals.Iq_lag, Ipcmd = ws.var_vals.Ipcmd, Iqcmd = ws.var_vals.Iqcmd, dq = ws.var_vals.dq, Pe = ws.var_vals.Pe, Qe = ws.var_vals.Qe, v = ws.var_vals.v),
         t,
         AT
@@ -396,15 +397,15 @@ function initialize_dynamic_states(
     @inbounds for i in 1:n
         kLVPL = model.Lvpl1[i] / (model.Brkpt[i] - model.Zerox[i])
 
-        ifelse(p_gen[i] == 0, true, v[i] > model.Lvpnt0[i]) || throw(ArgumentError("REGCA1 instance $i cannot start: it requires that the power-flow voltage is above Lvpnt0, or the power flow's active power is zero: at or below Lvpnt0 the low-voltage active current management passes no active current (Appendix A, A-2), and none carries a nonzero active power (check active_current_passes)"))
+        ifelse(v[i] > model.Lvpnt0[i], true, p_gen[i] == 0) || throw(ArgumentError("REGCA1 instance $i cannot start: it requires that the power-flow voltage is above Lvpnt0, or the power flow's active power is zero: at or below Lvpnt0 the low-voltage active current management passes no active current (Appendix A, A-2), and none carries a nonzero active power (check active_current_passes)"))
         q_gen[i] / Mratio[i] >= model.Iolim[i] || throw(ArgumentError("REGCA1 instance $i cannot start: it requires that the power flow's reactive power, on the converter's base, is at least qmin (Iolim), the floor of the high-voltage reactive current management (Appendix A, A-1) (check reactive_power_above_floor)"))
         ifelse(v[i] <= model.Volim[i], true, q_gen[i] / Mratio[i] <= model.Iolim[i]) || throw(ArgumentError("REGCA1 instance $i cannot start: it requires that the power-flow voltage is at most Volim, unless the reactive power is at its floor: above it the high-voltage reactive current management holds the voltage at Volim (Appendix A, A-1), and the power flow does not (check voltage_within_clamp)"))
 
         # State initial values
         Vflt[i] = v[i]
-        Ip[i] = ifelse(p_gen[i] == 0, 0, p_gen[i] / Mratio[i] / v[i] / clamp((v[i] - model.Lvpnt0[i]) / (model.Lvpnt1[i] - model.Lvpnt0[i]), 0, 1))
-        ifelse(ifelse(Ip[i] <= 0, true, !ifelse(Vflt[i] <= model.Zerox[i], model.Lvplsw[i] > 0, false)), ifelse(Ip[i] <= kLVPL * (Vflt[i] - model.Zerox[i]), true, !ifelse(model.Lvplsw[i] > 0, ifelse(Vflt[i] > model.Zerox[i], Vflt[i] < model.Brkpt[i], false), false)), false) || throw(ArgumentError("REGCA1 instance $i cannot start: it requires that Ip starts within its upper bound (check Ip_within_upper)"))
-        Iq_lag[i] = q_gen[i] / Mratio[i] / v[i]
+        Ip[i] = ifelse(p_gen[i] == 0, 0, p_gen[i] / (Mratio[i] * v[i] * clamp((v[i] - model.Lvpnt0[i]) / (model.Lvpnt1[i] - model.Lvpnt0[i]), 0, 1)))
+        ifelse(ifelse(!ifelse(model.Lvplsw[i] > 0, Vflt[i] <= model.Zerox[i], false), true, Ip[i] <= 0), ifelse(!ifelse(model.Lvplsw[i] > 0, ifelse(Vflt[i] > model.Zerox[i], Vflt[i] < model.Brkpt[i], false), false), true, Ip[i] <= kLVPL * (Vflt[i] - model.Zerox[i])), false) || throw(ArgumentError("REGCA1 instance $i cannot start: it requires that Ip starts within its upper bound (check Ip_within_upper)"))
+        Iq_lag[i] = q_gen[i] / (Mratio[i] * v[i])
 
         # Algebraic initial values
         Ipcmd[i] = Ip[i]

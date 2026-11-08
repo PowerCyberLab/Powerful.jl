@@ -349,11 +349,13 @@ injections and the power flow's powers at the start.
 The record's fields follow the order of PNNL-35110 Table 1.
 
 # Variables
-- States: `Pinv`, `Qinv`, `Vinv` (filtered power and voltage), `delta` (angle of the
-  internal voltage), `xpmax`, `xpmin`, `xqmax`, `xqmin` (limit controllers' integrators),
-  `xv` (integrator of the voltage controller)
-- Algebraic: `Pref`, `Qref`, `Vref` (references the plant controller changes), `Vcmd`,
-  `Edroop`, `Idroop`, `Pe`, `Qe`
+The droop control is a part, `control`, whose quantities carry its name:
+- States: `control_P_f_y`, `control_Q_f_y`, `control_V_f_y` (filtered power and voltage),
+  `control_DELTA_y` (angle of the internal voltage), `control_XPMAX_y`, `control_XPMIN_y`,
+  `control_XQMAX_y`, `control_XQMIN_y` (limit controllers' integrators), `control_XV_y`
+  (integrator of the voltage controller)
+- Algebraic: `control_Pref`, `control_Qref`, `control_Vref` (references the plant
+  controller changes, the group's `Pref`, `Qref`, `Vref`), `control_Idroop`, `Pe`, `Qe`
 - External: `v`, `theta` (terminal voltage)
 
 The integrators' limits, the voltage controller's, and the current limit are automata,

@@ -38,10 +38,13 @@ end
 
 # Parameter domains, checked where data enters
 function check_parameter_domains(x::SEXS, from::AbstractString)
-    x.EMIN <= x.EMAX || throw(ArgumentError("SEXS ($from) does not satisfy its constraint LAW_limits_ordered: LAW: the lower limit of LAW.y is at most its upper limit"))
-    (x.TE != 0) || throw(ArgumentError("SEXS ($from): TE is zero, and the model divides by it (graph[2].states.y.derivative)"))
-    (x.K != 0) || throw(ArgumentError("SEXS ($from): K is zero, and the model divides by it (algebraics.vref.init)"))
-    (x.TB != 0) || throw(ArgumentError("SEXS ($from): TB is zero, and the model divides by it (graph[1].LL)"))
+    x.TATB * x.TB >= 0.0 || throw(ArgumentError("SEXS ($from) does not satisfy its constraint LL.T1_min: LeadLag admits T1 >= 0"))
+    x.TB >= 0.0 || throw(ArgumentError("SEXS ($from) does not satisfy its constraint LL.T2_min: LeadLag admits T2 >= 0"))
+    x.TE >= 0.0 || throw(ArgumentError("SEXS ($from) does not satisfy its constraint LAW.T_min: LagAntiWindup admits T >= 0"))
+    x.EMIN <= x.EMAX || throw(ArgumentError("SEXS ($from) does not satisfy its constraint LAW.y_limits_ordered: LAW.y: the lower limit of LAW.y is at most its upper limit"))
+    (x.TB != 0) || throw(ArgumentError("SEXS ($from): TB is zero, and the model divides by it (parts.LL.outputs.y.expr)"))
+    (x.TE != 0) || throw(ArgumentError("SEXS ($from): TE is zero, and the model divides by it (parts.LAW.states.y.derivative)"))
+    (x.K != 0) || throw(ArgumentError("SEXS ($from): K is zero, and the model divides by it (initialization.values.LL.x)"))
     return x
 end
 
@@ -65,6 +68,8 @@ implements_group(::Type{<:SEXS}) = :exciters
 function group_var_mapping(::Type{<:SEXS})
     Dict(
         :E_fd => :E_fd, # Same name
+        :LAW_y => :LAW_y, # Same name
+        :LL_x => :LL_x, # Same name
         :vref => :vref, # Same name
     )
 end
@@ -114,7 +119,7 @@ function model_metadata(::Type{SEXS})
         name = :SEXS,
         vars = [
             ModelVar(:LL_x, StateVar();
-                description="Lead-lag compensator"),
+                description="Lead-lag compensator: Internal state"),
             ModelVar(:LAW_y, StateVar();
                 description="Exciter field with gain, lag, and anti-windup limits"),
             ModelVar(:vref, AlgebVar();
@@ -126,7 +131,7 @@ function model_metadata(::Type{SEXS})
         ],
         residuals = [
         ModelResidual(:dLL_x, StateRes(), PrivateRes();
-            description="Lead-lag compensator"),
+            description="Lead-lag compensator: Internal state"),
         ModelResidual(:dLAW_y, StateRes(), PrivateRes();
             description="Exciter field with gain, lag, and anti-windup limits"),
         ModelResidual(:g_vref, AlgebRes(), SharedRes(:add);
@@ -150,18 +155,18 @@ function model_metadata(::Type{SEXS})
     ],
         variable_limits = [VariableLimit(:LAW_y, :EMIN, :EMAX)],
         automata = (
-            Automaton(:LAW;
-                modes = [Mode(:free; holds = [:LAW_gate => 1.0]),
-                    Mode(:upper; holds = [:LAW_gate => 0.0]),
-                    Mode(:lower; holds = [:LAW_gate => 0.0])],
-                transitions = [Transition(:free, :upper; when = AllOf(Condition[Atom(:LAW_y_minus_EMAX, :>=), Atom(:LAW_rate, :>)])),
-                    Transition(:free, :lower; when = AllOf(Condition[Atom(:LAW_y_minus_EMIN, :<=), Atom(:LAW_rate, :<)])),
-                    Transition(:upper, :free; when = Atom(:LAW_rate, :<)),
-                    Transition(:lower, :free; when = Atom(:LAW_rate, :>))],
-                initial = [InitialMode(:upper; when = AllOf(Condition[Atom(:LAW_y_minus_EMAX, :>=), Atom(:LAW_rate, :>)])),
-                    InitialMode(:lower; when = AllOf(Condition[Atom(:LAW_y_minus_EMIN, :<=), Atom(:LAW_rate, :<)])),
+            Automaton(:LAW_y;
+                modes = [Mode(:free; holds = [:LAW_y_gate => 1.0]),
+                    Mode(:upper; holds = [:LAW_y_gate => 0.0]),
+                    Mode(:lower; holds = [:LAW_y_gate => 0.0])],
+                transitions = [Transition(:free, :upper; when = AllOf(Condition[Atom(:LAW_y_minus_EMAX, :>=), Atom(:LAW_y_rate, :>)])),
+                    Transition(:free, :lower; when = AllOf(Condition[Atom(:LAW_y_minus_EMIN, :<=), Atom(:LAW_y_rate, :<)])),
+                    Transition(:upper, :free; when = Atom(:LAW_y_rate, :<)),
+                    Transition(:lower, :free; when = Atom(:LAW_y_rate, :>))],
+                initial = [InitialMode(:upper; when = AllOf(Condition[Atom(:LAW_y_minus_EMAX, :>=), Atom(:LAW_y_rate, :>)])),
+                    InitialMode(:lower; when = AllOf(Condition[Atom(:LAW_y_minus_EMIN, :<=), Atom(:LAW_y_rate, :<)])),
                     InitialMode(:free)],
-                at_rest = [:LAW_rate]),
+                at_rest = [:LAW_y_rate]),
         ),
         status_field = :status,
         evaluation_pass = 2,
@@ -178,15 +183,12 @@ end
         TA = params.TATB[i] * params.TB[i]
 
         vi = vars.vref[i] - vars.v[i]
-        # --- LL: LeadLag ---
-        LL_y = vars.LL_x[i] + ((TA) / (params.TB[i])) * ((vi) - vars.LL_x[i])
-        LL_dx = ((vi) - vars.LL_x[i]) / (params.TB[i])
-
-        LAW_rate = (params.K[i] * LL_y - vars.LAW_y[i]) / params.TE[i]
+        LL_y = vars.LL_x[i] + TA / params.TB[i] * (vi - vars.LL_x[i])
+        LAW_y_rate = (params.K[i] * LL_y - vars.LAW_y[i]) / params.TE[i]
         E_fd_calc = vars.LAW_y[i]
         # === Residual Assignments ===
-        outputs.dLL_x[i] = mask * (LL_dx)
-        outputs.dLAW_y[i] = mask * (params.LAW_gate[i] * LAW_rate)
+        outputs.dLL_x[i] = mask * ((vi - vars.LL_x[i]) / params.TB[i])
+        outputs.dLAW_y[i] = mask * (params.LAW_y_gate[i] * LAW_y_rate)
         outputs.g_vref[i] = mask * (params.vref0[i] - vars.vref[i])
         outputs.g_E_fd[i] = mask * (E_fd_calc - vars.E_fd[i])
         outputs.E_fd_out[i] = mask * (vars.E_fd[i] - params.E_fd0[i])
@@ -201,7 +203,7 @@ end
 ) where {T, AT}
     sexs_residual_kernel!(
         (dLL_x = ws.res_vals.dLL_x, dLAW_y = ws.res_vals.dLAW_y, g_vref = ws.res_vals.g_vref, g_E_fd = ws.res_vals.g_E_fd, E_fd_out = ws.res_vals.E_fd_out),
-        (TATB = model.TATB, TB = model.TB, K = model.K, TE = model.TE, EMIN = model.EMIN, EMAX = model.EMAX, E_fd0 = ws.setpoints.E_fd0, vref0 = ws.setpoints.vref0, LAW_gate = ws.automata.discrete.LAW_gate),
+        (TATB = model.TATB, TB = model.TB, K = model.K, TE = model.TE, EMIN = model.EMIN, EMAX = model.EMAX, E_fd0 = ws.setpoints.E_fd0, vref0 = ws.setpoints.vref0, LAW_y_gate = ws.automata.discrete.LAW_y_gate),
         (LL_x = ws.var_vals.LL_x, LAW_y = ws.var_vals.LAW_y, vref = ws.var_vals.vref, E_fd = ws.var_vals.E_fd, v = ws.var_vals.v),
         active_mask,
         t,
@@ -216,14 +218,11 @@ end
     @inbounds for i in eachindex(values.LAW_y_minus_EMAX)
         TA = params.TATB[i] * params.TB[i]
         vi = vars.vref[i] - vars.v[i]
-        # --- LL: LeadLag ---
-        LL_y = vars.LL_x[i] + ((TA) / (params.TB[i])) * ((vi) - vars.LL_x[i])
-        LL_dx = ((vi) - vars.LL_x[i]) / (params.TB[i])
-
-        LAW_rate = (params.K[i] * LL_y - vars.LAW_y[i]) / params.TE[i]
+        LL_y = vars.LL_x[i] + TA / params.TB[i] * (vi - vars.LL_x[i])
+        LAW_y_rate = (params.K[i] * LL_y - vars.LAW_y[i]) / params.TE[i]
         # === Automaton Values ===
         values.LAW_y_minus_EMAX[i] = vars.LAW_y[i] - params.EMAX[i]
-        values.LAW_rate[i] = LAW_rate
+        values.LAW_y_rate[i] = LAW_y_rate
         values.LAW_y_minus_EMIN[i] = vars.LAW_y[i] - params.EMIN[i]
     end
     nothing
@@ -234,8 +233,8 @@ end
     external::NamedTuple, ::PowerInjection, t
 ) where {T, AT}
     sexs_automaton_values_kernel!(
-        (LAW_y_minus_EMAX = ws.automata.values.LAW_y_minus_EMAX, LAW_rate = ws.automata.values.LAW_rate, LAW_y_minus_EMIN = ws.automata.values.LAW_y_minus_EMIN),
-        (TATB = model.TATB, TB = model.TB, K = model.K, TE = model.TE, EMIN = model.EMIN, EMAX = model.EMAX, E_fd0 = ws.setpoints.E_fd0, vref0 = ws.setpoints.vref0, LAW_gate = ws.automata.discrete.LAW_gate),
+        (LAW_y_minus_EMAX = ws.automata.values.LAW_y_minus_EMAX, LAW_y_rate = ws.automata.values.LAW_y_rate, LAW_y_minus_EMIN = ws.automata.values.LAW_y_minus_EMIN),
+        (TATB = model.TATB, TB = model.TB, K = model.K, TE = model.TE, EMIN = model.EMIN, EMAX = model.EMAX, E_fd0 = ws.setpoints.E_fd0, vref0 = ws.setpoints.vref0, LAW_y_gate = ws.automata.discrete.LAW_y_gate),
         (LL_x = ws.var_vals.LL_x, LAW_y = ws.var_vals.LAW_y, vref = ws.var_vals.vref, E_fd = ws.var_vals.E_fd, v = ws.var_vals.v),
         t,
         AT
@@ -262,6 +261,8 @@ function initialize_dynamic_states(
 
     # === Compute Initial Values ===
     @inbounds for i in 1:n
+        model.TE[i] > 0 || throw(ArgumentError("SEXS instance $i cannot start: it requires that the lag rests within its limits only for a positive time constant (check LAW.rests_within_its_limits)"))
+
         # State initial values
         LL_x[i] = E_fd0[i] / model.K[i]
         LAW_y[i] = E_fd0[i]
